@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Never commit secrets — this repo is public.
+.env
+.env.*
