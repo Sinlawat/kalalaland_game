@@ -114,6 +114,8 @@ export interface EventRecord {
    * condition and looks only). Absent when no trait changed.
    */
   traitChanges?: Partial<Record<TraitKey, number>>;
+  /** What the event REALLY did to the family environment (after clamping). */
+  environmentChanges?: Partial<Record<EnvironmentKey, number>>;
   /** Habits the event switched to. Absent when no habit changed. */
   habitChanges?: Partial<Habits>;
   /** For temporary changes (D56): how many months each one lasts. */

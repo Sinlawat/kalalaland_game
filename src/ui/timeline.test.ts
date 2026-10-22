@@ -100,6 +100,19 @@ describe('buildTimeline', () => {
     });
   });
 
+  it('shows environment changes as chips after stats and traits', () => {
+    const state: Source = {
+      eventHistory: [{ id: 'jobloss', ageInMonths: 100, traitChanges: { discipline: 1 }, environmentChanges: { familyWealth: -10 } }],
+      history: [],
+      yearLog: { mentalHealth: { 'event.jobloss': -3 } },
+    };
+    expect(buildTimeline(state)[0]!.entries[0]!.effects).toEqual([
+      { target: 'mentalHealth', amount: -3 },
+      { target: 'discipline', amount: 1 },
+      { target: 'familyWealth', amount: -10 },
+    ]);
+  });
+
   it('keeps different choices of the same event apart', () => {
     const state: Source = {
       eventHistory: [

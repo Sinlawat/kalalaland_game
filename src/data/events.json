@@ -164,7 +164,7 @@
     },
     "frequency": "common",
     "once": false,
-    "cooldownMonths": 12,
+    "cooldownMonths": 24,
     "effects": {
       "habits": {
         "sleep": "short"
@@ -300,6 +300,326 @@
       "setFlags": [
         "early_screen_time"
       ]
+    }
+  },
+  {
+    "id": "family_new_sibling",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 12
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": {
+          "level": "short",
+          "months": 3
+        }
+      },
+      "setFlags": [
+        "has_sibling"
+      ]
+    }
+  },
+  {
+    "id": "family_move_far_from_school",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "flagsNone": [
+        "lives_with_grandparents"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": "short"
+      },
+      "setFlags": [
+        "long_commute"
+      ]
+    }
+  },
+  {
+    "id": "family_market_helper",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 40
+        }
+      ],
+      "flagsNone": [
+        "lives_with_grandparents"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": "short"
+      },
+      "traits": {
+        "discipline": 2
+      },
+      "setFlags": [
+        "helps_family_business"
+      ]
+    }
+  },
+  {
+    "id": "family_parent_lost_job",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": {
+          "level": "short",
+          "months": 6
+        }
+      },
+      "stats": {
+        "mentalHealth": -3
+      },
+      "environment": {
+        "familyWealth": -10
+      },
+      "setFlags": [
+        "parent_lost_job"
+      ]
+    }
+  },
+  {
+    "id": "family_relative_seriously_ill",
+    "conditions": {
+      "ageMin": 10,
+      "ageMax": 17
+    },
+    "frequency": "rare",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": {
+          "level": "short",
+          "months": 3
+        }
+      },
+      "stats": {
+        "mentalHealth": -2
+      }
+    }
+  },
+  {
+    "id": "family_parents_divorce",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ]
+    },
+    "frequency": "rare",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": "short"
+      },
+      "stats": {
+        "mentalHealth": -5
+      },
+      "environment": {
+        "familyWarmth": -10
+      },
+      "setFlags": [
+        "parents_divorced"
+      ]
+    }
+  },
+  {
+    "id": "family_swimming_lessons",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 12,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 60
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "habits": {
+        "exercise": {
+          "level": "regular",
+          "months": 12
+        }
+      },
+      "stats": {
+        "physicalHealth": 2
+      }
+    }
+  },
+  {
+    "id": "family_summer_trip",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 50
+        }
+      ],
+      "months": [
+        4
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "habits": {
+        "exercise": {
+          "level": "regular",
+          "months": 1
+        }
+      },
+      "stats": {
+        "mentalHealth": 3
+      }
+    }
+  },
+  {
+    "id": "family_dad_morning_run",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 50
+        }
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "join",
+        "effects": {
+          "habits": {
+            "exercise": "regular"
+          },
+          "stats": {
+            "physicalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "sleep_in",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "family_home_atmosphere_better",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsNone": [
+        "parents_divorced"
+      ],
+      "habits": {
+        "sleep": "short"
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "effects": {
+      "habits": {
+        "sleep": "enough"
+      },
+      "environment": {
+        "familyWarmth": 5
+      }
+    }
+  },
+  {
+    "id": "family_live_with_grandparents",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 40
+        }
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": "enough",
+        "exercise": "regular"
+      },
+      "stats": {
+        "mentalHealth": -2
+      },
+      "setFlags": [
+        "lives_with_grandparents"
+      ]
+    }
+  },
+  {
+    "id": "family_bedtime_rule",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 60
+        }
+      ],
+      "habits": {
+        "sleep": "short"
+      }
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "habits": {
+        "sleep": "enough"
+      }
     }
   }
 ]

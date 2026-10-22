@@ -340,6 +340,27 @@ describe('cooldown, lifetime chance and lifestyle conditions', () => {
   });
 });
 
+describe('environment effects (D57)', () => {
+  it('change family wealth and warmth, clamped, with the real change recorded', () => {
+    const state = makeState({ environment: { familyWealth: 5, familyWarmth: 40 } });
+    applyEvent(state, makeEvent({ id: 'jobloss', effects: { environment: { familyWealth: -10, familyWarmth: 5 } } }));
+    expect(state.environment).toMatchObject({ familyWealth: 0, familyWarmth: 45 });
+    expect(state.eventHistory[0]!.environmentChanges).toEqual({ familyWealth: -5, familyWarmth: 5 });
+  });
+
+  it('are not reduced with age (unlike traits)', () => {
+    const state = makeState({ ageInMonths: 40 * 12, environment: { familyWarmth: 50 } });
+    applyEvent(state, makeEvent({ effects: { environment: { familyWarmth: -10 } } }));
+    expect(state.environment.familyWarmth).toBe(40);
+  });
+
+  it('rejects work and financial stress (owned by later systems)', () => {
+    expect(() => parseEvents([{ ...makeEvent(), effects: { environment: { workStress: 10 } } }])).toThrow(
+      'unsupported environment value "workStress"',
+    );
+  });
+});
+
 describe('applyChoice', () => {
   const dream = makeEvent({
     id: 'dream',
@@ -416,7 +437,9 @@ describe('real events over many lives (Monte Carlo)', () => {
       const vaccine = end.eventHistory.filter((r) => r.id.startsWith('health_infant_vaccine'));
       expect(vaccine).toHaveLength(1);
       expect(vaccine[0]!.ageInMonths).toBe(1);
-      const expected = end.environment.familyWealth >= 50 ? 'health_infant_vaccine_extra' : 'health_infant_vaccine_basic';
+      // Wealth at BIRTH: events can change it later (e.g. a parent losing their job).
+      const wealthAtBirth = createNewLife(end.seed).environment.familyWealth;
+      const expected = wealthAtBirth >= 50 ? 'health_infant_vaccine_extra' : 'health_infant_vaccine_basic';
       expect(vaccine[0]!.id).toBe(expected);
     }
   });

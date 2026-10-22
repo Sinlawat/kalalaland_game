@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { advanceOneMonth, advanceUntilStop, resolveChoice, settlePendingChoices, simulateWholeLife } from './game';
+import { findEvent } from './events';
+import { advanceOneMonth, advanceUntilStop, firstAvailableChoice, resolveChoice, settlePendingChoices, simulateWholeLife } from './game';
 import { createNewLife } from './newLife';
 import type { GameState, StatTarget } from './types';
+
+/** One month the way the real-time runner does it, answering any choice popup like a simulation would. */
+function stepMonth(state: GameState): GameState {
+  let result = advanceOneMonth(state);
+  while (result.stop === 'choice') {
+    const event = findEvent(result.state.pendingChoices[0]!.eventId)!;
+    result = resolveChoice(result.state, firstAvailableChoice(result.state, event));
+  }
+  return result.state;
+}
 
 function statValue(state: GameState, target: StatTarget): number {
   return target === 'looks' ? state.outcome.looks : state.condition[target];
@@ -101,7 +112,7 @@ describe('advanceOneMonth (real-time runner, D38)', () => {
     let byYear = createNewLife(42);
     for (let year = 0; year < 10; year++) {
       byYear = advanceUntilStop(byYear).state;
-      for (let m = 0; m < 12; m++) byMonth = advanceOneMonth(byMonth).state;
+      for (let m = 0; m < 12; m++) byMonth = stepMonth(byMonth);
     }
     expect(byMonth).toEqual(byYear);
   });
@@ -165,7 +176,7 @@ describe('events with choices (D39)', () => {
   it('the same choice gives the same life (determinism through the pause)', () => {
     const play = () => {
       let state = resolveChoice(advanceOneMonth(beforeDream()).state, 'actor').state;
-      for (let i = 0; i < 24; i++) state = advanceOneMonth(state).state;
+      for (let i = 0; i < 24; i++) state = stepMonth(state);
       return state;
     };
     expect(play()).toEqual(play());

@@ -7,22 +7,23 @@
  * Pure functions (no React), so they are unit-tested directly.
  */
 
-import type { EventRecord, GameState, HabitKey, Habits, StatTarget, TraitKey } from '../engine/types';
+import type { EnvironmentKey, EventRecord, GameState, HabitKey, Habits, StatTarget, TraitKey } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
 
 /** Order of stat chips under an event. */
 export const EFFECT_ORDER: StatTarget[] = ['physicalHealth', 'mentalHealth', 'knowledge', 'looks'];
-/** Trait chips come after the stat chips. */
+/** Trait chips come after the stat chips, then the family environment. */
 const TRAIT_ORDER: TraitKey[] = ['discipline', 'resilience', 'riskTaking'];
+const ENVIRONMENT_ORDER: EnvironmentKey[] = ['familyWealth', 'familyWarmth'];
 
 /** Effects smaller than this are hidden (they would show as "0"). */
 const MIN_VISIBLE = 0.05;
 
 export interface EffectChip {
-  /** A stat or a trait; both have a `stat.<target>` label. */
-  target: StatTarget | TraitKey;
+  /** A stat, a trait or an environment value; all have a `stat.<target>` label. */
+  target: StatTarget | TraitKey | EnvironmentKey;
   amount: number;
 }
 
@@ -82,15 +83,19 @@ export function effectsOfOccurrence(state: TimelineSource, id: string, ageInMont
 }
 
 /**
- * Everything one occurrence REALLY changed: stats (from the year log) and
- * traits (stored on the record, because traits have no log).
+ * Everything one occurrence REALLY changed: stats (from the year log), and
+ * traits and the family environment (stored on the record: they have no log).
  */
 export function chipsOfRecord(state: TimelineSource, record: EventRecord): EffectChip[] {
   const traitChips = TRAIT_ORDER.flatMap((target) => {
     const amount = record.traitChanges?.[target];
     return amount === undefined ? [] : [{ target, amount }];
   });
-  return [...effectsOfOccurrence(state, record.id, record.ageInMonths), ...traitChips];
+  const environmentChips = ENVIRONMENT_ORDER.flatMap((target) => {
+    const amount = record.environmentChanges?.[target];
+    return amount === undefined ? [] : [{ target, amount }];
+  });
+  return [...effectsOfOccurrence(state, record.id, record.ageInMonths), ...traitChips, ...environmentChips];
 }
 
 /** All years that had events, newest first; within a year, events in the order they happened. */

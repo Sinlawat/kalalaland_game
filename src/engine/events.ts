@@ -27,7 +27,16 @@ import eventsJson from '../data/events.json';
 import { setHabitFromEvent } from './lifestyle';
 import { createRng, type Rng } from './rng';
 import { applyContributions, clampStat, type Contribution } from './stats';
-import { HABIT_LEVELS, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey } from './types';
+import {
+  HABIT_LEVELS,
+  type EnvironmentKey,
+  type EventRecord,
+  type GameState,
+  type HabitKey,
+  type Habits,
+  type StatTarget,
+  type TraitKey,
+} from './types';
 
 // ── Data types ──────────────────────────────────────────────────────────────
 
@@ -49,6 +58,14 @@ export type EffectStat = (typeof EFFECT_STATS)[number];
 
 /** Traits an effect may change (D41: halved from age 15). */
 export const EFFECT_TRAITS = ['discipline', 'resilience', 'riskTaking'] as const satisfies readonly TraitKey[];
+
+/**
+ * The family environment an event may change (D57), e.g. a parent losing
+ * their job lowers Family wealth. Work and financial stress are left out on
+ * purpose: the career and finance systems will own them.
+ */
+export const EFFECT_ENVIRONMENT = ['familyWealth', 'familyWarmth'] as const satisfies readonly EnvironmentKey[];
+export type EffectEnvironment = (typeof EFFECT_ENVIRONMENT)[number];
 
 /** Flags that game systems (not events) set; conditions may test them. */
 export const SYSTEM_FLAGS = ['working', 'traits_revealed'] as const;
@@ -82,6 +99,7 @@ export type HabitEffect<K extends HabitKey> = Habits[K] | { level: Habits[K]; mo
 export interface EventEffects {
   stats?: Partial<Record<EffectStat, number>>;
   traits?: Partial<Record<TraitKey, number>>;
+  environment?: Partial<Record<EffectEnvironment, number>>;
   habits?: { [K in HabitKey]?: HabitEffect<K> };
   setFlags?: string[];
   removeFlags?: string[];
@@ -185,12 +203,13 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'habits', 'setFlags', 'removeFlags'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'setFlags', 'removeFlags'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
     ['stats', EFFECT_STATS],
     ['traits', EFFECT_TRAITS],
+    ['environment', EFFECT_ENVIRONMENT],
   ] as const) {
     const changes = e[field];
     if (changes === undefined) continue;
@@ -199,7 +218,8 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
       continue;
     }
     for (const [name, amount] of Object.entries(changes)) {
-      if (!(allowed as readonly string[]).includes(name)) problems.push(`${at}: effect on unsupported ${field === 'stats' ? 'stat' : 'trait'} "${name}"`);
+      const kind = { stats: 'stat', traits: 'trait', environment: 'environment value' }[field];
+      if (!(allowed as readonly string[]).includes(name)) problems.push(`${at}: effect on unsupported ${kind} "${name}"`);
       if (typeof amount !== 'number' || !Number.isFinite(amount)) problems.push(`${at}: effect on "${name}" must be a number`);
     }
   }
@@ -569,6 +589,16 @@ function applyEffects(state: GameState, eventId: string, effects: EventEffects, 
     if (actual !== 0) traitChanges[trait] = actual;
   }
   if (Object.keys(traitChanges).length > 0) record.traitChanges = traitChanges;
+
+  // Environment (D57): full effect at any age, clamped to 0–100, real change recorded.
+  const environmentChanges: Partial<Record<EnvironmentKey, number>> = {};
+  for (const [key, amount] of Object.entries(effects.environment ?? {}) as [EffectEnvironment, number][]) {
+    const before = state.environment[key];
+    state.environment[key] = clampStat(before + amount);
+    const actual = state.environment[key] - before;
+    if (actual !== 0) environmentChanges[key] = actual;
+  }
+  if (Object.keys(environmentChanges).length > 0) record.environmentChanges = environmentChanges;
 
   const habitChanges: Record<string, string> = {};
   const habitMonths: Partial<Record<HabitKey, number>> = {};
