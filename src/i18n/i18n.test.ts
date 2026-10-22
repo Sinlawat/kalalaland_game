@@ -62,7 +62,9 @@ describe('th.json completeness', () => {
         }
       }
     }
-    const missing = [...sources].filter((source) => !hasMessage(`source.${source}`));
+    // Event sources ("event.<id>") are named by the event's own title; the rest by "source.<key>".
+    const labelKey = (source: string) => (source.startsWith('event.') ? `${source}.title` : `source.${source}`);
+    const missing = [...sources].filter((source) => !hasMessage(labelKey(source)));
     expect(missing).toEqual([]);
   });
 });

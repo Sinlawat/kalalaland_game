@@ -5,10 +5,10 @@ import { CharacterPanel } from './CharacterPanel';
 import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
 import { HabitControls } from './HabitControls';
+import { LifeTimeline } from './LifeTimeline';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
 import { useGame } from './useGame';
-import { YearSummaryPanel } from './YearSummaryPanel';
 
 export function App() {
   const controller = useGame();
@@ -35,10 +35,6 @@ export function App() {
     );
   }
 
-  // Always show the most recent completed year — also right after loading a
-  // save, not only at the moment a birthday was reached.
-  const lastYear = game.history.at(-1);
-
   return (
     <main className="screen screen--wide">
       <header className="topbar card">
@@ -63,20 +59,11 @@ export function App() {
         </div>
 
         <div className="play__summary">
-          {lastYear ? (
-            <YearSummaryPanel
-              summary={lastYear}
-              explainContext={{ age: lastYear.age, physicalWear: game.hidden.physicalWear }}
-            />
-          ) : (
-            <section className="card">
-              <p className="muted small">{t('summary.firstYearHint')}</p>
-            </section>
-          )}
+          <LifeTimeline game={game} />
         </div>
 
         <div className="play__stats">
-          <CharacterPanel game={game} lastYear={lastYear} />
+          <CharacterPanel game={game} />
         </div>
 
         <div className="play__habits">

@@ -90,6 +90,18 @@ describe('save / load', () => {
     });
   });
 
+  describe('migration v2 → v3 (event history)', () => {
+    it('loads a version 2 save with an empty event history and keeps its wear', () => {
+      const { eventHistory: _events, ...v2State } = createNewLife(78);
+      v2State.hidden = { physicalWear: 7 };
+      storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 2, savedAt: '2026-10-21T00:00:00.000Z', state: v2State }));
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.eventHistory).toEqual([]);
+      expect(result.state.hidden.physicalWear).toBe(7);
+    });
+  });
+
   it('reports tooNew for a save from a future game version', () => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION + 1, state: {} }));
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'tooNew' });

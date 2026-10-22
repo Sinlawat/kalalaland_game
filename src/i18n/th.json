@@ -128,15 +128,33 @@
   "explain.trait.resilience": "นิสัยใจสู้ช่วยลดผลลบต่อสุขภาพจิต ยิ่งค่าสูงยิ่งลดได้มาก สูงสุด {resilienceMax}% ของผลลบ",
   "explain.trait.discipline": "วินัยทำให้เรียนรู้เร็วขึ้นหรือช้าลง วินัย 50 คือเรียนรู้ตามปกติ สูงกว่านั้นเร็วขึ้น ต่ำกว่านั้นช้าลง",
 
-  "summary.title": "สรุปปีที่ผ่านมา",
-  "summary.events": "เกิดอะไรขึ้นบ้าง",
-  "summary.noEvents": "ปีนี้ไม่มีเหตุการณ์พิเศษ",
-  "summary.changes": "ตัวเราเปลี่ยนไปอย่างไร",
-  "summary.firstYearHint": "สรุปของแต่ละปีจะแสดงที่นี่ เมื่อตัวละครครบรอบวันเกิด",
-  "summary.ageReached": "ครบ {age} ปี",
-  "summary.total": "รวม",
-  "summary.noChange": "ไม่มีการเปลี่ยนแปลง",
-  "summary.hint": "ตัวเลขคือผลรวมทั้งปี แยกตามที่มา",
+  "explain.event": "ผลจากเหตุการณ์ \"{title}\" ดูรายละเอียดได้ในไทม์ไลน์ชีวิต",
+
+  "event.health_infant_vaccine_extra.title": "รับวัคซีนพื้นฐานและวัคซีนเสริม",
+  "event.health_infant_vaccine_extra.text": "ครอบครัวพาคุณไปรับวัคซีนพื้นฐานตามวัย และตัดสินใจรับวัคซีนเสริมตามคำแนะนำของแพทย์ด้วย",
+  "event.health_infant_vaccine_basic.title": "รับวัคซีนพื้นฐานตามวัย",
+  "event.health_infant_vaccine_basic.text": "ครอบครัวพาคุณไปรับวัคซีนพื้นฐานตามวัย ส่วนวัคซีนเสริมมีค่าใช้จ่ายสูงเกินกว่าที่ครอบครัวจะจ่ายได้",
+  "event.health_chickenpox.title": "ป่วยเป็นอีสุกอีใส",
+  "event.health_chickenpox.text": "คุณติดอีสุกอีใสจากเพื่อนที่โรงเรียน ต้องหยุดเรียนไปหลายวัน",
+
+
+  "timeline.title": "ไทม์ไลน์ชีวิต",
+  "timeline.recentHint": "เหตุการณ์ในช่วง {years} ปีที่ผ่านมา ล่าสุดอยู่บน",
+  "timeline.empty": "ช่วง {years} ปีที่ผ่านมายังไม่มีเหตุการณ์พิเศษ",
+  "timeline.ageInfant": "ขวบปีแรก",
+  "timeline.age": "อายุ {age} ปี",
+  "timeline.times": "{count} ครั้ง",
+  "timeline.effects": "ผลของเหตุการณ์",
+  "timeline.openHistory": "ดูประวัติก่อนหน้า ({count} เหตุการณ์)",
+
+  "history.title": "ประวัติชีวิต",
+  "history.pickYear": "เลือกช่วงอายุที่ต้องการดู",
+  "history.close": "ปิด",
+
+  "change.title": "ที่มาของการเปลี่ยนแปลง",
+  "change.period": "ช่วงปีที่ผ่านมา (จนครบ {age} ปี)",
+  "change.total": "รวม",
+  "change.open": "ดูที่มาของ{label} ({change})",
 
   "controls.continue": "ใช้ชีวิตต่อ",
   "controls.continueHint": "เกมจะเดินไปจนถึงวันเกิดครั้งถัดไป",

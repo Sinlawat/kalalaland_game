@@ -83,6 +83,13 @@ export interface YearSummary {
   snapshot: Condition & { looks: number };
 }
 
+// ── Events ──────────────────────────────────────────────────────────────────
+export interface EventRecord {
+  id: string;
+  /** Age when it happened. */
+  ageInMonths: number;
+}
+
 // ── Death ───────────────────────────────────────────────────────────────────
 export const DEATH_CAUSES = ['illness', 'oldAge', 'accident'] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
@@ -115,6 +122,12 @@ export interface GameState {
 
   /** Things that have happened, e.g. 'graduated_high_school'. */
   flags: string[];
+  /**
+   * Every event that happened, in order (added in save version 3).
+   * The single source for "once" checks, the yearly summary's
+   * "what happened" list, and later the life summary.
+   */
+  eventHistory: EventRecord[];
 
   /** Running totals for the current (unfinished) year. */
   yearLog: YearLog;

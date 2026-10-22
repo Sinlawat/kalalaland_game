@@ -130,6 +130,22 @@ export const BALANCE = {
     riskAccidentMax: 1.3,
   },
 
+  events: {
+    /**
+     * How often an event happens while its conditions are met, as a YEARLY
+     * chance. Event data uses the words (what the writer chose in the
+     * template); only these numbers decide what the words mean.
+     * 'guaranteed' is special: it happens in the first month the conditions
+     * are met, so it must also be "once" (checked when the data loads).
+     */
+    yearlyChance: {
+      rare: 0.05,
+      uncommon: 0.15,
+      normal: 0.35,
+      common: 0.7,
+    },
+  },
+
   mortality: {
     /** Yearly death chance in the first year of life (infant mortality). */
     infantYearly: 0.007,

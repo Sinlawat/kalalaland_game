@@ -38,7 +38,11 @@ export function InfoTip({ label, text }: Props) {
         // would close it again in the same tap.
         onClick={() => setOpen(true)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') setOpen(false);
+          if (event.key === 'Escape' && open) {
+            setOpen(false);
+            // Only this tip closes; a surrounding panel (ChangePopover) stays open.
+            event.stopPropagation();
+          }
         }}
       >
         i

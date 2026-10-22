@@ -1,8 +1,8 @@
 import { BALANCE } from '../data/balance';
 import { knowsOwnTraits } from '../engine/passive';
-import type { Condition, Environment, GameState, StatTarget, Traits, YearSummary } from '../engine/types';
+import type { Condition, Environment, GameState, StatTarget, Traits } from '../engine/types';
 import { t } from '../i18n/i18n';
-import { StatBar } from './StatBar';
+import { StatBar, type StatChange } from './StatBar';
 
 // Explicit display order (Object.keys order is an implementation detail).
 const CONDITION_KEYS: (keyof Condition)[] = ['physicalHealth', 'mentalHealth', 'knowledge'];
@@ -10,35 +10,35 @@ const TRAIT_KEYS: (keyof Traits)[] = ['discipline', 'resilience', 'riskTaking'];
 // Work/financial stress stay hidden until the systems that set them exist.
 const ENVIRONMENT_KEYS: (keyof Environment)[] = ['familyWealth', 'familyWarmth'];
 
-interface Props {
-  game: GameState;
-  /** The latest completed year; its totals are the "▲/▼" next to each bar. */
-  lastYear: YearSummary | undefined;
-}
-
 /**
- * The change of a stat over the last year = the sum of its logged sources.
- * Reusing the yearly log (instead of storing last year's values separately)
- * guarantees the number beside the bar equals the total in the summary.
+ * Last year's change of a stat = the sum of its logged sources, plus the
+ * sources themselves for the breakdown popover. Both come from the same log,
+ * so the "▲/▼" number always equals the total shown in the breakdown.
  */
-function yearlyChange(lastYear: YearSummary | undefined, target: StatTarget): number | undefined {
+function lastYearChange(game: GameState, target: StatTarget): StatChange | undefined {
+  const lastYear = game.history.at(-1);
   if (lastYear === undefined) return undefined;
-  return Object.values(lastYear.changes[target] ?? {}).reduce((sum, amount) => sum + amount, 0);
+  const sources = lastYear.changes[target] ?? {};
+  return {
+    total: Object.values(sources).reduce((sum, amount) => sum + amount, 0),
+    sources,
+    explainContext: { age: lastYear.age, physicalWear: game.hidden.physicalWear },
+  };
 }
 
-export function CharacterPanel({ game, lastYear }: Props) {
+export function CharacterPanel({ game }: { game: GameState }) {
   return (
     <div className="panels">
       <section className="card">
         <h2>{t('layer.condition')}</h2>
         {CONDITION_KEYS.map((key) => (
-          <StatBar key={key} label={t(`stat.${key}`)} value={game.condition[key]} change={yearlyChange(lastYear, key)} />
+          <StatBar key={key} label={t(`stat.${key}`)} value={game.condition[key]} change={lastYearChange(game, key)} />
         ))}
       </section>
 
       <section className="card">
         <h2>{t('layer.outcome')}</h2>
-        <StatBar label={t('stat.looks')} value={game.outcome.looks} change={yearlyChange(lastYear, 'looks')} />
+        <StatBar label={t('stat.looks')} value={game.outcome.looks} change={lastYearChange(game, 'looks')} />
       </section>
 
       {/* Traits and environment do not change yet, so they have no change indicator.

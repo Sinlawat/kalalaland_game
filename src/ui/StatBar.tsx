@@ -1,11 +1,20 @@
 import { t } from '../i18n/i18n';
-import { changeClass, formatDelta, formatStat } from './format';
+import { ChangePopover } from './ChangePopover';
+import type { ExplainContext } from './explain';
+import { changeClass, formatStat } from './format';
+
+/** Last year's change of a stat and where it came from. */
+export interface StatChange {
+  total: number;
+  sources: Record<string, number>;
+  explainContext: ExplainContext;
+}
 
 interface Props {
   label: string;
   value: number;
-  /** Change over the last completed year. Omit for stats that have no history. */
-  change?: number | undefined;
+  /** Omit for stats that have no history (traits, environment). */
+  change?: StatChange | undefined;
 }
 
 /**
@@ -15,19 +24,18 @@ interface Props {
  *   [████████▓▓░░░░░░] 76 ▲4.2   gain: the green part is what was added
  *   [████████▒▒░░░░░░] 72 ▼4.2   loss: the red part is what was lost
  *
+ * "▲4.2" is a button: hover, focus or tap shows where the change came from.
  * A styled <div> with role="meter" instead of the native <meter>: native
  * meters pick their own colors per browser and cannot follow our tokens.
  */
 export function StatBar({ label, value, change }: Props) {
-  const cls = change === undefined ? 'neutral' : changeClass(change);
+  const cls = change === undefined ? 'neutral' : changeClass(change.total);
   const hasChange = change !== undefined && cls !== 'neutral';
-  const previous = hasChange ? value - change : value;
+  const previous = hasChange ? value - change.total : value;
   const baseWidth = Math.min(previous, value);
   const deltaWidth = Math.abs(value - previous);
-
-  const deltaText = hasChange ? formatDelta(change) : '';
   const spoken = hasChange
-    ? t(change > 0 ? 'stat.changeUp' : 'stat.changeDown', { amount: Math.abs(change).toFixed(1) })
+    ? t(change.total > 0 ? 'stat.changeUp' : 'stat.changeDown', { amount: Math.abs(change.total).toFixed(1) })
     : '';
 
   return (
@@ -50,8 +58,15 @@ export function StatBar({ label, value, change }: Props) {
         )}
       </div>
       <span className="stat__value">{formatStat(value)}</span>
-      <span className={`stat__change ${cls}`} aria-hidden="true">
-        {deltaText}
+      <span className="stat__change">
+        {hasChange && (
+          <ChangePopover
+            label={label}
+            total={change.total}
+            sources={change.sources}
+            explainContext={change.explainContext}
+          />
+        )}
       </span>
     </div>
   );

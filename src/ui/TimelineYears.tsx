@@ -1,0 +1,45 @@
+import { t } from '../i18n/i18n';
+import { changeClass, formatChange } from './format';
+import type { TimelineYear } from './timeline';
+
+function ageLabel(age: number): string {
+  return age === 0 ? t('timeline.ageInfant') : t('timeline.age', { age });
+}
+
+/**
+ * A list of years, each with its events. Each event carries its own effects
+ * as chips, so one event that changed three stats shows up ONCE, with all
+ * three changes together (instead of once per stat).
+ * Shared by the timeline card and the life-history popup.
+ */
+export function TimelineYears({ years }: { years: TimelineYear[] }) {
+  return (
+    <ol className="timeline-years">
+      {years.map((year) => (
+        <li key={year.age} className="timeline-years__year">
+          <h3 className="timeline-years__age">{ageLabel(year.age)}</h3>
+          <ul className="timeline-years__events">
+            {year.entries.map((entry) => (
+              <li key={entry.id} className="timeline-event">
+                <strong>
+                  {t(`event.${entry.id}.title`)}
+                  {entry.count > 1 && <span className="muted small"> · {t('timeline.times', { count: entry.count })}</span>}
+                </strong>
+                <p>{t(`event.${entry.id}.text`)}</p>
+                {entry.effects.length > 0 && (
+                  <ul className="effect-chips" aria-label={t('timeline.effects')}>
+                    {entry.effects.map((chip) => (
+                      <li key={chip.target} className={`effect-chip effect-chip--${changeClass(chip.amount)}`}>
+                        {t(`stat.${chip.target}`)} {formatChange(chip.amount)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ol>
+  );
+}

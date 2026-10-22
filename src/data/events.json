@@ -1,0 +1,40 @@
+[
+  {
+    "id": "health_infant_vaccine_extra",
+    "conditions": {
+      "ageMin": 0,
+      "ageMax": 1,
+      "stats": [{ "stat": "familyWealth", "op": ">=", "value": 50 }]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": { "physicalHealth": 3 },
+      "setFlags": ["extra_vaccines"]
+    }
+  },
+  {
+    "id": "health_infant_vaccine_basic",
+    "conditions": {
+      "ageMin": 0,
+      "ageMax": 1,
+      "stats": [{ "stat": "familyWealth", "op": "<", "value": 50 }]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {}
+  },
+  {
+    "id": "health_chickenpox",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 12,
+      "flagsNone": ["extra_vaccines"]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": { "physicalHealth": -4, "mentalHealth": -1, "knowledge": -1 }
+    }
+  }
+]

@@ -11,6 +11,7 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
+import { applyEvent, rollEvents } from './events';
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
@@ -42,7 +43,7 @@ function closeYear(state: GameState): void {
  * Simulates ONE month on a state the caller owns (mutates it).
  * Returns a stop reason if the player must look at something now.
  *
- * Order follows the design doc. Steps for finance, events and NPCs will be
+ * Order follows the design doc. Steps for finance and NPCs will be
  * inserted here in later increments.
  */
 function simulateMonthInPlace(state: GameState): StopReason | null {
@@ -59,8 +60,11 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
   applyContributions(state, contributions);
   applyMonthlyWear(state, wearChange);
 
-  // 3. Finance            — increment 2
-  // 4. Events             — increment 3
+  // 3. Finance            — later increment
+
+  // 4. Events (no-choice events only for now: they are applied and appear
+  //    in the yearly summary; the game does not pause for them).
+  for (const event of rollEvents(state, rng)) applyEvent(state, event);
 
   // 5. Death check
   const cause = rollDeath(state, rng);
