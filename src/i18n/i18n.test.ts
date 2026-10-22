@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { HABIT_OPTIONS } from '../actions/habits';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import { DEATH_CAUSES, REGION_IDS, type HabitKey } from '../engine/types';
+import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, type HabitKey } from '../engine/types';
 import { hasMessage, t } from './i18n';
 
 describe('t', () => {

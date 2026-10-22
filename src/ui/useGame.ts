@@ -12,18 +12,17 @@
  * on by itself if the player had it running.
  *
  * Saving (D44): on a new life, every birthday, death, pause, when a choice
- * popup appears and when it is answered, habit change while paused, and
- * when the page is hidden or closed.
+ * popup appears and when it is answered, and when the page is hidden or
+ * closed. (The player does not change habits: events do, D50.)
  * Not every month: at most one year (15 s) can be lost, and the save grows
  * with the life, so writing it 12 times a year would be wasted work.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { setHabit } from '../actions/habits';
 import { acknowledgeTraitReveal, shouldRevealTraits } from '../actions/traits';
 import { advanceOneMonth, resolveChoice, settlePendingChoices } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import type { GameState, HabitKey, Habits } from '../engine/types';
+import type { GameState } from '../engine/types';
 import { deleteSave, loadGame, saveGame, type LoadResult } from '../save/save';
 import { getBrowserStorage } from './browserStorage';
 
@@ -48,7 +47,6 @@ export interface GameController {
   resume(): void;
   togglePlay(): void;
   setSpeed(speed: Speed): void;
-  changeHabit<K extends HabitKey>(habit: K, level: Habits[K]): void;
   acknowledgeTraits(): void;
   /** The player's answer to the choice popup. */
   choose(choiceId: string): void;
@@ -138,12 +136,6 @@ export function useGame(): GameController {
       setRunning(!running);
     },
     setSpeed,
-    changeHabit: (habit, level) => {
-      if (game === null || game.death !== null) return;
-      const next = setHabit(game, habit, level);
-      setGame(next);
-      if (!running) persist(next); // while running, the next birthday saves it
-    },
     acknowledgeTraits: () => {
       if (game === null || !shouldRevealTraits(game)) return;
       const next = acknowledgeTraitReveal(game);

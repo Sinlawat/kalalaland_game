@@ -9,7 +9,10 @@ import {
   hasHappened,
   isEligible,
   lockReasons,
-  monthlyChance,
+  monthlyPoolChance,
+  poolEventsPerYear,
+  pickWeighted,
+  lifetimeRoll,
   parseEvents,
   rollEvents,
   traitEffectFactor,
@@ -17,7 +20,6 @@ import {
   type EventDef,
 } from './events';
 import { simulateWholeLife } from './game';
-import { yearlyToMonthly } from './mortality';
 import { createNewLife } from './newLife';
 import { createRng } from './rng';
 import { makeState } from './testUtils';
@@ -109,7 +111,7 @@ describe('parseEvents (data validation)', () => {
         ]),
         'at least one choice must have no conditions',
       ],
-      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats and flags'],
+      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats, flags and lifestyle'],
       ['an unsupported trait', choiceEvent([open('a'), open('b', { traits: { charm: 5 } as never })]), 'unsupported trait "charm"'],
       ['a habit level that does not exist', choiceEvent([open('a'), open('b', { habits: { exercise: 'daily' } as never })]), 'has no level "daily"'],
     ])('rejects %s', (_label, raw, expected) => {
@@ -200,15 +202,6 @@ describe('lockReasons', () => {
   });
 });
 
-describe('monthlyChance', () => {
-  it('is certain for guaranteed events', () => {
-    expect(monthlyChance('guaranteed')).toBe(1);
-  });
-
-  it('turns the yearly chance into an exact monthly chance', () => {
-    expect(monthlyChance('uncommon')).toBeCloseTo(yearlyToMonthly(0.15), 12);
-  });
-});
 
 describe('rollEvents', () => {
   it('fires a guaranteed eligible event immediately and skips ineligible ones', () => {
@@ -240,6 +233,110 @@ describe('applyEvent', () => {
     const state = makeState({ flags: ['x'] });
     applyEvent(state, makeEvent({ effects: { setFlags: ['x'] } }));
     expect(state.flags).toEqual(['x']);
+  });
+});
+
+describe('the event pool (D53)', () => {
+  const poolEvent = (id: string, frequency: EventDef['frequency'], ageMax = 99): EventDef =>
+    makeEvent({ id, frequency, once: false, conditions: { ageMin: 0, ageMax } });
+
+  it('has 4 events a year for children and working age, 3 from 60, 2 from 75', () => {
+    expect([0, 22, 59, 60, 74, 75, 100].map(poolEventsPerYear)).toEqual([4, 4, 4, 3, 3, 2, 2]);
+    expect(monthlyPoolChance(30)).toBeCloseTo(4 / 12, 12);
+  });
+
+  it('at most ONE pool event a month, about 4 a year, however many events are written', () => {
+    for (const size of [1, 50, 2000]) {
+      const events = Array.from({ length: size }, (_, i) => poolEvent(`e${i}`, 'normal'));
+      const state = makeState({ ageInMonths: 30 * 12 });
+      const rng = createRng(size);
+      let total = 0;
+      for (let month = 0; month < 1200; month++) {
+        const got = rollEvents(state, rng, events);
+        expect(got.length).toBeLessThanOrEqual(1);
+        total += got.length;
+      }
+      expect(total / 100).toBeGreaterThan(3.5); // 1200 months = 100 years
+      expect(total / 100).toBeLessThan(4.5);
+    }
+  });
+
+  it('picks by weight: common (14) about 14 times as often as rare (1)', () => {
+    const pool = [poolEvent('r', 'rare'), poolEvent('c', 'common')];
+    const rng = createRng(3);
+    const counts = { r: 0, c: 0 };
+    for (let i = 0; i < 15000; i++) counts[pickWeighted(pool, rng).id as 'r' | 'c'] += 1;
+    expect(counts.c / counts.r).toBeGreaterThan(12);
+    expect(counts.c / counts.r).toBeLessThan(16.5);
+  });
+
+  it('guaranteed events are outside the pool: they always happen, alongside a pool event', () => {
+    const always = makeEvent({ id: 'always', frequency: 'guaranteed', once: true, conditions: { ageMin: 30, ageMax: 30 } });
+    const events = [always, poolEvent('p', 'common')];
+    const state = makeState({ ageInMonths: 30 * 12 });
+    const rng = createRng(1);
+    const months = Array.from({ length: 60 }, () => rollEvents(state, rng, events).map((e) => e.id));
+    expect(months.every((ids) => ids.includes('always'))).toBe(true);
+    expect(months.some((ids) => ids.includes('p'))).toBe(true);
+  });
+
+  it('nothing happens when no pool event fits the age', () => {
+    const later = poolEvent('later', 'common');
+    later.conditions = { ageMin: 50, ageMax: 60 };
+    const rng = createRng(1);
+    for (let month = 0; month < 100; month++) expect(rollEvents(makeState({ ageInMonths: 30 * 12 }), rng, [later])).toEqual([]);
+  });
+
+  it('stays fast with 10,000 events (age index)', () => {
+    const events = Array.from({ length: 10_000 }, (_, i) => {
+      const ageMin = i % 81;
+      return makeEvent({ id: `e${i}`, frequency: 'normal', once: true, conditions: { ageMin, ageMax: ageMin + (i % 15) } });
+    });
+    const state = makeState({ ageInMonths: 0, eventHistory: [] });
+    const rng = createRng(9);
+    const started = performance.now();
+    for (let month = 1; month <= 85 * 12; month++) {
+      state.ageInMonths = month;
+      for (const event of rollEvents(state, rng, events)) state.eventHistory.push({ id: event.id, ageInMonths: month });
+    }
+    expect(performance.now() - started).toBeLessThan(3000); // was ~25 s before the index
+  });
+});
+
+describe('cooldown, lifetime chance and lifestyle conditions', () => {
+  it('a repeatable event with a cooldown waits that many months', () => {
+    const yearly = makeEvent({ id: 'yearly', once: false, cooldownMonths: 12, conditions: { ageMin: 0, ageMax: 99 } });
+    const history = [{ id: 'yearly', ageInMonths: 100 }];
+    expect(isEligible(yearly, makeState({ ageInMonths: 111, eventHistory: history }))).toBe(false);
+    expect(isEligible(yearly, makeState({ ageInMonths: 112, eventHistory: history }))).toBe(true);
+  });
+
+  it('lifetime chance: fixed per life and event, about the right share of lives', () => {
+    expect(lifetimeRoll(42, 'x')).toBe(lifetimeRoll(42, 'x'));
+    const rare = makeEvent({ id: 'gene', lifetimeChance: 0.3, conditions: { ageMin: 0, ageMax: 99 } });
+    const share = Array.from({ length: 4000 }, (_, seed) => isEligible(rare, makeState({ seed }))).filter(Boolean).length / 4000;
+    expect(share).toBeGreaterThan(0.27);
+    expect(share).toBeLessThan(0.33);
+  });
+
+  it('checks the lifestyle the character has right now', () => {
+    const overwork = makeEvent({ conditions: { ageMin: 0, ageMax: 99, habits: { overtime: 'heavy' } } });
+    expect(isEligible(overwork, makeState({ habits: { overtime: 'heavy' } }))).toBe(true);
+    expect(isEligible(overwork, makeState({ habits: { overtime: 'some' } }))).toBe(false);
+  });
+
+  it.each([
+    ['cooldown on a once event', { once: true, cooldownMonths: 12 }, 'only makes sense for a repeatable event'],
+    ['a lifetime chance of 30 (instead of 0.3)', { lifetimeChance: 30 }, 'between 0 and 1'],
+    ['a lifestyle condition with a wrong level', { conditions: { ageMin: 0, ageMax: 1, habits: { sleep: 'never' } } }, 'invalid lifestyle condition'],
+    ['a temporary habit without months', { effects: { habits: { sleep: { level: 'short' } } } }, 'months must be a whole number'],
+  ])('rejects %s', (_label, change, expected) => {
+    expect(() => parseEvents([{ ...makeEvent(), ...change }])).toThrow(expected);
+  });
+
+  it('a locked lifestyle condition is reported as a reason', () => {
+    const choice: EventChoice = { id: 'run', conditions: { habits: { exercise: 'regular' } }, effects: {} };
+    expect(lockReasons(choice, makeState({ habits: { exercise: 'none' } }))).toEqual([{ kind: 'habit', habit: 'exercise', level: 'regular' }]);
   });
 });
 
@@ -288,6 +385,14 @@ describe('trait and habit effects (D41)', () => {
     expect(state.eventHistory[0]!.traitChanges).toEqual({ discipline: 3 });
   });
 
+  it('a temporary habit records its months and starts a timer back to the old level (D56)', () => {
+    const state = makeState({ ageInMonths: 100, habits: { sleep: 'enough' } });
+    applyEvent(state, makeEvent({ effects: { habits: { sleep: { level: 'short', months: 2 } } } }));
+    expect(state.habits.sleep).toBe('short');
+    expect(state.habitTimers.sleep).toEqual({ revertTo: 'enough', untilMonth: 102 });
+    expect(state.eventHistory[0]).toMatchObject({ habitChanges: { sleep: 'short' }, habitMonths: { sleep: 2 } });
+  });
+
   it('switches habits and records only the ones that really changed', () => {
     const state = makeState({ habits: { exercise: 'none', sleep: 'enough' } });
     applyEvent(state, makeEvent({ effects: { habits: { exercise: 'regular', sleep: 'enough' } } }));
@@ -334,10 +439,24 @@ describe('real events over many lives (Monte Carlo)', () => {
     expect(vaccinated.filter((end) => ids(end).includes('health_chickenpox'))).toEqual([]);
   });
 
-  it('most children without extra vaccines get chickenpox by 13 (15% a year for 10 years ≈ 80%)', () => {
+  it('children without extra vaccines nearly all get chickenpox by 13 (few childhood events compete in the pool yet)', () => {
     const basic = ends.filter((end) => !end.flags.includes('extra_vaccines') && end.ageInMonths >= 13 * 12);
     const share = basic.filter((end) => ids(end).includes('health_chickenpox')).length / basic.length;
-    expect(share).toBeGreaterThan(0.65);
-    expect(share).toBeLessThan(0.92);
+    expect(share).toBeGreaterThan(0.9);
+  });
+
+  it('food allergy happens only in about 10% of lives (lifetime chance)', () => {
+    const grown = ends.filter((end) => end.ageInMonths >= 19 * 12);
+    const share = grown.filter((end) => ids(end).includes('health_food_allergy')).length / grown.length;
+    expect(share).toBeGreaterThan(0.05);
+    expect(share).toBeLessThan(0.15);
+  });
+
+  it('malnutrition hits only poor families, at most once per 12 months', () => {
+    for (const end of ends) {
+      const months = end.eventHistory.filter((r) => r.id === 'health_malnutrition').map((r) => r.ageInMonths);
+      if (months.length > 0) expect(end.environment.familyWealth).toBeLessThan(31);
+      months.slice(1).forEach((month, i) => expect(month - months[i]!).toBeGreaterThanOrEqual(12));
+    }
   });
 });

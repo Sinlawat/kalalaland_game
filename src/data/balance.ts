@@ -27,14 +27,15 @@ export const BALANCE = {
 
   earlyChildhood: {
     /**
-     * Design decisions (D34, D35):
-     * - At Grade 1 (ป.1, age 6) the player starts choosing habits and gets
-     *   to know their own traits.
-     * - Before that, habits are not the child's choice:
+     * Design decisions (D35, D50, D51):
+     * - At Grade 1 (ป.1, age 6) the child gets a lifestyle of their own and
+     *   gets to know their own traits. The player never picks the lifestyle:
+     *   it starts from the family (below) and changes only through events.
+     * - Before that, the family decides:
      *   - movement: none for babies; from `playFromAge`, normal play ('light' exercise values)
      *   - sleep: depends on the family environment (Family warmth), from birth
      */
-    playerChoosesHabitsFromAge: 6,
+    ownLifestyleFromAge: 6,
     playFromAge: 2,
     /**
      * Sleep effect = interpolate from the 'short' to the 'enough' sleep values.
@@ -42,6 +43,13 @@ export const BALANCE = {
      * An average family (50) is assumed to look after a young child's sleep well.
      */
     familyWarmthForEnoughSleep: 50,
+    /**
+     * D51: the lifestyle the child starts with at `ownLifestyleFromAge`.
+     * Sleep continues the rule above: 'enough' from `familyWarmthForEnoughSleep`,
+     * otherwise 'short'.
+     */
+    startingExercise: 'light',
+    startingOvertime: 'none',
   },
 
   physicalHealth: {
@@ -132,17 +140,25 @@ export const BALANCE = {
 
   events: {
     /**
-     * How often an event happens while its conditions are met, as a YEARLY
-     * chance. Event data uses the words (what the writer chose in the
-     * template); only these numbers decide what the words mean.
-     * 'guaranteed' is special: it happens in the first month the conditions
-     * are met, so it must also be "once" (checked when the data loads).
+     * The event pool (D53). Each month the game first decides WHETHER
+     * something happens (on average `perYear` times a year for the age band),
+     * then picks ONE eligible event, weighted by its frequency word.
+     * Writing more events therefore adds variety, not frequency.
+     * 'guaranteed' events are outside the pool: they happen in the first
+     * month their conditions are met (so they must be "once").
+     * Bands are read from the top: the first with `fromAge` <= age applies.
      */
-    yearlyChance: {
-      rare: 0.05,
-      uncommon: 0.15,
-      normal: 0.35,
-      common: 0.7,
+    poolEventsPerYear: [
+      { fromAge: 75, perYear: 2 },
+      { fromAge: 60, perYear: 3 },
+      { fromAge: 0, perYear: 4 },
+    ],
+    /** Relative weights when picking from the pool: 'common' is picked 14× as often as 'rare'. */
+    poolWeights: {
+      rare: 1,
+      uncommon: 3,
+      normal: 7,
+      common: 14,
     },
     /**
      * D41: traits set early in life; from this age an event's effect on a

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { setHabit } from '../actions/habits';
 import { advanceOneMonth, advanceUntilStop, resolveChoice, settlePendingChoices, simulateWholeLife } from './game';
 import { createNewLife } from './newLife';
 import type { GameState, StatTarget } from './types';
@@ -112,7 +111,7 @@ describe('habits per month (D38)', () => {
   it('records the habits in effect each month and closes them into the year', () => {
     let state = { ...createNewLife(5), ageInMonths: 6 * 12 };
     state = advanceOneMonth(state).state;
-    state = advanceOneMonth(setHabit(state, 'exercise', 'regular')).state;
+    state = advanceOneMonth({ ...state, habits: { ...state.habits, exercise: 'regular' } }).state;
     expect(state.yearHabits.map((h) => h.exercise)).toEqual(['light', 'regular']);
 
     state = advanceUntilStop(state).state; // to the birthday
@@ -189,7 +188,7 @@ describe('events with choices (D39)', () => {
   });
 
   it('simulations answer choices with the chooser they are given', () => {
-    const end = simulateWholeLife(createNewLife(12), () => 'rider');
+    const end = simulateWholeLife(createNewLife(12), { chooser: () => 'rider' });
     if (end.ageInMonths >= 13 * 12) expect(end.flags).toContain('dream_rider');
   });
 

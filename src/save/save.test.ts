@@ -124,6 +124,17 @@ describe('save / load', () => {
     });
   });
 
+  describe('migration v5 → v6 (temporary lifestyle)', () => {
+    it('loads a version 5 save with no temporary lifestyle running', () => {
+      const { habitTimers: _timers, ...v5State } = createNewLife(81);
+      storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 5, savedAt: '2026-10-22T00:00:00.000Z', state: v5State }));
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.habitTimers).toEqual({});
+      expect(() => advanceUntilStop(result.state)).not.toThrow();
+    });
+  });
+
   it('keeps a choice that was waiting when the page closed', () => {
     // Born in March, 143 months old: the next month is the dream event.
     const waiting = advanceOneMonth({ ...createNewLife(7), birthMonth: 3, ageInMonths: 143 }).state;

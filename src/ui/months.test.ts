@@ -58,6 +58,20 @@ describe('monthSlots (calendar year, January to December)', () => {
   });
 });
 
+describe('monthSlots: lifestyle per month', () => {
+  it('shows habits only from Grade 1 (age 6); before that the family decides', () => {
+    // Born in January, 74 months old (6 years 2 months): March of the calendar year.
+    const state = makeState({
+      ageInMonths: 74,
+      birthMonth: 1,
+      history: [closedYear(6, Array(12).fill(regular))],
+      yearHabits: [lazy, lazy],
+    });
+    const shown = monthSlots(state).filter((s) => s.habits).map((s) => s.monthOfLife);
+    expect(shown).toEqual([72, 73, 74]);
+  });
+});
+
 describe('habitsAtMonth', () => {
   // 14 months old: months 1–12 closed at age 1, months 13–14 in the running year
   const state = makeState({

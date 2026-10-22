@@ -11,7 +11,8 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
-import { applyChoice, applyEvent, findEvent, hasChoices, lockReasons, rollEvents, type EventDef } from './events';
+import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, lockReasons, rollEvents, type EventDef } from './events';
+import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
@@ -55,11 +56,16 @@ function closeYear(state: GameState): void {
  * Order follows the design doc. Steps for finance and NPCs will be
  * inserted here in later increments.
  */
-function simulateMonthInPlace(state: GameState): StopReason | null {
+function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EVENTS): StopReason | null {
   const rng = createRng(state.rngState);
 
-  // 0. Remember which habits were in effect this month (D38: the player can
-  //    change them mid-year, so a year may mix several levels).
+  // 0. Lifestyle for this month (D50, D51, D56): at Grade 1 the family's
+  //    lifestyle becomes the child's; temporary changes that ran out go back.
+  //    Done BEFORE recording, so the month strip shows what really applied.
+  if (state.ageInMonths + 1 === OWN_LIFESTYLE_FROM_MONTH) applyStartingLifestyle(state);
+  expireHabitTimers(state);
+  //    Remember which habits were in effect this month (events can change
+  //    them mid-year, so a year may mix several levels).
   state.yearHabits.push({ ...state.habits });
 
   // 1. Age +1 month
@@ -77,7 +83,7 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
 
   // 4. Events. Without choices: applied now. With choices (D39): queued in
   //    the order they were rolled, and the month pauses here.
-  for (const event of rollEvents(state, rng)) {
+  for (const event of rollEvents(state, rng, events)) {
     if (hasChoices(event)) state.pendingChoices.push({ eventId: event.id, ageInMonths: state.ageInMonths });
     else applyEvent(state, event);
   }
@@ -138,10 +144,10 @@ export function advanceOneMonth(state: GameState): MonthResult {
 }
 
 /** Applies one choice to the oldest waiting event; finishes the month after the last one. Mutates. */
-function resolveChoiceInPlace(state: GameState, choiceId: string): StopReason | null {
+function resolveChoiceInPlace(state: GameState, choiceId: string, events: readonly EventDef[] = EVENTS): StopReason | null {
   const pending = state.pendingChoices[0];
   if (!pending) throw new Error('No event is waiting for a choice');
-  const event = findEvent(pending.eventId);
+  const event = findEvent(pending.eventId, events);
   if (!event) throw new Error(`Unknown event "${pending.eventId}"`);
   applyChoice(state, event, choiceId, pending.ageInMonths);
   state.pendingChoices.shift();
@@ -186,12 +192,24 @@ export const firstAvailableChoice: Chooser = (state, event) => {
   return choice.id;
 };
 
-/** Runs one month and answers its choices with `chooser`. Mutates. */
-function simulateMonthWithChooser(state: GameState, chooser: Chooser): StopReason | null {
-  let stop = simulateMonthInPlace(state);
+/**
+ * Options for the simulation helpers below (tests and tools only).
+ * - chooser: answers events with choices (default: first available choice)
+ * - events: the event list to use (default: the game's). The balance test
+ *   passes [] to measure lifestyle effects without content events mixed in.
+ */
+export interface SimulationOptions {
+  chooser?: Chooser;
+  events?: readonly EventDef[];
+}
+
+/** Runs one month and answers its choices. Mutates. */
+function simulateMonthWithChooser(state: GameState, options: SimulationOptions): StopReason | null {
+  const { chooser = firstAvailableChoice, events = EVENTS } = options;
+  let stop = simulateMonthInPlace(state, events);
   while (stop === 'choice') {
-    const event = findEvent(state.pendingChoices[0]!.eventId)!;
-    stop = resolveChoiceInPlace(state, chooser(state, event));
+    const event = findEvent(state.pendingChoices[0]!.eventId, events)!;
+    stop = resolveChoiceInPlace(state, chooser(state, event), events);
   }
   return stop;
 }
@@ -199,29 +217,26 @@ function simulateMonthWithChooser(state: GameState, chooser: Chooser): StopReaso
 /**
  * Runs months until the next birthday or death (at most 12 months).
  * For tests and tools that want a whole year in one call: choices are
- * answered by `chooser` (the UI never uses this; the player chooses there).
+ * answered by the chooser (the UI never uses this; the player chooses there).
  */
-export function advanceUntilStop(state: GameState, chooser: Chooser = firstAvailableChoice): AdvanceResult {
+export function advanceUntilStop(state: GameState, options: SimulationOptions = {}): AdvanceResult {
   assertCanAdvance(state);
   const next = structuredClone(state);
   let monthsAdvanced = 0;
   // Guard against an endless loop if a future change removes the birthday stop.
   while (monthsAdvanced < MONTHS_PER_YEAR) {
     monthsAdvanced += 1;
-    const stop = simulateMonthWithChooser(next, chooser);
+    const stop = simulateMonthWithChooser(next, options);
     if (stop !== null) return { state: next, stop, monthsAdvanced };
   }
   throw new Error(`No stop point within ${MONTHS_PER_YEAR} months — the loop is broken`);
 }
 
-/**
- * Runs a whole life with fixed habits, for tests and balance simulation.
- * Choices are answered by `chooser`. Not used by the UI.
- */
-export function simulateWholeLife(state: GameState, chooser: Chooser = firstAvailableChoice): GameState {
+/** Runs a whole life, for tests and balance simulation. Not used by the UI. */
+export function simulateWholeLife(state: GameState, options: SimulationOptions = {}): GameState {
   const next = structuredClone(state);
   while (next.death === null) {
-    simulateMonthWithChooser(next, chooser);
+    simulateMonthWithChooser(next, options);
   }
   return next;
 }

@@ -4,13 +4,23 @@
     "conditions": {
       "ageMin": 0,
       "ageMax": 1,
-      "stats": [{ "stat": "familyWealth", "op": ">=", "value": 50 }]
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 50
+        }
+      ]
     },
     "frequency": "guaranteed",
     "once": true,
     "effects": {
-      "stats": { "physicalHealth": 3 },
-      "setFlags": ["extra_vaccines"]
+      "stats": {
+        "physicalHealth": 3
+      },
+      "setFlags": [
+        "extra_vaccines"
+      ]
     }
   },
   {
@@ -18,7 +28,13 @@
     "conditions": {
       "ageMin": 0,
       "ageMax": 1,
-      "stats": [{ "stat": "familyWealth", "op": "<", "value": 50 }]
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 50
+        }
+      ]
     },
     "frequency": "guaranteed",
     "once": true,
@@ -29,12 +45,18 @@
     "conditions": {
       "ageMin": 3,
       "ageMax": 12,
-      "flagsNone": ["extra_vaccines"]
+      "flagsNone": [
+        "extra_vaccines"
+      ]
     },
     "frequency": "uncommon",
     "once": true,
     "effects": {
-      "stats": { "physicalHealth": -4, "mentalHealth": -1, "knowledge": -1 }
+      "stats": {
+        "physicalHealth": -4,
+        "mentalHealth": -1,
+        "knowledge": -1
+      }
     }
   },
   {
@@ -42,15 +64,242 @@
     "conditions": {
       "ageMin": 12,
       "ageMax": 12,
-      "months": [3]
+      "months": [
+        3
+      ]
     },
     "frequency": "guaranteed",
     "once": true,
     "choices": [
-      { "id": "factory", "effects": { "setFlags": ["dream_factory"] } },
-      { "id": "tech", "effects": { "setFlags": ["dream_tech"] } },
-      { "id": "actor", "effects": { "setFlags": ["dream_actor"] } },
-      { "id": "rider", "effects": { "setFlags": ["dream_rider"] } }
+      {
+        "id": "factory",
+        "effects": {
+          "setFlags": [
+            "dream_factory"
+          ]
+        }
+      },
+      {
+        "id": "tech",
+        "effects": {
+          "setFlags": [
+            "dream_tech"
+          ]
+        }
+      },
+      {
+        "id": "actor",
+        "effects": {
+          "setFlags": [
+            "dream_actor"
+          ]
+        }
+      },
+      {
+        "id": "rider",
+        "effects": {
+          "setFlags": [
+            "dream_rider"
+          ]
+        }
+      }
     ]
+  },
+  {
+    "id": "health_food_allergy",
+    "conditions": {
+      "ageMin": 1,
+      "ageMax": 18
+    },
+    "frequency": "normal",
+    "once": true,
+    "lifetimeChance": 0.1,
+    "effects": {
+      "stats": {
+        "physicalHealth": -2
+      },
+      "setFlags": [
+        "food_allergy"
+      ]
+    }
+  },
+  {
+    "id": "health_malnutrition",
+    "conditions": {
+      "ageMin": 1,
+      "ageMax": 18,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 31
+        }
+      ]
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "stats": {
+        "physicalHealth": -5,
+        "mentalHealth": -1
+      }
+    }
+  },
+  {
+    "id": "health_insomnia_family_conflict",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 18,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "habits": {
+        "sleep": "enough"
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "habits": {
+        "sleep": "short"
+      }
+    }
+  },
+  {
+    "id": "health_myopia_hereditary",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 18,
+      "flagsNone": [
+        "myopia"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "lifetimeChance": 0.3,
+    "effects": {
+      "setFlags": [
+        "myopia",
+        "wears_glasses"
+      ]
+    }
+  },
+  {
+    "id": "health_presbyopia",
+    "conditions": {
+      "ageMin": 40,
+      "ageMax": 60
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "setFlags": [
+        "presbyopia",
+        "wears_glasses"
+      ]
+    }
+  },
+  {
+    "id": "health_myopia_overwork",
+    "conditions": {
+      "ageMin": 23,
+      "ageMax": 60,
+      "flagsAll": [
+        "working"
+      ],
+      "flagsNone": [
+        "myopia"
+      ],
+      "habits": {
+        "overtime": "heavy"
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "setFlags": [
+        "myopia",
+        "wears_glasses"
+      ]
+    }
+  },
+  {
+    "id": "family_developmental_delay",
+    "conditions": {
+      "ageMin": 4,
+      "ageMax": 6,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": -2
+      }
+    }
+  },
+  {
+    "id": "family_developmental_support",
+    "conditions": {
+      "ageMin": 1,
+      "ageMax": 6,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 70
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 3
+      }
+    }
+  },
+  {
+    "id": "family_early_screen_time",
+    "conditions": {
+      "ageMin": 4,
+      "ageMax": 6,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 70
+        },
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 41
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": -3,
+        "physicalHealth": -1,
+        "mentalHealth": -2
+      },
+      "setFlags": [
+        "early_screen_time"
+      ]
+    }
   }
 ]

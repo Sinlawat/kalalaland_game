@@ -7,6 +7,13 @@
  *   choice's `effects` are applied. Choices whose conditions are not met are
  *   still shown, disabled, with the reason.
  *
+ * Which events happen (D53, the event pool):
+ * - 'guaranteed' events happen in the first month their conditions are met;
+ * - every other eligible event sits in a POOL. Each month the game decides
+ *   whether something happens (a few times a year, by age), and if so picks
+ *   ONE event from the pool, weighted by its frequency word. Writing more
+ *   events adds variety, not frequency.
+ *
  * This module:
  * 1. validates the data when it loads (a typo must fail loudly, not
  *    silently make an event never happen),
@@ -17,25 +24,16 @@
 
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
-import { yearlyToMonthly } from './mortality';
-import type { Rng } from './rng';
+import { setHabitFromEvent } from './lifestyle';
+import { createRng, type Rng } from './rng';
 import { applyContributions, clampStat, type Contribution } from './stats';
-import {
-  EXERCISE_LEVELS,
-  OVERTIME_LEVELS,
-  SLEEP_LEVELS,
-  type EventRecord,
-  type GameState,
-  type HabitKey,
-  type Habits,
-  type StatTarget,
-  type TraitKey,
-} from './types';
+import { HABIT_LEVELS, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey } from './types';
 
 // ── Data types ──────────────────────────────────────────────────────────────
 
 export const FREQUENCIES = ['guaranteed', 'rare', 'uncommon', 'normal', 'common'] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
+export type PoolFrequency = Exclude<Frequency, 'guaranteed'>;
 
 /** Values a condition may test. */
 export const CONDITION_STATS = [
@@ -52,13 +50,6 @@ export type EffectStat = (typeof EFFECT_STATS)[number];
 /** Traits an effect may change (D41: halved from age 15). */
 export const EFFECT_TRAITS = ['discipline', 'resilience', 'riskTaking'] as const satisfies readonly TraitKey[];
 
-/** Habit levels an effect may switch to. */
-export const HABIT_LEVELS: { readonly [K in HabitKey]: readonly Habits[K][] } = {
-  exercise: EXERCISE_LEVELS,
-  sleep: SLEEP_LEVELS,
-  overtime: OVERTIME_LEVELS,
-};
-
 /** Flags that game systems (not events) set; conditions may test them. */
 export const SYSTEM_FLAGS = ['working', 'traits_revealed'] as const;
 
@@ -73,6 +64,8 @@ export interface CharacterConditions {
   stats?: StatCondition[];
   flagsAll?: string[];
   flagsNone?: string[];
+  /** The lifestyle the character must have right now, e.g. { overtime: 'heavy' }. */
+  habits?: Partial<Habits>;
 }
 
 export interface EventConditions extends CharacterConditions {
@@ -83,10 +76,13 @@ export interface EventConditions extends CharacterConditions {
   months?: number[];
 }
 
+/** A lifestyle change: a level (lasting), or a level for some months (D56). */
+export type HabitEffect<K extends HabitKey> = Habits[K] | { level: Habits[K]; months: number };
+
 export interface EventEffects {
   stats?: Partial<Record<EffectStat, number>>;
   traits?: Partial<Record<TraitKey, number>>;
-  habits?: Partial<Habits>;
+  habits?: { [K in HabitKey]?: HabitEffect<K> };
   setFlags?: string[];
   removeFlags?: string[];
 }
@@ -107,6 +103,13 @@ export interface EventDef {
   conditions: EventConditions;
   frequency: Frequency;
   once: boolean;
+  /** Repeatable events: months to wait after an occurrence before it can happen again. */
+  cooldownMonths?: number;
+  /**
+   * 0–1: the share of lives in which this event can EVER happen (e.g. a
+   * hereditary condition). Decided once per life, see `lifetimeRoll`.
+   */
+  lifetimeChance?: number;
   effects?: EventEffects;
   choices?: EventChoice[];
 }
@@ -127,6 +130,15 @@ function unknownKeys(value: Record<string, unknown>, allowed: readonly string[])
   return Object.keys(value).filter((key) => !allowed.includes(key));
 }
 
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) > 0;
+}
+
+function isHabitLevel(habit: string, level: unknown): boolean {
+  const levels = HABIT_LEVELS[habit as HabitKey] as readonly unknown[] | undefined;
+  return levels !== undefined && levels.includes(level);
+}
+
 /** Collects problems and flag usage while one file is checked. */
 interface Checker {
   problems: string[];
@@ -134,7 +146,7 @@ interface Checker {
   flagsTested: { at: string; flag: string }[];
 }
 
-/** stats / flagsAll / flagsNone: shared by event conditions and choice conditions. */
+/** stats / flagsAll / flagsNone / habits: shared by event conditions and choice conditions. */
 function checkCharacterConditions(c: Record<string, unknown>, at: string, check: Checker): void {
   if (c.stats !== undefined) {
     if (!Array.isArray(c.stats)) check.problems.push(`${at}: conditions.stats must be a list`);
@@ -157,6 +169,13 @@ function checkCharacterConditions(c: Record<string, unknown>, at: string, check:
     if (list === undefined) continue;
     if (!isStringArray(list)) check.problems.push(`${at}: ${key} must be a list of flag names`);
     else list.forEach((flag) => check.flagsTested.push({ at, flag }));
+  }
+  if (c.habits !== undefined) {
+    if (!isRecord(c.habits)) check.problems.push(`${at}: conditions.habits must be an object`);
+    else
+      for (const [habit, level] of Object.entries(c.habits)) {
+        if (!isHabitLevel(habit, level)) check.problems.push(`${at}: invalid lifestyle condition ${habit} = ${JSON.stringify(level)}`);
+      }
   }
 }
 
@@ -187,10 +206,14 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   if (e.habits !== undefined) {
     if (!isRecord(e.habits)) problems.push(`${at}: effects.habits must be an object`);
     else
-      for (const [habit, level] of Object.entries(e.habits)) {
-        const levels = HABIT_LEVELS[habit as HabitKey] as readonly unknown[] | undefined;
-        if (!levels) problems.push(`${at}: effect on unknown habit "${habit}"`);
-        else if (!levels.includes(level)) problems.push(`${at}: habit "${habit}" has no level ${JSON.stringify(level)}`);
+      for (const [habit, spec] of Object.entries(e.habits)) {
+        const level = isRecord(spec) ? spec.level : spec;
+        if (!(habit in HABIT_LEVELS)) problems.push(`${at}: effect on unknown habit "${habit}"`);
+        else if (!isHabitLevel(habit, level)) problems.push(`${at}: habit "${habit}" has no level ${JSON.stringify(level)}`);
+        if (isRecord(spec)) {
+          for (const key of unknownKeys(spec, ['level', 'months'])) problems.push(`${at}: habit "${habit}": unknown field "${key}"`);
+          if (!isPositiveInteger(spec.months)) problems.push(`${at}: habit "${habit}": months must be a whole number above 0`);
+        }
       }
   }
   for (const key of ['setFlags', 'removeFlags'] as const) {
@@ -224,8 +247,8 @@ function checkChoices(choices: unknown, at: string, check: Checker): void {
     if (choice.conditions === undefined) alwaysAvailable += 1;
     else if (!isRecord(choice.conditions)) problems.push(`${where}: conditions must be an object`);
     else {
-      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsNone'])) {
-        problems.push(`${where}: unknown condition "${key}" (a choice may only test stats and flags)`);
+      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsNone', 'habits'])) {
+        problems.push(`${where}: unknown condition "${key}" (a choice may only test stats, flags and lifestyle)`);
       }
       checkCharacterConditions(choice.conditions, where, check);
     }
@@ -254,7 +277,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     const id = typeof item.id === 'string' ? item.id : '';
     const at = id ? `event "${id}"` : where;
 
-    for (const key of unknownKeys(item, ['id', 'conditions', 'frequency', 'once', 'effects', 'choices'])) {
+    for (const key of unknownKeys(item, ['id', 'conditions', 'frequency', 'once', 'cooldownMonths', 'lifetimeChance', 'effects', 'choices'])) {
       problems.push(`${at}: unknown field "${key}"`);
     }
     if (!ID_PATTERN.test(id)) problems.push(`${at}: id must be lowercase letters, digits and _`);
@@ -268,12 +291,22 @@ export function parseEvents(raw: unknown): EventDef[] {
     if (item.frequency === 'guaranteed' && item.once !== true) {
       problems.push(`${at}: a guaranteed event must be once (otherwise it happens every month)`);
     }
+    if (item.cooldownMonths !== undefined) {
+      if (!isPositiveInteger(item.cooldownMonths)) problems.push(`${at}: cooldownMonths must be a whole number above 0`);
+      if (item.once === true) problems.push(`${at}: cooldownMonths only makes sense for a repeatable event (once: false)`);
+    }
+    if (item.lifetimeChance !== undefined) {
+      const chance = item.lifetimeChance;
+      if (typeof chance !== 'number' || !(chance > 0 && chance < 1)) {
+        problems.push(`${at}: lifetimeChance must be a number between 0 and 1 (0.1 = 10% of lives)`);
+      }
+    }
 
     const c = item.conditions;
     if (!isRecord(c)) {
       problems.push(`${at}: conditions must be an object`);
     } else {
-      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'months'])) {
+      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months'])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
       const { ageMin, ageMax } = c;
@@ -353,31 +386,70 @@ function meetsStat(state: GameState, s: StatCondition): boolean {
   return s.op === '>=' ? value >= s.value : value < s.value;
 }
 
+function habitEntries(habits: Partial<Habits> | undefined): [HabitKey, string][] {
+  return Object.entries(habits ?? {}) as [HabitKey, string][];
+}
+
 function meetsCharacterConditions(state: GameState, c: CharacterConditions): boolean {
   if (c.flagsAll && !c.flagsAll.every((flag) => state.flags.includes(flag))) return false;
   if (c.flagsNone && c.flagsNone.some((flag) => state.flags.includes(flag))) return false;
+  if (habitEntries(c.habits).some(([habit, level]) => state.habits[habit] !== level)) return false;
   return (c.stats ?? []).every((s) => meetsStat(state, s));
 }
 
-export function hasHappened(state: GameState, eventId: string): boolean {
-  return (
-    state.eventHistory.some((record) => record.id === eventId) ||
-    state.pendingChoices.some((pending) => pending.eventId === eventId)
-  );
+/**
+ * Last month each event happened in, including events still waiting for a
+ * choice. Built once per month, so checking hundreds of events stays cheap
+ * however long the life history gets.
+ */
+export type HappenedIndex = ReadonlyMap<string, number>;
+
+export function happenedIndex(state: Pick<GameState, 'eventHistory' | 'pendingChoices'>): HappenedIndex {
+  const last = new Map<string, number>();
+  for (const record of state.eventHistory) last.set(record.id, record.ageInMonths);
+  for (const pending of state.pendingChoices) last.set(pending.eventId, pending.ageInMonths);
+  return last;
 }
 
-export function isEligible(event: EventDef, state: GameState): boolean {
+export function hasHappened(state: GameState, eventId: string): boolean {
+  return happenedIndex(state).has(eventId);
+}
+
+/**
+ * A number in [0, 1) fixed for this life and this event: the same seed and
+ * event id always give the same value. Used for `lifetimeChance`, so it
+ * behaves as if it were rolled at birth, yet:
+ * - it draws nothing from the game's RNG (no other result changes), and
+ * - it also works for events added by an update after the life started.
+ */
+export function lifetimeRoll(seed: number, eventId: string): number {
+  // FNV-1a hash of "seed|id", then one step of the game's generator to spread the bits.
+  let hash = 0x811c9dc5;
+  for (const char of `${seed}|${eventId}`) {
+    hash ^= char.codePointAt(0)!;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return createRng(hash).next();
+}
+
+export function isEligible(event: EventDef, state: GameState, happened: HappenedIndex = happenedIndex(state)): boolean {
   const c = event.conditions;
   const age = Math.floor(state.ageInMonths / 12);
   if (age < c.ageMin || age > c.ageMax) return false;
-  if (event.once && hasHappened(state, event.id)) return false;
+  const last = happened.get(event.id);
+  if (last !== undefined) {
+    if (event.once) return false;
+    if (event.cooldownMonths !== undefined && state.ageInMonths - last < event.cooldownMonths) return false;
+  }
   if (c.months && !c.months.includes(calendarMonth(state))) return false;
+  if (event.lifetimeChance !== undefined && lifetimeRoll(state.seed, event.id) >= event.lifetimeChance) return false;
   return meetsCharacterConditions(state, c);
 }
 
 /** Why a choice cannot be picked now; the UI turns each reason into text. */
 export type LockReason =
   | { kind: 'stat'; stat: ConditionStat; op: '>=' | '<'; value: number; current: number }
+  | { kind: 'habit'; habit: HabitKey; level: string }
   /** A flag condition is not met; the event's content explains it in its own words. */
   | { kind: 'flag' };
 
@@ -388,6 +460,9 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
   const reasons: LockReason[] = (c.stats ?? [])
     .filter((s) => !meetsStat(state, s))
     .map((s) => ({ kind: 'stat', stat: s.stat, op: s.op, value: s.value, current: readConditionStat(state, s.stat) }));
+  for (const [habit, level] of habitEntries(c.habits)) {
+    if (state.habits[habit] !== level) reasons.push({ kind: 'habit', habit, level });
+  }
   const flagsOk =
     (c.flagsAll ?? []).every((flag) => state.flags.includes(flag)) &&
     !(c.flagsNone ?? []).some((flag) => state.flags.includes(flag));
@@ -395,20 +470,70 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
   return reasons;
 }
 
-export function monthlyChance(frequency: Frequency): number {
-  if (frequency === 'guaranteed') return 1;
-  return yearlyToMonthly(BALANCE.events.yearlyChance[frequency]);
+// ── Selection: guaranteed events + the pool (D53) ───────────────────────────
+
+/** Ages above this share one bucket in the age index. */
+const MAX_INDEXED_AGE = 120;
+
+/**
+ * Events grouped by every whole year of age they can happen in, keeping the
+ * file order within a year (so results never depend on the grouping).
+ * Built once per event list; with thousands of events a month then only
+ * looks at the few that fit the age, instead of all of them.
+ */
+const ageIndexCache = new WeakMap<readonly EventDef[], EventDef[][]>();
+
+function ageIndex(events: readonly EventDef[]): EventDef[][] {
+  let index = ageIndexCache.get(events);
+  if (!index) {
+    index = Array.from({ length: MAX_INDEXED_AGE + 1 }, () => []);
+    for (const event of events) {
+      const last = Math.min(event.conditions.ageMax, MAX_INDEXED_AGE);
+      for (let age = Math.min(event.conditions.ageMin, MAX_INDEXED_AGE); age <= last; age++) index[age]!.push(event);
+    }
+    ageIndexCache.set(events, index);
+  }
+  return index;
+}
+
+/** D53: average number of pool events per year at this age. */
+export function poolEventsPerYear(age: number): number {
+  const band = BALANCE.events.poolEventsPerYear.find((b) => age >= b.fromAge);
+  return band ? band.perYear : 0;
+}
+
+/** Chance that ONE pool event happens in a month. */
+export function monthlyPoolChance(age: number): number {
+  return Math.min(1, poolEventsPerYear(age) / 12);
+}
+
+/** Picks one event, each with probability weight / total weight. */
+export function pickWeighted(pool: readonly EventDef[], rng: Rng): EventDef {
+  const weights = pool.map((event) => BALANCE.events.poolWeights[event.frequency as PoolFrequency]);
+  let roll = rng.next() * weights.reduce((sum, w) => sum + w, 0);
+  for (let i = 0; i < pool.length; i++) {
+    roll -= weights[i]!;
+    if (roll < 0) return pool[i]!;
+  }
+  return pool.at(-1)!; // floating-point safety: roll landed exactly on the total
 }
 
 /**
- * Which events happen this month. Eligibility is checked for all events
- * BEFORE any is applied, so the order of events in the file cannot make
- * one event unlock another within the same month.
+ * Which events happen this month: every eligible guaranteed event, plus at
+ * most one event from the pool. Eligibility is checked for all events
+ * BEFORE any is applied, so one event cannot unlock another in the same month.
+ * The RNG is used only when the pool is not empty: one draw for "does
+ * something happen", one more to pick.
  */
 export function rollEvents(state: GameState, rng: Rng, events: readonly EventDef[] = EVENTS): EventDef[] {
-  return events
-    .filter((event) => isEligible(event, state))
-    .filter((event) => rng.chance(monthlyChance(event.frequency)));
+  const age = Math.floor(state.ageInMonths / 12);
+  const happened = happenedIndex(state);
+  const eligible = ageIndex(events)[Math.min(age, MAX_INDEXED_AGE)]!.filter((event) => isEligible(event, state, happened));
+
+  const result = eligible.filter((event) => event.frequency === 'guaranteed');
+  const pool = eligible.filter((event) => event.frequency !== 'guaranteed');
+  if (pool.length > 0 && rng.chance(monthlyPoolChance(age))) result.push(pickWeighted(pool, rng));
+  return result;
 }
 
 // ── Effects ─────────────────────────────────────────────────────────────────
@@ -445,13 +570,17 @@ function applyEffects(state: GameState, eventId: string, effects: EventEffects, 
   }
   if (Object.keys(traitChanges).length > 0) record.traitChanges = traitChanges;
 
-  const habitChanges: Partial<Habits> = {};
-  for (const [habit, level] of Object.entries(effects.habits ?? {}) as [HabitKey, Habits[HabitKey]][]) {
-    if (state.habits[habit] === level) continue;
-    (state.habits as Record<HabitKey, string>)[habit] = level;
-    (habitChanges as Record<HabitKey, string>)[habit] = level;
+  const habitChanges: Record<string, string> = {};
+  const habitMonths: Partial<Record<HabitKey, number>> = {};
+  for (const [habit, spec] of Object.entries(effects.habits ?? {}) as [HabitKey, HabitEffect<HabitKey>][]) {
+    const level = typeof spec === 'string' ? spec : spec.level;
+    const months = typeof spec === 'string' ? undefined : spec.months;
+    if (!setHabitFromEvent(state, habit, level as Habits[typeof habit], months)) continue;
+    habitChanges[habit] = level;
+    if (months !== undefined) habitMonths[habit] = months;
   }
-  if (Object.keys(habitChanges).length > 0) record.habitChanges = habitChanges;
+  if (Object.keys(habitChanges).length > 0) record.habitChanges = habitChanges as Partial<Habits>;
+  if (Object.keys(habitMonths).length > 0) record.habitMonths = habitMonths;
 
   for (const flag of effects.setFlags ?? []) {
     if (!state.flags.includes(flag)) state.flags.push(flag);

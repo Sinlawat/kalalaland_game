@@ -40,7 +40,7 @@ export function explainParams({ age, physicalWear }: ExplainContext): Record<str
     mindNormal: BALANCE.mentalHealth.setPoint,
     mindRate: percent(BALANCE.mentalHealth.driftRatePerYear),
     playFrom: BALANCE.earlyChildhood.playFromAge,
-    gradeOne: BALANCE.earlyChildhood.playerChoosesHabitsFromAge,
+    gradeOne: BALANCE.earlyChildhood.ownLifestyleFromAge,
     warmthForSleep: BALANCE.earlyChildhood.familyWarmthForEnoughSleep,
     growFrom: BALANCE.knowledge.childhoodStartAge,
     growTo: BALANCE.knowledge.childhoodEndAge,

@@ -12,23 +12,34 @@ interface Props {
 
 const TRAIT_STATS = ['discipline', 'resilience', 'riskTaking'];
 
+/** Text the game writes itself for one unmet condition. */
+function automaticReason(game: GameState, reason: LockReason): string {
+  switch (reason.kind) {
+    case 'flag':
+      return t('choice.locked.generic');
+    case 'habit':
+      return t('choice.locked.habit', { habit: t(`habit.${reason.habit}`), level: t(`habit.${reason.habit}.${reason.level}`) });
+    case 'stat':
+      // Before Grade 1 the child does not know their traits (D35): don't spell them out.
+      if (TRAIT_STATS.includes(reason.stat) && !knowsOwnTraits(game)) return t('choice.locked.generic');
+      return t(reason.op === '>=' ? 'choice.locked.atLeast' : 'choice.locked.below', {
+        stat: t(`stat.${reason.stat}`),
+        value: reason.value,
+        current: formatStat(reason.current),
+      });
+  }
+}
+
 /**
  * Text for a locked choice (D39: shown disabled, with the reason).
- * Stat conditions explain themselves ("needs knowledge 70, now 45");
- * flag conditions use the event's own words, written with the content.
- * Before Grade 1 the child does not know their traits (D35), so a trait
- * condition is not spelled out then.
+ * The writer's own words win when the content has them (required for flag
+ * conditions, optional otherwise, e.g. house rules: "your parents don't
+ * allow games after 10 pm"). Otherwise the game explains each condition.
  */
-function reasonText(game: GameState, eventId: string, choice: EventChoice, reason: LockReason): string {
-  if (reason.kind === 'flag' || (TRAIT_STATS.includes(reason.stat) && !knowsOwnTraits(game))) {
-    const key = `event.${eventId}.choice.${choice.id}.locked`;
-    return hasMessage(key) ? t(key) : t('choice.locked.generic');
-  }
-  return t(reason.op === '>=' ? 'choice.locked.atLeast' : 'choice.locked.below', {
-    stat: t(`stat.${reason.stat}`),
-    value: reason.value,
-    current: formatStat(reason.current),
-  });
+function lockedText(game: GameState, eventId: string, choice: EventChoice, reasons: LockReason[]): string {
+  const key = `event.${eventId}.choice.${choice.id}.locked`;
+  if (hasMessage(key)) return t(key);
+  return reasons.map((reason) => automaticReason(game, reason)).join(' · ');
 }
 
 /**
@@ -90,7 +101,7 @@ export function ChoiceDialog({ game, onChoose }: Props) {
               </button>
               {locked && (
                 <p id={reasonId} className="choice-list__reason">
-                  🔒 {reasons.map((reason) => reasonText(game, event.id, choice, reason)).join(' · ')}
+                  🔒 {lockedText(game, event.id, choice, reasons)}
                 </p>
               )}
             </li>

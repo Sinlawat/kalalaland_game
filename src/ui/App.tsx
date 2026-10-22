@@ -4,8 +4,8 @@ import { CharacterPanel } from './CharacterPanel';
 import { ChoiceDialog } from './ChoiceDialog';
 import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
-import { HabitControls } from './HabitControls';
 import { LifeTimeline } from './LifeTimeline';
+import { LifestylePanel } from './LifestylePanel';
 import { PlaybackBar } from './PlaybackBar';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
@@ -74,7 +74,7 @@ export function App() {
         </div>
 
         <div className="play__habits">
-          <HabitControls game={game} onChange={controller.changeHabit} />
+          <LifestylePanel game={game} />
         </div>
       </div>
 

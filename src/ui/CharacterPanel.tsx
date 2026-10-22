@@ -52,7 +52,7 @@ export function CharacterPanel({ game }: { game: GameState }) {
           TRAIT_KEYS.map((key) => <StatBar key={key} label={t(`stat.${key}`)} value={game.traits[key]} />)
         ) : (
           <>
-            <p>{t('traits.locked', { age: BALANCE.earlyChildhood.playerChoosesHabitsFromAge })}</p>
+            <p>{t('traits.locked', { age: BALANCE.earlyChildhood.ownLifestyleFromAge })}</p>
             <p className="muted small">{t('traits.lockedReason')}</p>
           </>
         )}

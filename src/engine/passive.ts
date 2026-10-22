@@ -23,16 +23,15 @@ export function isWorking(state: Pick<GameState, 'flags'>): boolean {
 
 /** Grade 1 (ป.1): the age at which the child starts making their own choices. */
 function reachedGradeOne(state: Pick<GameState, 'ageInMonths'>): boolean {
-  return ageInYears(state) >= BALANCE.earlyChildhood.playerChoosesHabitsFromAge;
+  return ageInYears(state) >= BALANCE.earlyChildhood.ownLifestyleFromAge;
 }
 
 /**
- * D34: the player chooses habits from Grade 1. Before that the stored habits
- * are ignored and early-childhood rules apply. Both the engine and the habit
- * action use this function, so "what the UI allows" and "what the engine
- * does" cannot drift apart.
+ * D34/D50: from Grade 1 the child has a lifestyle of their own and the
+ * engine applies `state.habits`. Before that the family decides (see
+ * exerciseAndSleepEffects). The player never picks habits; events change them.
  */
-export function canChooseHabits(state: Pick<GameState, 'ageInMonths'>): boolean {
+export function hasOwnLifestyle(state: Pick<GameState, 'ageInMonths'>): boolean {
   return reachedGradeOne(state);
 }
 
@@ -84,7 +83,7 @@ export interface YearlyEffect {
  */
 function exerciseAndSleepEffects(state: GameState, table: ExerciseSleepTable): YearlyEffect[] {
   const { habits, environment } = state;
-  if (canChooseHabits(state)) {
+  if (hasOwnLifestyle(state)) {
     return [
       { source: `habit.exercise.${habits.exercise}`, yearly: table.exercise[habits.exercise] },
       { source: `habit.sleep.${habits.sleep}`, yearly: table.sleep[habits.sleep] },
@@ -210,7 +209,7 @@ function looksContributions(state: GameState, age: number): Contribution[] {
   if (age >= b.agingStartAge) {
     result.push({ target: 'looks', source: 'body.aging', amount: perMonth(b.agingPerYear) });
   }
-  if (canChooseHabits(state) && state.habits.exercise === 'regular') {
+  if (hasOwnLifestyle(state) && state.habits.exercise === 'regular') {
     result.push({ target: 'looks', source: 'habit.exercise.regular', amount: perMonth(b.regularExercisePerYear) });
   }
   return result;

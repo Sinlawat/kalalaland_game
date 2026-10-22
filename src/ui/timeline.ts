@@ -7,7 +7,7 @@
  * Pure functions (no React), so they are unit-tested directly.
  */
 
-import type { EventRecord, GameState, Habits, StatTarget, TraitKey } from '../engine/types';
+import type { EventRecord, GameState, HabitKey, Habits, StatTarget, TraitKey } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
@@ -34,6 +34,8 @@ export interface TimelineEntry {
   choiceId?: string;
   /** Habits the event switched to (the latest occurrence wins). */
   habitChanges?: Partial<Habits>;
+  /** Months for temporary changes (D56), matching `habitChanges`. */
+  habitMonths?: Partial<Record<HabitKey, number>>;
   /** Age of the first occurrence in this year of age. */
   ageInMonths: number;
   /** How many times it happened in this year of age (repeatable events). */
@@ -111,12 +113,14 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         else existing.effects.push({ ...chip });
       }
       if (record.habitChanges) existing.habitChanges = { ...existing.habitChanges, ...record.habitChanges };
+      if (record.habitMonths) existing.habitMonths = { ...existing.habitMonths, ...record.habitMonths };
     } else {
       entries.set(key, {
         key,
         id: record.id,
         ...(record.choiceId !== undefined ? { choiceId: record.choiceId } : {}),
         ...(record.habitChanges ? { habitChanges: { ...record.habitChanges } } : {}),
+        ...(record.habitMonths ? { habitMonths: { ...record.habitMonths } } : {}),
         ageInMonths: record.ageInMonths,
         count: 1,
         effects,

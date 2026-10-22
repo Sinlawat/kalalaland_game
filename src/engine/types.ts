@@ -37,6 +37,19 @@ export interface Habits {
 }
 export type HabitKey = keyof Habits;
 
+/** Every level of every habit, in order from worst to best where that applies. */
+export const HABIT_LEVELS: { readonly [K in HabitKey]: readonly Habits[K][] } = {
+  exercise: EXERCISE_LEVELS,
+  sleep: SLEEP_LEVELS,
+  overtime: OVERTIME_LEVELS,
+};
+
+/**
+ * D56: a lifestyle change that lasts a limited time. When the game month
+ * reaches `untilMonth`, the habit goes back to `revertTo`.
+ */
+export type HabitTimers = { [K in HabitKey]?: { revertTo: Habits[K]; untilMonth: number } };
+
 // ── Layer 4: Condition (0–100, stored as floats, rounded only for display) ──
 export interface Condition {
   physicalHealth: number;
@@ -103,6 +116,8 @@ export interface EventRecord {
   traitChanges?: Partial<Record<TraitKey, number>>;
   /** Habits the event switched to. Absent when no habit changed. */
   habitChanges?: Partial<Habits>;
+  /** For temporary changes (D56): how many months each one lasts. */
+  habitMonths?: Partial<Record<HabitKey, number>>;
 }
 
 /**
@@ -139,7 +154,10 @@ export interface GameState {
 
   traits: Traits;
   environment: Environment;
+  /** Changed only by events (D50); the player never picks them. */
   habits: Habits;
+  /** Temporary lifestyle changes still running (save version 6). */
+  habitTimers: HabitTimers;
   condition: Condition;
   outcome: Outcome;
   /** Values the engine uses but the player never sees as numbers. */

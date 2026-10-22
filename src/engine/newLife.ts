@@ -63,6 +63,7 @@ export function createNewLife(seed: number): GameState {
     flags: [],
     eventHistory: [],
     pendingChoices: [],
+    habitTimers: {},
     yearLog: {},
     yearHabits: [],
     history: [],

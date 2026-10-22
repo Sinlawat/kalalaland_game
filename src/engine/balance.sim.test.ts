@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { simulateWholeLife } from './game';
+import { advanceUntilStop, simulateWholeLife, type SimulationOptions } from './game';
 import { createNewLife } from './newLife';
 import type { DeathCause, GameState, Habits } from './types';
 
@@ -26,16 +26,23 @@ interface LifeStats {
 }
 
 /**
- * Habits are set at birth, but the engine ignores them until Grade 1 (D34),
- * so this is the same as the player choosing them at age 6 and never changing.
+ * Without `habits`: normal lives (family lifestyle at Grade 1, real events).
+ * With `habits`: the targets of D36 are about lifestyle alone, so these lives
+ * run WITHOUT content events (an event could change the habit, or add its
+ * own health effects) and the habit is set right after Grade 1, when the
+ * family's starting lifestyle has been applied (D51), and never changes.
  */
 function runLives(habits?: Pick<Habits, 'exercise' | 'sleep'>): LifeStats {
   const ends: GameState[] = [];
   const causes: Record<DeathCause, number> = { illness: 0, oldAge: 0, accident: 0 };
+  const options: SimulationOptions = habits ? { events: [] } : {};
   for (let seed = 0; seed < LIVES; seed++) {
-    const life = createNewLife(seed);
-    if (habits) life.habits = { ...life.habits, ...habits };
-    const end = simulateWholeLife(life);
+    let life = createNewLife(seed);
+    if (habits) {
+      for (let year = 0; year < 6 && life.death === null; year++) life = advanceUntilStop(life, options).state;
+      life.habits = { ...life.habits, ...habits };
+    }
+    const end = life.death === null ? simulateWholeLife(life, options) : life;
     ends.push(end);
     causes[end.death!.cause] += 1;
   }

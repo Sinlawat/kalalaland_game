@@ -35,11 +35,17 @@ export function TimelineYears({ years }: { years: TimelineYear[] }) {
                 </strong>
                 <p>{entryText(entry)}</p>
                 {entry.habitChanges &&
-                  (Object.entries(entry.habitChanges) as [HabitKey, string][]).map(([habit, level]) => (
-                    <p key={habit} className="muted small">
-                      {t('timeline.habitChange', { habit: t(`habit.${habit}`), level: t(`habit.${habit}.${level}`) })}
-                    </p>
-                  ))}
+                  (Object.entries(entry.habitChanges) as [HabitKey, string][]).map(([habit, level]) => {
+                    const months = entry.habitMonths?.[habit];
+                    const params = { habit: t(`habit.${habit}`), level: t(`habit.${habit}.${level}`) };
+                    return (
+                      <p key={habit} className="muted small">
+                        {months === undefined
+                          ? t('timeline.habitChange', params)
+                          : t('timeline.habitChangeTemporary', { ...params, months })}
+                      </p>
+                    );
+                  })}
                 {entry.effects.length > 0 && (
                   <ul className="effect-chips" aria-label={t('timeline.effects')}>
                     {entry.effects.map((chip) => (

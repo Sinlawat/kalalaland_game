@@ -12,6 +12,7 @@
  */
 
 import { calendarMonth } from '../engine/events';
+import { OWN_LIFESTYLE_FROM_MONTH } from '../engine/lifestyle';
 import type { GameState, HabitKey, Habits } from '../engine/types';
 import { chipsOfRecord } from './timeline';
 
@@ -83,7 +84,9 @@ export function monthSlots(state: MonthSource): MonthSlot[] {
     const records = lived ? state.eventHistory.filter((r) => r.ageInMonths === monthOfLife) : [];
     const eventIds = records.map((r) => r.id);
     const amounts = records.flatMap((record) => chipsOfRecord(state, record).map((chip) => chip.amount));
-    const monthHabits = habitsAtMonth(state, monthOfLife);
+    // Before Grade 1 the family decides (D51): the recorded habits are not
+    // the child's and the engine does not use them, so they are not shown.
+    const monthHabits = monthOfLife >= OWN_LIFESTYLE_FROM_MONTH ? habitsAtMonth(state, monthOfLife) : undefined;
     return {
       calendarMonth: month,
       monthOfLife,
