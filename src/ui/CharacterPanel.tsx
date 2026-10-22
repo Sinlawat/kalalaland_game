@@ -4,6 +4,7 @@ import type { Condition, Environment, GameState, StatTarget, Traits } from '../e
 import { t } from '../i18n/i18n';
 import { habitSourceMonths } from './months';
 import { StatBar, type StatChange } from './StatBar';
+import { useEventFlash } from './useEventFlash';
 
 // Explicit display order (Object.keys order is an implementation detail).
 const CONDITION_KEYS: (keyof Condition)[] = ['physicalHealth', 'mentalHealth', 'knowledge'];
@@ -30,26 +31,46 @@ function lastYearChange(game: GameState, target: StatTarget): StatChange | undef
 }
 
 export function CharacterPanel({ game }: { game: GameState }) {
+  const flashes = useEventFlash(game);
+  const lastYear = game.history.at(-1);
+
   return (
     <div className="panels">
       <section className="card">
         <h2>{t('layer.condition')}</h2>
         {CONDITION_KEYS.map((key) => (
-          <StatBar key={key} label={t(`stat.${key}`)} value={game.condition[key]} change={lastYearChange(game, key)} />
+          <StatBar
+            key={key}
+            label={t(`stat.${key}`)}
+            value={game.condition[key]}
+            change={lastYearChange(game, key)}
+            flash={flashes[key]}
+          />
         ))}
+        {/* The ▲/▼ lags behind events by up to a year; say what it measures. */}
+        {lastYear !== undefined && (
+          <p className="muted small stat-hint">{t('stat.changeHint', { from: lastYear.age - 1, to: lastYear.age })}</p>
+        )}
       </section>
 
       <section className="card">
         <h2>{t('layer.outcome')}</h2>
-        <StatBar label={t('stat.looks')} value={game.outcome.looks} change={lastYearChange(game, 'looks')} />
+        <StatBar
+          label={t('stat.looks')}
+          value={game.outcome.looks}
+          change={lastYearChange(game, 'looks')}
+          flash={flashes.looks}
+        />
       </section>
 
-      {/* Traits and environment do not change yet, so they have no change indicator.
+      {/* Traits and environment have no yearly log, so no ▲/▼; events still flash them.
           D35: traits are hidden until Grade 1 (they still act in the engine). */}
       <section className="card">
         <h2>{t('layer.traits')}</h2>
         {knowsOwnTraits(game) ? (
-          TRAIT_KEYS.map((key) => <StatBar key={key} label={t(`stat.${key}`)} value={game.traits[key]} />)
+          TRAIT_KEYS.map((key) => (
+            <StatBar key={key} label={t(`stat.${key}`)} value={game.traits[key]} flash={flashes[key]} />
+          ))
         ) : (
           <>
             <p>{t('traits.locked', { age: BALANCE.earlyChildhood.ownLifestyleFromAge })}</p>
@@ -61,7 +82,7 @@ export function CharacterPanel({ game }: { game: GameState }) {
       <section className="card">
         <h2>{t('layer.environment')}</h2>
         {ENVIRONMENT_KEYS.map((key) => (
-          <StatBar key={key} label={t(`stat.${key}`)} value={game.environment[key]} />
+          <StatBar key={key} label={t(`stat.${key}`)} value={game.environment[key]} flash={flashes[key]} />
         ))}
       </section>
     </div>

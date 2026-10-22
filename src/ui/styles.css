@@ -193,6 +193,54 @@ p { margin: 0 0 8px; }
 .stat__delta--down { background: var(--down); opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) { .stat__fill, .stat__delta { transition: none; } }
 .stat__value { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Event flash: the effect of an event that JUST happened (useEventFlash).
+   A solid pill in the SAME grid cell as the ▲ (both placed explicitly, so
+   they overlap instead of the pill pushing the ▲ to a new row), and a glow
+   on the bar in the same colour. A timer removes both, so with reduced
+   motion they simply appear and disappear without moving.
+   Not position:absolute — .stat must stay the positioning parent of the
+   change popover panel. */
+.stat__change { grid-column: 4; grid-row: 1; }
+.stat__flash {
+  grid-column: 4;
+  grid-row: 1;
+  z-index: 1;
+  /* Fill the whole cell, plus a ring in the card colour, so the dashed ▲
+     button underneath (a little larger than the cell) does not peek out. */
+  justify-self: stretch;
+  text-align: center;
+  padding: 2px 4px;
+  box-shadow: 0 0 0 4px var(--surface);
+  font-size: 0.8rem;
+  border-radius: 999px;
+  color: var(--surface);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  animation: stat-flash 2.5s ease-out forwards;
+}
+.stat__flash--up { background: var(--up); }
+.stat__flash--down { background: var(--down); }
+.stat__glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: stat-glow 2.5s ease-out forwards; }
+.stat__glow--up { background: var(--up); }
+.stat__glow--down { background: var(--down); }
+@keyframes stat-flash {
+  0% { opacity: 0; transform: scale(0.6); }
+  10% { opacity: 1; transform: scale(1.12); }
+  20% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes stat-glow {
+  0%, 30% { opacity: 0.45; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat__flash { animation: none; }
+  .stat__glow { animation: none; opacity: 0.3; }
+}
+.stat-hint { margin: 6px 0 0; }
 .stat__change { font-size: 0.8rem; white-space: nowrap; }
 
 /* ── Lifestyle (read-only, D50) ───────────────────────────────────────── */

@@ -41,6 +41,7 @@
   "stat.fame": "ชื่อเสียง",
   "stat.changeUp": "เพิ่มขึ้น {amount} จากปีก่อน",
   "stat.changeDown": "ลดลง {amount} จากปีก่อน",
+  "stat.changeHint": "▲▼ = รวมทั้งปีที่ผ่านมา (อายุ {from}–{to} ปี) อัปเดตทุกวันเกิด · ป้ายสีที่เด้งขึ้นชั่วครู่ = ผลของเหตุการณ์ที่เพิ่งเกิด",
 
   "habit.exercise": "ออกกำลังกาย",
   "habit.exercise.none": "ไม่ออก",
