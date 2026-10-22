@@ -156,8 +156,28 @@
   "change.total": "รวม",
   "change.open": "ดูที่มาของ{label} ({change})",
 
-  "controls.continue": "ใช้ชีวิตต่อ",
-  "controls.continueHint": "เกมจะเดินไปจนถึงวันเกิดครั้งถัดไป",
+
+  "controls.play": "เล่นต่อ",
+  "controls.pause": "หยุด",
+  "controls.speed": "ความเร็วของเวลา",
+
+  "monthBar.label": "เดือนในปีนี้",
+  "month.1": "ม.ค.",
+  "month.2": "ก.พ.",
+  "month.3": "มี.ค.",
+  "month.4": "เม.ย.",
+  "month.5": "พ.ค.",
+  "month.6": "มิ.ย.",
+  "month.7": "ก.ค.",
+  "month.8": "ส.ค.",
+  "month.9": "ก.ย.",
+  "month.10": "ต.ค.",
+  "month.11": "พ.ย.",
+  "month.12": "ธ.ค.",
+
+  "habit.yearStrip": "ไลฟ์สไตล์แต่ละเดือนของปีนี้",
+  "habit.monthsCount": "{level} {count} เดือน",
+  "change.months": "{count} เดือน",
 
   "death.title": "{name} จากไปเมื่ออายุ {age} ปี",
   "death.cause": "สาเหตุ: {cause}",

@@ -14,6 +14,8 @@ interface Props {
   /** Change per source for this stat in that year. */
   sources: Record<string, number>;
   explainContext: ExplainContext;
+  /** Months a habit source applied, shown as "(3 เดือน)" beside it. */
+  sourceMonths: Record<string, number>;
 }
 
 /**
@@ -29,7 +31,7 @@ interface Props {
  * from the button down to the panel crosses the row, which is outside the
  * widget, so a hover-based panel closes on the way — the bug players hit.
  */
-export function ChangePopover({ label, total, sources, explainContext }: Props) {
+export function ChangePopover({ label, total, sources, explainContext, sourceMonths }: Props) {
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -86,10 +88,14 @@ export function ChangePopover({ label, total, sources, explainContext }: Props) 
         <ul className="change-popover__list">
           {rows.map(([source, amount]) => {
             const sourceName = sourceLabel(source);
+            const months = sourceMonths[source];
             return (
               <li key={source}>
                 <span className="summary__source">
                   {sourceName}
+                  {months !== undefined && months < 12 && (
+                    <span className="muted small">({t('change.months', { count: months })})</span>
+                  )}
                   <InfoTip label={sourceName} text={explainSource(source, explainContext)} />
                 </span>
                 <span className={changeClass(amount)}>{formatChange(amount)}</span>

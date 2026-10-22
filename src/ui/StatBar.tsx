@@ -8,6 +8,8 @@ export interface StatChange {
   total: number;
   sources: Record<string, number>;
   explainContext: ExplainContext;
+  /** Months each habit source applied during that year, e.g. 'habit.sleep.short' → 2. */
+  sourceMonths: Record<string, number>;
 }
 
 interface Props {
@@ -65,6 +67,7 @@ export function StatBar({ label, value, change }: Props) {
             total={change.total}
             sources={change.sources}
             explainContext={change.explainContext}
+            sourceMonths={change.sourceMonths}
           />
         )}
       </span>

@@ -38,7 +38,7 @@ export interface TimelineYear {
   entries: TimelineEntry[];
 }
 
-type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog'>;
+export type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog'>;
 
 /**
  * The summary year that contains month `ageInMonths`, as a month range.
@@ -57,7 +57,7 @@ function summaryYearOf(state: TimelineSource, ageInMonths: number) {
  * per (stat, source) per summary year, so if the same event happened twice in
  * that year, each occurrence gets an equal share.
  */
-function effectsOfOccurrence(state: TimelineSource, id: string, ageInMonths: number): EffectChip[] {
+export function effectsOfOccurrence(state: TimelineSource, id: string, ageInMonths: number): EffectChip[] {
   const year = summaryYearOf(state, ageInMonths);
   const occurrences = state.eventHistory.filter(
     (record) => record.id === id && record.ageInMonths > year.start && record.ageInMonths <= year.end,

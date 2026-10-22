@@ -2,6 +2,7 @@ import { BALANCE } from '../data/balance';
 import { knowsOwnTraits } from '../engine/passive';
 import type { Condition, Environment, GameState, StatTarget, Traits } from '../engine/types';
 import { t } from '../i18n/i18n';
+import { habitSourceMonths } from './months';
 import { StatBar, type StatChange } from './StatBar';
 
 // Explicit display order (Object.keys order is an implementation detail).
@@ -23,6 +24,8 @@ function lastYearChange(game: GameState, target: StatTarget): StatChange | undef
     total: Object.values(sources).reduce((sum, amount) => sum + amount, 0),
     sources,
     explainContext: { age: lastYear.age, physicalWear: game.hidden.physicalWear },
+    // Habits can change mid-year (D38): say how many months each one applied.
+    sourceMonths: habitSourceMonths(lastYear.habits ?? []),
   };
 }
 

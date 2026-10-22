@@ -81,6 +81,11 @@ export interface YearSummary {
   changes: YearLog;
   /** Values at the end of the year, for the life summary chart. */
   snapshot: Condition & { looks: number };
+  /**
+   * Habits in effect in each month of the year, in order (save version 4).
+   * Missing for years played before version 4.
+   */
+  habits?: Habits[];
 }
 
 // ── Events ──────────────────────────────────────────────────────────────────
@@ -131,6 +136,8 @@ export interface GameState {
 
   /** Running totals for the current (unfinished) year. */
   yearLog: YearLog;
+  /** Habits in effect in each month of the current year so far (save version 4). */
+  yearHabits: Habits[];
   /** One entry per completed year of life. */
   history: YearSummary[];
 

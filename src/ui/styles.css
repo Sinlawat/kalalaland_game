@@ -11,6 +11,7 @@
   --accent-text: #ffffff;
   --up: #2f7a4f;
   --down: #b0453a;
+  --mixed: #c08a1e;
   --physical: #3d6b5a;
   --mental: #8a5a9e;
   --notice: #f3ead6;
@@ -31,6 +32,7 @@
     --accent-text: #11201a;
     --up: #7fc79a;
     --down: #e88c80;
+    --mixed: #e0b45a;
     --physical: #7fb39c;
     --mental: #c49ad6;
     --notice: #3a3324;
@@ -339,3 +341,70 @@ p { margin: 0 0 8px; }
 .card__header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .card__header h2 { margin: 0; }
 .button--small { padding: 4px 12px; font-size: 0.85rem; }
+
+/* ── Playback bar (D38): play/pause, speed, month bar ─────────────────── */
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+.playback__play { min-width: 7.5em; }
+.playback .month-bar { flex: 1 1 320px; }
+
+.month-bar { position: relative; }
+.month-bar__slots { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.month-bar__cell { display: grid; justify-items: center; gap: 2px; }
+.month-bar__marker-row { height: 18px; display: flex; align-items: end; }
+.month-bar__slot { width: 100%; height: 10px; border-radius: 3px; background: var(--border); transition: background 0.2s ease; }
+.month-bar__slot--lived { background: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.month-bar__slot--current { outline: 2px solid var(--accent); outline-offset: 1px; }
+.month-bar__slot--good { background: var(--up); }
+.month-bar__slot--bad { background: var(--down); }
+.month-bar__slot--mixed { background: var(--mixed); }
+.month-bar__label { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
+.month-bar__marker { font-size: 0.7rem; line-height: 1; padding: 0 2px; border: 0; background: none; cursor: pointer; }
+.month-bar__marker--good { color: var(--up); }
+.month-bar__marker--bad { color: var(--down); }
+.month-bar__marker--mixed { color: var(--mixed); }
+.month-bar__marker:focus-visible { outline: 2px solid var(--accent); border-radius: 3px; }
+.month-bar__bubble {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 4px);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.month-bar__bubble[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .month-bar__slot { transition: none; } }
+
+/* ── Habit month strip ────────────────────────────────────────────────── */
+.habit-strip { display: grid; gap: 4px; margin-top: 8px; }
+.habit-strip__cells { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; max-width: 220px; }
+.habit-strip__cell { height: 6px; border-radius: 2px; background: var(--border); }
+.habit-strip__cell--good { background: var(--up); }
+.habit-strip__cell--mid { background: var(--mixed); }
+.habit-strip__cell--bad { background: var(--down); }
+
+/* ── Narrow phones: keep everything inside the screen width ───────────── */
+.month-bar, .month-bar__slots, .month-bar__cell { min-width: 0; }
+@media (max-width: 480px) {
+  .stat { grid-template-columns: 6.5em minmax(40px, 1fr) 2.5ch 6.5ch; gap: 6px; }
+  .playback { padding: 8px 10px; }
+  .playback .month-bar { flex-basis: 100%; }
+  .month-bar__label { font-size: 0.55rem; }
+}

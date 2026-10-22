@@ -102,6 +102,17 @@ describe('save / load', () => {
     });
   });
 
+  describe('migration v3 → v4 (habits per month)', () => {
+    it('loads a version 3 save with an empty habit record for the running year', () => {
+      const { yearHabits: _habits, ...v3State } = createNewLife(79);
+      storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 3, savedAt: '2026-10-22T00:00:00.000Z', state: v3State }));
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.yearHabits).toEqual([]);
+      expect(() => advanceUntilStop(result.state)).not.toThrow();
+    });
+  });
+
   it('reports tooNew for a save from a future game version', () => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION + 1, state: {} }));
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'tooNew' });

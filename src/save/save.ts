@@ -14,7 +14,7 @@
 import type { GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 3;
+export const CURRENT_SAVE_VERSION = 4;
 
 /** The subset of the browser Storage API we use. */
 export type SaveStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -47,6 +47,9 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   1: (state) => (isRecord(state) ? { ...state, hidden: { physicalWear: 0 } } : state),
   // v2 → v3: event history (event system). Older lives have no recorded events.
   2: (state) => (isRecord(state) ? { ...state, eventHistory: [] } : state),
+  // v3 → v4: habits per month (D38). The current year starts empty; older
+  // history entries simply have no `habits` (the field is optional there).
+  3: (state) => (isRecord(state) ? { ...state, yearHabits: [] } : state),
 };
 
 function migrate(state: unknown, fromVersion: number): unknown {
@@ -87,6 +90,7 @@ export function isValidGameState(value: unknown): value is GameState {
     Array.isArray(value.flags) &&
     Array.isArray(value.eventHistory) &&
     isRecord(value.yearLog) &&
+    Array.isArray(value.yearHabits) &&
     Array.isArray(value.history) &&
     (value.death === null || isRecord(value.death))
   );

@@ -6,6 +6,7 @@ import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
 import { HabitControls } from './HabitControls';
 import { LifeTimeline } from './LifeTimeline';
+import { PlaybackBar } from './PlaybackBar';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
 import { useGame } from './useGame';
@@ -73,11 +74,8 @@ export function App() {
 
       {shouldRevealTraits(game) && <TraitRevealDialog game={game} onClose={controller.acknowledgeTraits} />}
 
-      <div className="actions actions--sticky">
-        <button type="button" className="button button--primary button--large" onClick={controller.advance}>
-          {t('controls.continue')}
-        </button>
-        <span className="muted small">{t('controls.continueHint')}</span>
+      <div className="actions--sticky">
+        <PlaybackBar game={game} controller={controller} />
       </div>
     </main>
   );

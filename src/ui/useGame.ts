@@ -1,35 +1,58 @@
 /**
- * The bridge between React and the engine.
+ * The bridge between React and the engine, including the real-time runner.
  *
- * React keeps ONE value: the current GameState returned by the engine.
- * Every player action calls a pure engine function and stores the new state.
- * No game rules live here — only "when to call what" and autosave.
+ * React keeps ONE game value: the current GameState returned by the engine.
+ * Every action calls a pure engine function and stores the new state.
+ * No game rules live here — only "when to call what", timing and saving.
+ *
+ * Time (D38): while running, one game month passes every 1.25 s at 1×
+ * (15 s per year). The runner pauses by itself when something needs the
+ * player (a popup) or the character dies, and when the tab is hidden.
+ *
+ * Saving (D44): on a new life, every birthday, death, pause, popup answer,
+ * habit change while paused, and when the page is hidden or closed.
+ * Not every month: at most one year (15 s) can be lost, and the save grows
+ * with the life, so writing it 12 times a year would be wasted work.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { setHabit } from '../actions/habits';
 import { acknowledgeTraitReveal, shouldRevealTraits } from '../actions/traits';
-import { advanceUntilStop } from '../engine/game';
+import { advanceOneMonth } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import type { GameState, HabitKey, Habits, StopReason } from '../engine/types';
+import type { GameState, HabitKey, Habits } from '../engine/types';
 import { deleteSave, loadGame, saveGame, type LoadResult } from '../save/save';
 import { getBrowserStorage } from './browserStorage';
+
+export const SPEEDS = [1, 2, 4] as const;
+export type Speed = (typeof SPEEDS)[number];
+
+/** D38: 15 seconds of real time per game year at 1×. */
+export const MS_PER_MONTH_AT_1X = 15_000 / 12;
 
 export interface GameController {
   /** The life being played, or null on the start screen. */
   game: GameState | null;
-  lastStop: StopReason | null;
   /** A saved life that can be resumed from the start screen. */
   resumable: GameState | null;
   /** Why the save could not be loaded when the page opened, if it failed. */
   loadError: Extract<LoadResult, { status: 'error' }>['reason'] | null;
   saveFailed: boolean;
+  /** The player wants time to run (it may still be held by a popup). */
+  running: boolean;
+  speed: Speed;
   startNewLife(seed: number): void;
   resume(): void;
-  advance(): void;
+  togglePlay(): void;
+  setSpeed(speed: Speed): void;
   changeHabit<K extends HabitKey>(habit: K, level: Habits[K]): void;
   acknowledgeTraits(): void;
   quitToStart(): void;
+}
+
+/** Something on screen needs the player before time can move on. */
+function isHeld(game: GameState): boolean {
+  return game.death !== null || shouldRevealTraits(game);
 }
 
 export function useGame(): GameController {
@@ -38,42 +61,92 @@ export function useGame(): GameController {
   const [boot] = useState<LoadResult>(() => loadGame(storage));
   const [resumable, setResumable] = useState<GameState | null>(boot.status === 'ok' ? boot.state : null);
   const [game, setGame] = useState<GameState | null>(null);
-  const [lastStop, setLastStop] = useState<StopReason | null>(null);
+  const [running, setRunning] = useState(false);
+  const [speed, setSpeed] = useState<Speed>(1);
   const [saveFailed, setSaveFailed] = useState(false);
 
-  /** Every state change happens while the game is paused, so we autosave each time. */
-  const commit = (next: GameState, stop: StopReason | null): void => {
-    setGame(next);
-    setLastStop(stop);
-    setSaveFailed(saveGame(storage, next).status === 'error');
-  };
+  // The latest state for event listeners (pagehide) that live outside renders.
+  const gameRef = useRef<GameState | null>(null);
+  gameRef.current = game;
+
+  const persist = useCallback(
+    (state: GameState) => setSaveFailed(saveGame(storage, state).status === 'error'),
+    [storage],
+  );
+
+  // ── The runner: one month per tick ─────────────────────────────────────
+  // A new timeout is scheduled after every month (each tick produces a new
+  // `game`, which re-runs this effect). Cleanup cancels a pending tick when
+  // the player pauses, changes speed, or a popup appears.
+  useEffect(() => {
+    if (!running || game === null || isHeld(game)) return undefined;
+    const timer = window.setTimeout(() => {
+      const result = advanceOneMonth(game);
+      setGame(result.state);
+      if (result.stop !== null) persist(result.state); // birthday or death
+      if (result.stop === 'death') setRunning(false);
+    }, MS_PER_MONTH_AT_1X / speed);
+    return () => window.clearTimeout(timer);
+  }, [game, running, speed, persist]);
+
+  // ── Pause and save when the page is hidden or closed ───────────────────
+  useEffect(() => {
+    const onHide = () => {
+      if (gameRef.current !== null) persist(gameRef.current);
+      setRunning(false); // nobody is watching: don't let a life run by itself
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') onHide();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onHide);
+    };
+  }, [persist]);
 
   return {
     game,
-    lastStop,
     resumable,
     loadError: boot.status === 'error' ? boot.reason : null,
     saveFailed,
-    startNewLife: (seed) => commit(createNewLife(seed), null),
+    running,
+    speed,
+    startNewLife: (seed) => {
+      const life = createNewLife(seed);
+      setGame(life);
+      persist(life);
+      setRunning(true); // a new life starts living right away
+    },
     resume: () => {
-      if (resumable !== null) commit(resumable, null);
+      if (resumable === null) return;
+      setGame(resumable);
+      setRunning(false); // a resumed life waits for the player to press play
     },
-    advance: () => {
+    togglePlay: () => {
       if (game === null || game.death !== null) return;
-      const result = advanceUntilStop(game);
-      commit(result.state, result.stop);
+      if (running) persist(game);
+      setRunning(!running);
     },
+    setSpeed,
     changeHabit: (habit, level) => {
-      if (game !== null && game.death === null) commit(setHabit(game, habit, level), lastStop);
+      if (game === null || game.death !== null) return;
+      const next = setHabit(game, habit, level);
+      setGame(next);
+      if (!running) persist(next); // while running, the next birthday saves it
     },
     acknowledgeTraits: () => {
-      if (game !== null && shouldRevealTraits(game)) commit(acknowledgeTraitReveal(game), lastStop);
+      if (game === null || !shouldRevealTraits(game)) return;
+      const next = acknowledgeTraitReveal(game);
+      setGame(next);
+      persist(next);
     },
     quitToStart: () => {
       deleteSave(storage);
       setResumable(null);
       setGame(null);
-      setLastStop(null);
+      setRunning(false);
     },
   };
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { advanceUntilStop, simulateWholeLife } from './game';
+import { setHabit } from '../actions/habits';
+import { advanceOneMonth, advanceUntilStop, simulateWholeLife } from './game';
 import { createNewLife } from './newLife';
 import type { GameState, StatTarget } from './types';
 
@@ -72,5 +73,52 @@ describe('simulateWholeLife', () => {
       expect(['illness', 'oldAge', 'accident']).toContain(end.death!.cause);
       expect(end.history).toHaveLength(Math.ceil(end.ageInMonths / 12));
     }
+  });
+});
+
+describe('advanceOneMonth (real-time runner, D38)', () => {
+  it('moves exactly one month and does not mutate the input', () => {
+    const life = createNewLife(3);
+    const before = structuredClone(life);
+    const result = advanceOneMonth(life);
+    expect(result.state.ageInMonths).toBe(1);
+    expect(result.stop).toBeNull();
+    expect(life).toEqual(before);
+  });
+
+  it('reports the birthday on the 12th month', () => {
+    let state = createNewLife(3);
+    const stops = [];
+    for (let i = 0; i < 12; i++) {
+      const result = advanceOneMonth(state);
+      stops.push(result.stop);
+      state = result.state;
+    }
+    expect(stops).toEqual([...Array(11).fill(null), 'yearEnd']);
+  });
+
+  it('gives the same life as advancing a year at a time', () => {
+    let byMonth = createNewLife(42);
+    let byYear = createNewLife(42);
+    for (let year = 0; year < 10; year++) {
+      byYear = advanceUntilStop(byYear).state;
+      for (let m = 0; m < 12; m++) byMonth = advanceOneMonth(byMonth).state;
+    }
+    expect(byMonth).toEqual(byYear);
+  });
+});
+
+describe('habits per month (D38)', () => {
+  it('records the habits in effect each month and closes them into the year', () => {
+    let state = { ...createNewLife(5), ageInMonths: 6 * 12 };
+    state = advanceOneMonth(state).state;
+    state = advanceOneMonth(setHabit(state, 'exercise', 'regular')).state;
+    expect(state.yearHabits.map((h) => h.exercise)).toEqual(['light', 'regular']);
+
+    state = advanceUntilStop(state).state; // to the birthday
+    const closed = state.history.at(-1)!;
+    expect(closed.habits).toHaveLength(12);
+    expect(closed.habits!.slice(0, 2).map((h) => h.exercise)).toEqual(['light', 'regular']);
+    expect(state.yearHabits).toEqual([]);
   });
 });

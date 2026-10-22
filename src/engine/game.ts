@@ -29,25 +29,37 @@ export interface AdvanceResult {
   monthsAdvanced: number;
 }
 
-/** Moves the running year log into history. Called on each birthday. */
+export interface MonthResult {
+  state: GameState;
+  /** 'yearEnd' on a birthday, 'death' when the character died, otherwise null. */
+  stop: StopReason | null;
+}
+
+/** Moves the running year log (and the year's habits) into history. Called on each birthday. */
 function closeYear(state: GameState): void {
   state.history.push({
     age: state.ageInMonths / MONTHS_PER_YEAR,
     changes: state.yearLog,
     snapshot: { ...state.condition, looks: state.outcome.looks },
+    habits: state.yearHabits,
   });
   state.yearLog = {};
+  state.yearHabits = [];
 }
 
 /**
  * Simulates ONE month on a state the caller owns (mutates it).
- * Returns a stop reason if the player must look at something now.
+ * Returns 'yearEnd' on a birthday, 'death' on death, otherwise null.
  *
  * Order follows the design doc. Steps for finance and NPCs will be
  * inserted here in later increments.
  */
 function simulateMonthInPlace(state: GameState): StopReason | null {
   const rng = createRng(state.rngState);
+
+  // 0. Remember which habits were in effect this month (D38: the player can
+  //    change them mid-year, so a year may mix several levels).
+  state.yearHabits.push({ ...state.habits });
 
   // 1. Age +1 month
   state.ageInMonths += 1;
@@ -63,7 +75,7 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
   // 3. Finance            — later increment
 
   // 4. Events (no-choice events only for now: they are applied and appear
-  //    in the yearly summary; the game does not pause for them).
+  //    in the timeline; the game does not pause for them).
   for (const event of rollEvents(state, rng)) applyEvent(state, event);
 
   // 5. Death check
@@ -75,7 +87,7 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
     return 'death';
   }
 
-  // 6. Year end (birthday): close the year log → yearly summary
+  // 6. Year end (birthday): close the year log
   if (state.ageInMonths % MONTHS_PER_YEAR === 0) {
     closeYear(state);
     return 'yearEnd';
@@ -83,15 +95,29 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
   return null;
 }
 
-/**
- * Runs months until the next stop point (design: the UI pauses only when
- * there is something to decide or read). Every birthday is a stop, so this
- * runs at most 12 months.
- */
-export function advanceUntilStop(state: GameState): AdvanceResult {
+function assertAlive(state: GameState): void {
   if (state.death !== null) {
     throw new Error('Cannot advance: this character has already died');
   }
+}
+
+/**
+ * Advances exactly one month. Used by the real-time runner (D38: the UI
+ * calls this once per tick, about every 1.25 s at normal speed).
+ */
+export function advanceOneMonth(state: GameState): MonthResult {
+  assertAlive(state);
+  const next = structuredClone(state);
+  const stop = simulateMonthInPlace(next);
+  return { state: next, stop };
+}
+
+/**
+ * Runs months until the next birthday or death (at most 12 months).
+ * Kept for tests and tools that want a whole year in one call.
+ */
+export function advanceUntilStop(state: GameState): AdvanceResult {
+  assertAlive(state);
   const next = structuredClone(state);
   let monthsAdvanced = 0;
   // Guard against an endless loop if a future change removes the birthday stop.
