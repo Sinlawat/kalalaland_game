@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { advanceUntilStop } from '../engine/game';
+import { advanceOneMonth, advanceUntilStop } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
 import { CURRENT_SAVE_VERSION, deleteSave, loadGame, SAVE_KEY, saveGame, type SaveStorage } from './save';
 
@@ -111,6 +111,25 @@ describe('save / load', () => {
       expect(result.state.yearHabits).toEqual([]);
       expect(() => advanceUntilStop(result.state)).not.toThrow();
     });
+  });
+
+  describe('migration v4 → v5 (events with choices)', () => {
+    it('loads a version 4 save with nothing waiting for a choice', () => {
+      const { pendingChoices: _pending, ...v4State } = createNewLife(80);
+      storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 4, savedAt: '2026-10-22T00:00:00.000Z', state: v4State }));
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.pendingChoices).toEqual([]);
+      expect(() => advanceUntilStop(result.state)).not.toThrow();
+    });
+  });
+
+  it('keeps a choice that was waiting when the page closed', () => {
+    // Born in March, 143 months old: the next month is the dream event.
+    const waiting = advanceOneMonth({ ...createNewLife(7), birthMonth: 3, ageInMonths: 143 }).state;
+    expect(waiting.pendingChoices).toHaveLength(1);
+    saveGame(storage, waiting);
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: waiting });
   });
 
   it('reports tooNew for a save from a future game version', () => {

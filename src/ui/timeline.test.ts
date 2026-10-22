@@ -72,6 +72,46 @@ describe('buildTimeline', () => {
     expect(buildTimeline(state)[0]!.entries[0]!.effects).toEqual([{ target: 'physicalHealth', amount: 2 }]);
   });
 
+  it('shows an event with choices with the choice made, its trait changes and habit changes', () => {
+    const state: Source = {
+      eventHistory: [
+        {
+          id: 'club',
+          ageInMonths: 150,
+          choiceId: 'sports',
+          traitChanges: { discipline: 4 },
+          habitChanges: { exercise: 'regular' },
+        },
+      ],
+      history: [year(12)],
+      yearLog: { physicalHealth: { 'event.club': 1 } },
+    };
+    expect(buildTimeline(state)[0]!.entries[0]).toEqual({
+      key: 'club:sports',
+      id: 'club',
+      choiceId: 'sports',
+      habitChanges: { exercise: 'regular' },
+      ageInMonths: 150,
+      count: 1,
+      effects: [
+        { target: 'physicalHealth', amount: 1 },
+        { target: 'discipline', amount: 4 },
+      ],
+    });
+  });
+
+  it('keeps different choices of the same event apart', () => {
+    const state: Source = {
+      eventHistory: [
+        { id: 'offer', ageInMonths: 300, choiceId: 'yes' },
+        { id: 'offer', ageInMonths: 305, choiceId: 'no' },
+      ],
+      history: [],
+      yearLog: {},
+    };
+    expect(buildTimeline(state)[0]!.entries.map((e) => e.key)).toEqual(['offer:yes', 'offer:no']);
+  });
+
   it('matches the event history of real lives (every event appears once in the timeline)', () => {
     for (let seed = 0; seed < 50; seed++) {
       const end = simulateWholeLife(createNewLife(seed));

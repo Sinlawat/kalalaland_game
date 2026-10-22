@@ -1,7 +1,7 @@
 import { shouldRevealTraits } from '../actions/traits';
 import { t } from '../i18n/i18n';
-import { TraitRevealDialog } from './TraitRevealDialog';
 import { CharacterPanel } from './CharacterPanel';
+import { ChoiceDialog } from './ChoiceDialog';
 import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
 import { HabitControls } from './HabitControls';
@@ -9,6 +9,7 @@ import { LifeTimeline } from './LifeTimeline';
 import { PlaybackBar } from './PlaybackBar';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
+import { TraitRevealDialog } from './TraitRevealDialog';
 import { useGame } from './useGame';
 
 export function App() {
@@ -77,7 +78,13 @@ export function App() {
         </div>
       </div>
 
-      {shouldRevealTraits(game) && <TraitRevealDialog game={game} onClose={controller.acknowledgeTraits} />}
+      {/* One popup at a time. A choice belongs to a month that is still
+          running, so it comes before the trait reveal of the same month. */}
+      {game.pendingChoices.length > 0 ? (
+        <ChoiceDialog key={game.pendingChoices[0]!.eventId} game={game} onChoose={controller.choose} />
+      ) : (
+        shouldRevealTraits(game) && <TraitRevealDialog game={game} onClose={controller.acknowledgeTraits} />
+      )}
     </main>
   );
 }

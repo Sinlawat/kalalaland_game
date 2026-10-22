@@ -36,5 +36,21 @@
     "effects": {
       "stats": { "physicalHealth": -4, "mentalHealth": -1, "knowledge": -1 }
     }
+  },
+  {
+    "id": "life_childhood_dream",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 12,
+      "months": [3]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      { "id": "factory", "effects": { "setFlags": ["dream_factory"] } },
+      { "id": "tech", "effects": { "setFlags": ["dream_tech"] } },
+      { "id": "actor", "effects": { "setFlags": ["dream_actor"] } },
+      { "id": "rider", "effects": { "setFlags": ["dream_rider"] } }
+    ]
   }
 ]

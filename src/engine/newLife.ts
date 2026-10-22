@@ -62,6 +62,7 @@ export function createNewLife(seed: number): GameState {
     hidden: { physicalWear: 0 },
     flags: [],
     eventHistory: [],
+    pendingChoices: [],
     yearLog: {},
     yearHabits: [],
     history: [],

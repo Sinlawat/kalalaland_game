@@ -144,6 +144,13 @@ export const BALANCE = {
       normal: 0.35,
       common: 0.7,
     },
+    /**
+     * D41: traits set early in life; from this age an event's effect on a
+     * trait is multiplied by `traitFactorLater` (habits are hard to change
+     * after lower secondary school).
+     */
+    traitEffectsReducedFromAge: 15,
+    traitFactorLater: 0.5,
   },
 
   mortality: {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { setHabit } from '../actions/habits';
-import { advanceOneMonth, advanceUntilStop, simulateWholeLife } from './game';
+import { advanceOneMonth, advanceUntilStop, resolveChoice, settlePendingChoices, simulateWholeLife } from './game';
 import { createNewLife } from './newLife';
 import type { GameState, StatTarget } from './types';
 
@@ -120,5 +120,92 @@ describe('habits per month (D38)', () => {
     expect(closed.habits).toHaveLength(12);
     expect(closed.habits!.slice(0, 2).map((h) => h.exercise)).toEqual(['light', 'regular']);
     expect(state.yearHabits).toEqual([]);
+  });
+});
+
+describe('events with choices (D39)', () => {
+  const DREAM = 'life_childhood_dream';
+
+  /**
+   * Born in March, one month before the 12th birthday: the next month is
+   * March at age 12 (the dream event), and it is ALSO the birthday — the
+   * hardest case, because the year closes in that same month.
+   */
+  function beforeDream(): GameState {
+    return { ...createNewLife(7), birthMonth: 3, ageInMonths: 12 * 12 - 1 };
+  }
+
+  it('pauses the month at the event: no birthday, no death check yet', () => {
+    const result = advanceOneMonth(beforeDream());
+    expect(result.stop).toBe('choice');
+    expect(result.state.ageInMonths).toBe(144);
+    expect(result.state.pendingChoices).toEqual([{ eventId: DREAM, ageInMonths: 144 }]);
+    expect(result.state.history).toHaveLength(0); // the year is not closed yet
+    expect(result.state.eventHistory.some((r) => r.id === DREAM)).toBe(false);
+  });
+
+  it('refuses to move time on while a choice is waiting', () => {
+    const waiting = advanceOneMonth(beforeDream()).state;
+    expect(() => advanceOneMonth(waiting)).toThrow('waiting for the player');
+  });
+
+  it('finishes the month after the choice: records it in the year it happened, then closes the year', () => {
+    const waiting = advanceOneMonth(beforeDream()).state;
+    const before = structuredClone(waiting);
+    const result = resolveChoice(waiting, 'tech');
+
+    expect(waiting).toEqual(before); // input untouched
+    expect(result.stop).toBe('yearEnd');
+    expect(result.state.pendingChoices).toEqual([]);
+    expect(result.state.flags).toContain('dream_tech');
+    expect(result.state.eventHistory.at(-1)).toEqual({ id: DREAM, ageInMonths: 144, choiceId: 'tech' });
+    expect(result.state.history.at(-1)!.age).toBe(12);
+    expect(() => advanceOneMonth(result.state)).not.toThrow();
+  });
+
+  it('the same choice gives the same life (determinism through the pause)', () => {
+    const play = () => {
+      let state = resolveChoice(advanceOneMonth(beforeDream()).state, 'actor').state;
+      for (let i = 0; i < 24; i++) state = advanceOneMonth(state).state;
+      return state;
+    };
+    expect(play()).toEqual(play());
+  });
+
+  it('answers a queue of choices one by one, oldest first', () => {
+    const waiting = advanceOneMonth(beforeDream()).state;
+    // Two waiting events in one month (artificial: the same event twice, to test the queue only).
+    waiting.pendingChoices.push({ eventId: DREAM, ageInMonths: 144 });
+    const first = resolveChoice(waiting, 'rider');
+    expect(first.stop).toBe('choice');
+    expect(first.state.pendingChoices).toHaveLength(1);
+    expect(first.state.history).toHaveLength(0);
+    const second = resolveChoice(first.state, 'factory');
+    expect(second.stop).toBe('yearEnd');
+  });
+
+  it('rejects a choice when nothing is waiting', () => {
+    expect(() => resolveChoice(createNewLife(1), 'tech')).toThrow('No event is waiting');
+  });
+
+  it('simulations answer choices with the chooser they are given', () => {
+    const end = simulateWholeLife(createNewLife(12), () => 'rider');
+    if (end.ageInMonths >= 13 * 12) expect(end.flags).toContain('dream_rider');
+  });
+
+  describe('settlePendingChoices (after loading a save)', () => {
+    it('returns the very same state when every waiting event still exists', () => {
+      const waiting = advanceOneMonth(beforeDream()).state;
+      expect(settlePendingChoices(waiting).state).toBe(waiting);
+    });
+
+    it('drops an event removed by an update and finishes the month', () => {
+      const waiting = advanceOneMonth(beforeDream()).state;
+      waiting.pendingChoices = [{ eventId: 'deleted_event', ageInMonths: 144 }];
+      const result = settlePendingChoices(waiting);
+      expect(result.state.pendingChoices).toEqual([]);
+      expect(result.stop).toBe('yearEnd');
+      expect(result.state.history.at(-1)!.age).toBe(12);
+    });
   });
 });

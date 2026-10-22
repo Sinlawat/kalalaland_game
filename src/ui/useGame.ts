@@ -7,10 +7,13 @@
  *
  * Time (D38): while running, one game month passes every 1.25 s at 1×
  * (15 s per year). The runner pauses by itself when something needs the
- * player (a popup) or the character dies, and when the tab is hidden.
+ * player (a popup: trait reveal or an event with choices) or the character
+ * dies, and when the tab is hidden. After the popup is answered, time goes
+ * on by itself if the player had it running.
  *
- * Saving (D44): on a new life, every birthday, death, pause, popup answer,
- * habit change while paused, and when the page is hidden or closed.
+ * Saving (D44): on a new life, every birthday, death, pause, when a choice
+ * popup appears and when it is answered, habit change while paused, and
+ * when the page is hidden or closed.
  * Not every month: at most one year (15 s) can be lost, and the save grows
  * with the life, so writing it 12 times a year would be wasted work.
  */
@@ -18,7 +21,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { setHabit } from '../actions/habits';
 import { acknowledgeTraitReveal, shouldRevealTraits } from '../actions/traits';
-import { advanceOneMonth } from '../engine/game';
+import { advanceOneMonth, resolveChoice, settlePendingChoices } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
 import type { GameState, HabitKey, Habits } from '../engine/types';
 import { deleteSave, loadGame, saveGame, type LoadResult } from '../save/save';
@@ -47,12 +50,14 @@ export interface GameController {
   setSpeed(speed: Speed): void;
   changeHabit<K extends HabitKey>(habit: K, level: Habits[K]): void;
   acknowledgeTraits(): void;
+  /** The player's answer to the choice popup. */
+  choose(choiceId: string): void;
   quitToStart(): void;
 }
 
 /** Something on screen needs the player before time can move on. */
 function isHeld(game: GameState): boolean {
-  return game.death !== null || shouldRevealTraits(game);
+  return game.death !== null || game.pendingChoices.length > 0 || shouldRevealTraits(game);
 }
 
 export function useGame(): GameController {
@@ -83,7 +88,7 @@ export function useGame(): GameController {
     const timer = window.setTimeout(() => {
       const result = advanceOneMonth(game);
       setGame(result.state);
-      if (result.stop !== null) persist(result.state); // birthday or death
+      if (result.stop !== null) persist(result.state); // birthday, death, or a choice popup
       if (result.stop === 'death') setRunning(false);
     }, MS_PER_MONTH_AT_1X / speed);
     return () => window.clearTimeout(timer);
@@ -121,7 +126,10 @@ export function useGame(): GameController {
     },
     resume: () => {
       if (resumable === null) return;
-      setGame(resumable);
+      // An update may have removed an event that was waiting for a choice.
+      const settled = settlePendingChoices(resumable).state;
+      setGame(settled);
+      if (settled !== resumable) persist(settled);
       setRunning(false); // a resumed life waits for the player to press play
     },
     togglePlay: () => {
@@ -141,6 +149,13 @@ export function useGame(): GameController {
       const next = acknowledgeTraitReveal(game);
       setGame(next);
       persist(next);
+    },
+    choose: (choiceId) => {
+      if (game === null || game.pendingChoices.length === 0) return;
+      const result = resolveChoice(game, choiceId);
+      setGame(result.state);
+      persist(result.state);
+      if (result.stop === 'death') setRunning(false);
     },
     quitToStart: () => {
       deleteSave(storage);

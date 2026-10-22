@@ -13,7 +13,7 @@
 
 import { calendarMonth } from '../engine/events';
 import type { GameState, HabitKey, Habits } from '../engine/types';
-import { effectsOfOccurrence } from './timeline';
+import { chipsOfRecord } from './timeline';
 
 export const MONTHS_PER_YEAR = 12;
 
@@ -80,8 +80,9 @@ export function monthSlots(state: MonthSource): MonthSlot[] {
     const month = index + 1;
     const monthOfLife = state.ageInMonths + (month - nowCalendar);
     const lived = monthOfLife >= 1 && monthOfLife <= state.ageInMonths;
-    const eventIds = lived ? state.eventHistory.filter((r) => r.ageInMonths === monthOfLife).map((r) => r.id) : [];
-    const amounts = eventIds.flatMap((id) => effectsOfOccurrence(state, id, monthOfLife).map((chip) => chip.amount));
+    const records = lived ? state.eventHistory.filter((r) => r.ageInMonths === monthOfLife) : [];
+    const eventIds = records.map((r) => r.id);
+    const amounts = records.flatMap((record) => chipsOfRecord(state, record).map((chip) => chip.amount));
     const monthHabits = habitsAtMonth(state, monthOfLife);
     return {
       calendarMonth: month,

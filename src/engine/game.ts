@@ -11,7 +11,7 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
-import { applyEvent, rollEvents } from './events';
+import { applyChoice, applyEvent, findEvent, hasChoices, lockReasons, rollEvents, type EventDef } from './events';
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
@@ -49,7 +49,8 @@ function closeYear(state: GameState): void {
 
 /**
  * Simulates ONE month on a state the caller owns (mutates it).
- * Returns 'yearEnd' on a birthday, 'death' on death, otherwise null.
+ * Returns 'yearEnd' on a birthday, 'death' on death, 'choice' when the
+ * month is paused for the player, otherwise null.
  *
  * Order follows the design doc. Steps for finance and NPCs will be
  * inserted here in later increments.
@@ -74,9 +75,30 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
 
   // 3. Finance            — later increment
 
-  // 4. Events (no-choice events only for now: they are applied and appear
-  //    in the timeline; the game does not pause for them).
-  for (const event of rollEvents(state, rng)) applyEvent(state, event);
+  // 4. Events. Without choices: applied now. With choices (D39): queued in
+  //    the order they were rolled, and the month pauses here.
+  for (const event of rollEvents(state, rng)) {
+    if (hasChoices(event)) state.pendingChoices.push({ eventId: event.id, ageInMonths: state.ageInMonths });
+    else applyEvent(state, event);
+  }
+  state.rngState = rng.state;
+  if (state.pendingChoices.length > 0) return 'choice';
+
+  return finishMonthInPlace(state);
+}
+
+/**
+ * Steps 5–6 of a month: the death check and the birthday. Runs right after
+ * the events, or — when the month paused for choices — after the last choice.
+ * That way a choice made in a birthday month is logged in the year it
+ * belongs to, and its effects count in this month's death check.
+ *
+ * The RNG continues from `rngState`, which gives exactly the same numbers as
+ * one unbroken generator (its whole state is that one integer), so lives
+ * without choice events are identical to before choices existed.
+ */
+function finishMonthInPlace(state: GameState): StopReason | null {
+  const rng = createRng(state.rngState);
 
   // 5. Death check
   const cause = rollDeath(state, rng);
@@ -95,9 +117,12 @@ function simulateMonthInPlace(state: GameState): StopReason | null {
   return null;
 }
 
-function assertAlive(state: GameState): void {
+function assertCanAdvance(state: GameState): void {
   if (state.death !== null) {
     throw new Error('Cannot advance: this character has already died');
+  }
+  if (state.pendingChoices.length > 0) {
+    throw new Error('Cannot advance: an event is waiting for the player to choose');
   }
 }
 
@@ -106,24 +131,84 @@ function assertAlive(state: GameState): void {
  * calls this once per tick, about every 1.25 s at normal speed).
  */
 export function advanceOneMonth(state: GameState): MonthResult {
-  assertAlive(state);
+  assertCanAdvance(state);
   const next = structuredClone(state);
   const stop = simulateMonthInPlace(next);
   return { state: next, stop };
 }
 
+/** Applies one choice to the oldest waiting event; finishes the month after the last one. Mutates. */
+function resolveChoiceInPlace(state: GameState, choiceId: string): StopReason | null {
+  const pending = state.pendingChoices[0];
+  if (!pending) throw new Error('No event is waiting for a choice');
+  const event = findEvent(pending.eventId);
+  if (!event) throw new Error(`Unknown event "${pending.eventId}"`);
+  applyChoice(state, event, choiceId, pending.ageInMonths);
+  state.pendingChoices.shift();
+  return state.pendingChoices.length > 0 ? 'choice' : finishMonthInPlace(state);
+}
+
+/**
+ * The player's answer to the choice popup (D39). Never modifies its input.
+ * stop: 'choice' when another event is still waiting, otherwise what the
+ * rest of the month produced ('yearEnd', 'death' or null).
+ */
+export function resolveChoice(state: GameState, choiceId: string): MonthResult {
+  if (state.death !== null) throw new Error('Cannot choose: this character has already died');
+  const next = structuredClone(state);
+  const stop = resolveChoiceInPlace(next, choiceId);
+  return { state: next, stop };
+}
+
+/**
+ * After loading a save: drops waiting events that no longer exist in the
+ * game data (removed or renamed by an update), and finishes the month if
+ * none is left. Returns the input unchanged when there is nothing to do.
+ */
+export function settlePendingChoices(state: GameState): MonthResult {
+  const known = state.pendingChoices.filter((pending) => findEvent(pending.eventId) !== undefined);
+  if (known.length === state.pendingChoices.length) {
+    return { state, stop: state.pendingChoices.length > 0 ? 'choice' : null };
+  }
+  const next = structuredClone(state);
+  next.pendingChoices = known;
+  const stop = known.length > 0 ? 'choice' : finishMonthInPlace(next);
+  return { state: next, stop };
+}
+
+/** Picks a choice on the player's behalf, for tests and simulations. */
+export type Chooser = (state: GameState, event: EventDef) => string;
+
+/** Default for simulations: the first choice that is available. */
+export const firstAvailableChoice: Chooser = (state, event) => {
+  const choice = event.choices?.find((c) => lockReasons(c, state).length === 0);
+  if (!choice) throw new Error(`Event "${event.id}" has no available choice`);
+  return choice.id;
+};
+
+/** Runs one month and answers its choices with `chooser`. Mutates. */
+function simulateMonthWithChooser(state: GameState, chooser: Chooser): StopReason | null {
+  let stop = simulateMonthInPlace(state);
+  while (stop === 'choice') {
+    const event = findEvent(state.pendingChoices[0]!.eventId)!;
+    stop = resolveChoiceInPlace(state, chooser(state, event));
+  }
+  return stop;
+}
+
 /**
  * Runs months until the next birthday or death (at most 12 months).
- * Kept for tests and tools that want a whole year in one call.
+ * For tests and tools that want a whole year in one call: choices are
+ * answered by `chooser` (the UI never uses this; the player chooses there).
  */
-export function advanceUntilStop(state: GameState): AdvanceResult {
-  assertAlive(state);
+export function advanceUntilStop(state: GameState, chooser: Chooser = firstAvailableChoice): AdvanceResult {
+  assertCanAdvance(state);
   const next = structuredClone(state);
   let monthsAdvanced = 0;
   // Guard against an endless loop if a future change removes the birthday stop.
   while (monthsAdvanced < MONTHS_PER_YEAR) {
     monthsAdvanced += 1;
-    const stop = simulateMonthInPlace(next);
+    const stop = simulateMonthWithChooser(next, chooser);
     if (stop !== null) return { state: next, stop, monthsAdvanced };
   }
   throw new Error(`No stop point within ${MONTHS_PER_YEAR} months — the loop is broken`);
@@ -131,12 +216,12 @@ export function advanceUntilStop(state: GameState): AdvanceResult {
 
 /**
  * Runs a whole life with fixed habits, for tests and balance simulation.
- * Not used by the UI.
+ * Choices are answered by `chooser`. Not used by the UI.
  */
-export function simulateWholeLife(state: GameState): GameState {
+export function simulateWholeLife(state: GameState, chooser: Chooser = firstAvailableChoice): GameState {
   const next = structuredClone(state);
   while (next.death === null) {
-    simulateMonthInPlace(next);
+    simulateMonthWithChooser(next, chooser);
   }
   return next;
 }

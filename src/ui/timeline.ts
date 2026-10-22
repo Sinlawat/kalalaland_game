@@ -1,29 +1,39 @@
 /**
  * Builds the life timeline from data the save already has:
- * - `eventHistory`: which event happened at which age,
- * - `history[].changes`: what each source changed during each year.
+ * - `eventHistory`: which event happened at which age, which choice was
+ *   made, and what it did to traits and habits,
+ * - `history[].changes`: what each source changed in the stats during each year.
  *
  * Pure functions (no React), so they are unit-tested directly.
  */
 
-import type { GameState, StatTarget } from '../engine/types';
+import type { EventRecord, GameState, Habits, StatTarget, TraitKey } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
 
-/** Order of effect chips under an event. */
+/** Order of stat chips under an event. */
 export const EFFECT_ORDER: StatTarget[] = ['physicalHealth', 'mentalHealth', 'knowledge', 'looks'];
+/** Trait chips come after the stat chips. */
+const TRAIT_ORDER: TraitKey[] = ['discipline', 'resilience', 'riskTaking'];
 
 /** Effects smaller than this are hidden (they would show as "0"). */
 const MIN_VISIBLE = 0.05;
 
 export interface EffectChip {
-  target: StatTarget;
+  /** A stat or a trait; both have a `stat.<target>` label. */
+  target: StatTarget | TraitKey;
   amount: number;
 }
 
 export interface TimelineEntry {
+  /** Unique within a year: the event id, plus the choice for events with choices. */
+  key: string;
   id: string;
+  /** The choice made, for events with choices (the text then comes from the result). */
+  choiceId?: string;
+  /** Habits the event switched to (the latest occurrence wins). */
+  habitChanges?: Partial<Habits>;
   /** Age of the first occurrence in this year of age. */
   ageInMonths: number;
   /** How many times it happened in this year of age (repeatable events). */
@@ -69,6 +79,18 @@ export function effectsOfOccurrence(state: TimelineSource, id: string, ageInMont
   })).filter((chip) => chip.amount !== 0);
 }
 
+/**
+ * Everything one occurrence REALLY changed: stats (from the year log) and
+ * traits (stored on the record, because traits have no log).
+ */
+export function chipsOfRecord(state: TimelineSource, record: EventRecord): EffectChip[] {
+  const traitChips = TRAIT_ORDER.flatMap((target) => {
+    const amount = record.traitChanges?.[target];
+    return amount === undefined ? [] : [{ target, amount }];
+  });
+  return [...effectsOfOccurrence(state, record.id, record.ageInMonths), ...traitChips];
+}
+
 /** All years that had events, newest first; within a year, events in the order they happened. */
 export function buildTimeline(state: TimelineSource): TimelineYear[] {
   const years = new Map<number, Map<string, TimelineEntry>>();
@@ -78,8 +100,9 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
     const entries = years.get(age) ?? new Map<string, TimelineEntry>();
     years.set(age, entries);
 
-    const effects = effectsOfOccurrence(state, record.id, record.ageInMonths);
-    const existing = entries.get(record.id);
+    const effects = chipsOfRecord(state, record);
+    const key = record.choiceId === undefined ? record.id : `${record.id}:${record.choiceId}`;
+    const existing = entries.get(key);
     if (existing) {
       existing.count += 1;
       for (const chip of effects) {
@@ -87,8 +110,17 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         if (same) same.amount += chip.amount;
         else existing.effects.push({ ...chip });
       }
+      if (record.habitChanges) existing.habitChanges = { ...existing.habitChanges, ...record.habitChanges };
     } else {
-      entries.set(record.id, { id: record.id, ageInMonths: record.ageInMonths, count: 1, effects });
+      entries.set(key, {
+        key,
+        id: record.id,
+        ...(record.choiceId !== undefined ? { choiceId: record.choiceId } : {}),
+        ...(record.habitChanges ? { habitChanges: { ...record.habitChanges } } : {}),
+        ageInMonths: record.ageInMonths,
+        count: 1,
+        effects,
+      });
     }
   }
 

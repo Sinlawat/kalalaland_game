@@ -93,6 +93,26 @@ export interface EventRecord {
   id: string;
   /** Age when it happened. */
   ageInMonths: number;
+  /** For events with choices: the choice the player made (D39). */
+  choiceId?: string;
+  /**
+   * What the event REALLY did to traits, after the age factor and clamping.
+   * Stored here because traits have no yearly log (the stat log covers
+   * condition and looks only). Absent when no trait changed.
+   */
+  traitChanges?: Partial<Record<TraitKey, number>>;
+  /** Habits the event switched to. Absent when no habit changed. */
+  habitChanges?: Partial<Habits>;
+}
+
+/**
+ * An event with choices that happened and waits for the player (D39).
+ * While any is waiting, the month is paused right after its event step:
+ * the death check and the birthday run only after the last choice.
+ */
+export interface PendingChoice {
+  eventId: string;
+  ageInMonths: number;
 }
 
 // ── Death ───────────────────────────────────────────────────────────────────
@@ -133,6 +153,11 @@ export interface GameState {
    * "what happened" list, and later the life summary.
    */
   eventHistory: EventRecord[];
+  /**
+   * Events with choices waiting for the player, oldest first (save version 5).
+   * Empty almost always; non-empty only while the choice popup is open.
+   */
+  pendingChoices: PendingChoice[];
 
   /** Running totals for the current (unfinished) year. */
   yearLog: YearLog;
@@ -144,5 +169,8 @@ export interface GameState {
   death: Death | null;
 }
 
-/** Why the engine stopped advancing and handed control back to the player. */
-export type StopReason = 'yearEnd' | 'death';
+/**
+ * Why the engine stopped advancing and handed control back to the player.
+ * 'choice': an event with choices happened; the month finishes after the player chooses.
+ */
+export type StopReason = 'yearEnd' | 'death' | 'choice';
