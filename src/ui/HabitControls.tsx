@@ -34,7 +34,7 @@ function HabitYearStrip<K extends HabitKey>({ game, habit }: { game: GameState; 
         {slots.map((slot) => {
           const level = slot.habits?.[habit];
           const tone = level === undefined ? 'empty' : LEVEL_TONE[habit][level];
-          return <span key={slot.monthOfLife} className={`habit-strip__cell habit-strip__cell--${tone}`} />;
+          return <span key={slot.calendarMonth} className={`habit-strip__cell habit-strip__cell--${tone}`} />;
         })}
       </span>
       <span className="muted small">

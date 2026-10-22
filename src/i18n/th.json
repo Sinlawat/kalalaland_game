@@ -161,7 +161,8 @@
   "controls.pause": "หยุด",
   "controls.speed": "ความเร็วของเวลา",
 
-  "monthBar.label": "เดือนในปีนี้",
+  "monthBar.label": "เดือนในปีนี้ (ม.ค.–ธ.ค.)",
+  "monthBar.birthday": "เดือนเกิด",
   "month.1": "ม.ค.",
   "month.2": "ก.พ.",
   "month.3": "มี.ค.",

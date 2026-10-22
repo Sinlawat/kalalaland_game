@@ -159,13 +159,6 @@ p { margin: 0 0 8px; }
 .button--large { padding: 12px 28px; font-size: 1.05rem; }
 
 .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.actions--sticky {
-  position: sticky;
-  bottom: 0;
-  justify-content: center;
-  padding: 12px 0;
-  background: linear-gradient(transparent, var(--bg) 35%);
-}
 
 .field { display: grid; gap: 6px; margin-bottom: 4px; }
 .field input {
@@ -343,14 +336,21 @@ p { margin: 0 0 8px; }
 .button--small { padding: 4px 12px; font-size: 0.85rem; }
 
 /* ── Playback bar (D38): play/pause, speed, month bar ─────────────────── */
+/* Docked under the header; stays at the top of the screen while scrolling. */
+.playback-dock {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 0 var(--gap);
+  padding: 6px 0;
+  background: var(--bg);
+}
 .playback {
   display: flex;
   align-items: center;
   gap: 12px 16px;
   flex-wrap: wrap;
   width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -366,11 +366,14 @@ p { margin: 0 0 8px; }
 .month-bar__marker-row { height: 18px; display: flex; align-items: end; }
 .month-bar__slot { width: 100%; height: 10px; border-radius: 3px; background: var(--border); transition: background 0.2s ease; }
 .month-bar__slot--lived { background: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.month-bar__slot--unborn { background: transparent; border: 1px dashed var(--border); }
 .month-bar__slot--current { outline: 2px solid var(--accent); outline-offset: 1px; }
 .month-bar__slot--good { background: var(--up); }
 .month-bar__slot--bad { background: var(--down); }
 .month-bar__slot--mixed { background: var(--mixed); }
-.month-bar__label { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
+.month-bar__label { font-size: 0.65rem; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 1px; }
+.month-bar__label--birthday { color: var(--text); font-weight: 600; }
+.month-bar__cake { font-size: 0.7rem; line-height: 1; }
 .month-bar__marker { font-size: 0.7rem; line-height: 1; padding: 0 2px; border: 0; background: none; cursor: pointer; }
 .month-bar__marker--good { color: var(--up); }
 .month-bar__marker--bad { color: var(--down); }
@@ -381,7 +384,7 @@ p { margin: 0 0 8px; }
   z-index: 30;
   left: 0;
   right: 0;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--text);
@@ -407,4 +410,5 @@ p { margin: 0 0 8px; }
   .playback { padding: 8px 10px; }
   .playback .month-bar { flex-basis: 100%; }
   .month-bar__label { font-size: 0.55rem; }
+  .month-bar__cake { font-size: 0.55rem; }
 }

@@ -1,6 +1,14 @@
 /**
- * Month-level views of the current year, for the month bar (D38) and the
- * lifestyle strips. Pure functions over the game state; no React.
+ * Month-level views for the month bar (D38) and the lifestyle strips.
+ * Pure functions over the game state; no React.
+ *
+ * Two kinds of "year" exist in the game, on purpose:
+ * - the ENGINE's year is a year of age (birthday to birthday): the yearly
+ *   log, history and the change breakdown follow it;
+ * - the MONTH BAR shows the CALENDAR year, January to December, because that
+ *   is how people read months. The birthday is marked inside it.
+ * Every month of life is stored by its number since birth, so both views
+ * read the same data; only the grouping differs.
  */
 
 import { calendarMonth } from '../engine/events';
@@ -13,14 +21,18 @@ export const MONTHS_PER_YEAR = 12;
 export type EventTone = 'good' | 'bad' | 'mixed';
 
 export interface MonthSlot {
-  /** Month of life this slot stands for (1 = first month after birth). */
-  monthOfLife: number;
-  /** Calendar month 1–12, for the label under the slot. */
+  /** Calendar month 1–12 (January = 1). Slots are always in this order. */
   calendarMonth: number;
+  /** Month of life this slot stands for (1 = first month after birth; ≤ 0 = before birth). */
+  monthOfLife: number;
+  /** Before the character was born (only in the calendar year of birth). */
+  beforeBirth: boolean;
   /** Already lived? */
   lived: boolean;
   /** The month the game just simulated (the "now" marker). */
   current: boolean;
+  /** The character's birth month (birthday marker). */
+  birthday: boolean;
   /** Events that happened in this month, in order. */
   eventIds: string[];
   /** Colour for the event marker; absent when there were no events. */
@@ -30,16 +42,6 @@ export interface MonthSlot {
 }
 
 type MonthSource = Pick<GameState, 'ageInMonths' | 'birthMonth' | 'eventHistory' | 'history' | 'yearLog' | 'yearHabits'>;
-
-/**
- * First month of life of the year being shown, minus one (0, 12, 24…).
- * On a birthday the year that JUST ended is shown (full), so the player
- * sees what happened before the bar starts filling again.
- */
-export function displayedYearStart(ageInMonths: number): number {
-  if (ageInMonths === 0) return 0;
-  return Math.floor((ageInMonths - 1) / MONTHS_PER_YEAR) * MONTHS_PER_YEAR;
-}
 
 /**
  * good  = only gains, bad = only losses,
@@ -53,29 +55,41 @@ export function toneOf(amounts: number[]): EventTone {
   return 'mixed';
 }
 
-/** Habits per month of the shown year: from history if that year is closed, else the running year. */
-function habitsOfYear(state: MonthSource, yearStart: number): Habits[] {
-  const yearEnd = yearStart + MONTHS_PER_YEAR;
+/**
+ * Habits in effect in a given month of life. Closed years keep theirs in
+ * history (12 per year of age); the running year in `yearHabits`.
+ * Returns undefined for months not recorded (e.g. played before save v4).
+ */
+export function habitsAtMonth(state: MonthSource, monthOfLife: number): Habits | undefined {
+  if (monthOfLife < 1 || monthOfLife > state.ageInMonths) return undefined;
+  const yearEnd = Math.ceil(monthOfLife / MONTHS_PER_YEAR) * MONTHS_PER_YEAR;
   const closed = state.history.find((summary) => Math.round(summary.age * MONTHS_PER_YEAR) === yearEnd);
-  if (closed) return closed.habits ?? [];
-  return state.yearHabits;
+  if (closed) return closed.habits?.[(monthOfLife - 1) % MONTHS_PER_YEAR];
+  const runningStart = state.ageInMonths - state.yearHabits.length;
+  return state.yearHabits[monthOfLife - 1 - runningStart];
 }
 
+/**
+ * 12 slots, January to December, of the calendar year the character is in
+ * now. At age 0 the "now" is the birth month itself.
+ */
 export function monthSlots(state: MonthSource): MonthSlot[] {
-  const start = displayedYearStart(state.ageInMonths);
-  const habits = habitsOfYear(state, start);
+  const nowCalendar = calendarMonth({ birthMonth: state.birthMonth, ageInMonths: state.ageInMonths });
 
   return Array.from({ length: MONTHS_PER_YEAR }, (_, index) => {
-    const monthOfLife = start + index + 1;
-    const lived = monthOfLife <= state.ageInMonths;
-    const eventIds = state.eventHistory.filter((r) => r.ageInMonths === monthOfLife).map((r) => r.id);
+    const month = index + 1;
+    const monthOfLife = state.ageInMonths + (month - nowCalendar);
+    const lived = monthOfLife >= 1 && monthOfLife <= state.ageInMonths;
+    const eventIds = lived ? state.eventHistory.filter((r) => r.ageInMonths === monthOfLife).map((r) => r.id) : [];
     const amounts = eventIds.flatMap((id) => effectsOfOccurrence(state, id, monthOfLife).map((chip) => chip.amount));
-    const monthHabits = lived ? habits[index] : undefined;
+    const monthHabits = habitsAtMonth(state, monthOfLife);
     return {
+      calendarMonth: month,
       monthOfLife,
-      calendarMonth: calendarMonth({ birthMonth: state.birthMonth, ageInMonths: monthOfLife }),
+      beforeBirth: monthOfLife < 1,
       lived,
-      current: monthOfLife === state.ageInMonths,
+      current: monthOfLife === state.ageInMonths && state.ageInMonths >= 1,
+      birthday: month === state.birthMonth,
       eventIds,
       ...(eventIds.length > 0 ? { tone: toneOf(amounts) } : {}),
       ...(monthHabits ? { habits: monthHabits } : {}),

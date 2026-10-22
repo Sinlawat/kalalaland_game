@@ -35,9 +35,11 @@ function EventMarker({ slot }: { slot: MonthSlot }) {
 }
 
 /**
- * D38: 12 slots, one per month of the current year. Lived months fill in as
- * time runs; months with events are coloured (green = only gains,
- * red = only losses, yellow = mixed or no stat change) and carry a ▼.
+ * D38: 12 slots, January to December of the current calendar year. Lived
+ * months fill in as time runs; months with events are coloured
+ * (green = only gains, red = only losses, yellow = mixed or no stat change)
+ * and carry a ▼. The birth month is marked with 🎂; months before birth
+ * (only in the year of birth) are drawn as empty outlines.
  */
 export function MonthBar({ game }: { game: GameState }) {
   const slots = monthSlots(game);
@@ -48,14 +50,22 @@ export function MonthBar({ game }: { game: GameState }) {
           const classes = [
             'month-bar__slot',
             slot.lived ? 'month-bar__slot--lived' : '',
+            slot.beforeBirth ? 'month-bar__slot--unborn' : '',
             slot.current ? 'month-bar__slot--current' : '',
             slot.tone ? `month-bar__slot--${slot.tone}` : '',
           ].join(' ');
           return (
-            <li key={slot.monthOfLife} className="month-bar__cell">
+            <li key={slot.calendarMonth} className="month-bar__cell">
               <span className="month-bar__marker-row">{slot.tone && <EventMarker slot={slot} />}</span>
               <span className={classes} />
-              <span className="month-bar__label">{t(`month.${slot.calendarMonth}`)}</span>
+              <span className={`month-bar__label${slot.birthday ? ' month-bar__label--birthday' : ''}`}>
+                {t(`month.${slot.calendarMonth}`)}
+                {slot.birthday && (
+                  <span className="month-bar__cake" title={t('monthBar.birthday')} aria-label={t('monthBar.birthday')}>
+                    🎂
+                  </span>
+                )}
+              </span>
             </li>
           );
         })}

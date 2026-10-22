@@ -9,8 +9,8 @@ interface Props {
 }
 
 /**
- * The sticky bar at the bottom of the play screen, like a video player:
- * play/pause, speed, and the month bar of the current year (D38).
+ * The time bar, right under the name/age card and sticky at the top while
+ * scrolling: play/pause, speed, and the month bar of the current year (D38).
  */
 export function PlaybackBar({ game, controller }: Props) {
   const { running, speed } = controller;

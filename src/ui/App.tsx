@@ -50,6 +50,11 @@ export function App() {
         <span className="muted small">{t('status.seed', { seed: game.seed })}</span>
       </header>
 
+      {/* Time sits right under who and how old: the two things read together. */}
+      <div className="playback-dock">
+        <PlaybackBar game={game} controller={controller} />
+      </div>
+
       {controller.saveFailed && <p className="notice notice--error">{t('save.error.unwritable')}</p>}
 
       {/* Layout areas are placed by CSS grid (see .play in styles.css), so the
@@ -73,10 +78,6 @@ export function App() {
       </div>
 
       {shouldRevealTraits(game) && <TraitRevealDialog game={game} onClose={controller.acknowledgeTraits} />}
-
-      <div className="actions--sticky">
-        <PlaybackBar game={game} controller={controller} />
-      </div>
     </main>
   );
 }
