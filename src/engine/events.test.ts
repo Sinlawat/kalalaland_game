@@ -659,12 +659,29 @@ describe('real events over many lives (Monte Carlo)', () => {
       }
       for (const record of end.eventHistory) {
         const age = Math.floor(record.ageInMonths / 12);
-        if (record.id === 'growth_first_word') expect(age).toBe(1);
+        if (record.id.startsWith('growth_first_word')) expect(age).toBe(1);
         if (record.id === 'growth_first_sentence') expect(age).toBe(2);
         if (record.id.startsWith('growth_')) expect(age).toBeLessThanOrEqual(6);
       }
     }
     expect(withInterest).toBeGreaterThan(ends.length / 2);
+  });
+
+  it('growth: the family\'s warmth decides which version of first word and drawing a child gets, never both', () => {
+    let cold = 0;
+    for (const end of ends) {
+      const warmthAtBirth = createNewLife(end.seed).environment.familyWarmth; // nothing changes it before 6 yet
+      for (const [warmId, coldId] of [
+        ['growth_first_word', 'growth_first_word_unnoticed'],
+        ['growth_drawing', 'growth_drawing_scolded'],
+      ] as const) {
+        const got = ids(end).filter((id) => id === warmId || id === coldId);
+        expect(got.length).toBeLessThanOrEqual(1);
+        if (got[0] === coldId) cold += 1;
+        if (got.length === 1) expect(got[0]).toBe(warmthAtBirth < 31 ? coldId : warmId);
+      }
+    }
+    expect(cold).toBeGreaterThan(0);
   });
 
   it('malnutrition hits only poor families, at most once per 12 months', () => {

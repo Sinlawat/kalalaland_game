@@ -332,7 +332,17 @@
     "id": "growth_first_word",
     "conditions": {
       "ageMin": 1,
-      "ageMax": 1
+      "ageMax": 1,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 31
+        }
+      ],
+      "flagsNone": [
+        "spoke_first_word"
+      ]
     },
     "frequency": "common",
     "once": true,
@@ -340,7 +350,37 @@
       "stats": {
         "knowledge": 1,
         "mentalHealth": 1
-      }
+      },
+      "setFlags": [
+        "spoke_first_word"
+      ]
+    }
+  },
+  {
+    "id": "growth_first_word_unnoticed",
+    "conditions": {
+      "ageMin": 1,
+      "ageMax": 1,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsNone": [
+        "spoke_first_word"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "spoke_first_word"
+      ]
     }
   },
   {
@@ -410,7 +450,17 @@
     "id": "growth_drawing",
     "conditions": {
       "ageMin": 3,
-      "ageMax": 5
+      "ageMax": 5,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 31
+        }
+      ],
+      "flagsNone": [
+        "started_drawing"
+      ]
     },
     "frequency": "normal",
     "once": true,
@@ -418,7 +468,37 @@
       "stats": {
         "mentalHealth": 1,
         "knowledge": 1
-      }
+      },
+      "setFlags": [
+        "started_drawing"
+      ]
+    }
+  },
+  {
+    "id": "growth_drawing_scolded",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 5,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsNone": [
+        "started_drawing"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "started_drawing"
+      ]
     }
   },
   {
