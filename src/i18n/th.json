@@ -191,6 +191,8 @@
   "event.family_market_helper.text": "พ่อแม่ของคุณเปิดแผงขายของที่ตลาดเช้า คุณต้องตื่นตีสี่มาช่วยจัดร้านก่อนไปโรงเรียนทุกวัน",
   "event.family_parent_lost_job.title": "พ่อหรือแม่ตกงาน",
   "event.family_parent_lost_job.text": "พ่อหรือแม่ของคุณถูกเลิกจ้าง บรรยากาศในบ้านตึงเครียด ทุกคนต้องประหยัดกันมากขึ้น",
+  "event.family_parent_lost_job_while_away.title": "พ่อหรือแม่ตกงาน",
+  "event.family_parent_lost_job_while_away.text": "คุณได้ข่าวจากตายายว่าพ่อหรือแม่ของคุณถูกเลิกจ้าง ทุกคนต้องประหยัดกันมากขึ้น และคุณก็อดเป็นห่วงไม่ได้",
   "event.family_parent_new_job.title": "พ่อหรือแม่ได้งานใหม่",
   "event.family_parent_new_job.text": "หลังจากหางานอยู่นาน พ่อหรือแม่ของคุณก็ได้งานใหม่ แม้เงินเดือนจะน้อยกว่าเดิม แต่ทุกคนก็โล่งใจขึ้น",
   "event.family_relative_seriously_ill.title": "คนในบ้านป่วยหนัก",

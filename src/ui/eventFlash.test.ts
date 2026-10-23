@@ -5,13 +5,13 @@ import { createNewLife } from '../engine/newLife';
 import type { EnvironmentKey, GameState, YearSummary } from '../engine/types';
 import { newEventChanges } from './eventFlash';
 
-type Source = Pick<GameState, 'seed' | 'eventHistory' | 'history' | 'yearLog'>;
+type Source = Pick<GameState, 'seed' | 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
 function year(age: number, changes: YearSummary['changes'] = {}): YearSummary {
   return { age, changes, snapshot: { physicalHealth: 0, mentalHealth: 0, knowledge: 0, looks: 0 } };
 }
 
-const before: Source = { seed: 1, eventHistory: [{ id: 'old', ageInMonths: 3 }], history: [], yearLog: { knowledge: { 'event.old': 2 } } };
+const before: Source = { seed: 1, birthMonth: 1, eventHistory: [{ id: 'old', ageInMonths: 3 }], history: [], yearLog: { knowledge: { 'event.old': 2 } } };
 
 describe('newEventChanges', () => {
   it('reports the real effect of an event recorded since the last render', () => {

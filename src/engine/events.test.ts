@@ -340,6 +340,41 @@ describe('cooldown, lifetime chance and lifestyle conditions', () => {
   });
 });
 
+describe('monthsSince: waiting after another event', () => {
+  const newJob = makeEvent({
+    id: 'new_job',
+    conditions: { ageMin: 0, ageMax: 99, monthsSince: { events: ['lost_job', 'lost_job_away'], min: 6 } },
+  });
+
+  it('is not possible before any of the events happened', () => {
+    expect(isEligible(newJob, makeState({ eventHistory: [] }))).toBe(false);
+  });
+
+  it('waits at least `min` months after the event (boundary: 5 no, 6 yes)', () => {
+    const history = [{ id: 'lost_job', ageInMonths: 100 }];
+    expect(isEligible(newJob, makeState({ ageInMonths: 105, eventHistory: history }))).toBe(false);
+    expect(isEligible(newJob, makeState({ ageInMonths: 106, eventHistory: history }))).toBe(true);
+  });
+
+  it('counts from the MOST RECENT of the listed events', () => {
+    const history = [
+      { id: 'lost_job', ageInMonths: 80 },
+      { id: 'lost_job_away', ageInMonths: 100 },
+    ];
+    expect(isEligible(newJob, makeState({ ageInMonths: 103, eventHistory: history }))).toBe(false);
+    expect(isEligible(newJob, makeState({ ageInMonths: 106, eventHistory: history }))).toBe(true);
+  });
+
+  it.each([
+    [{ events: [], min: 6 }, 'monthsSince must be'],
+    [{ events: ['test_event'], min: 0 }, 'monthsSince must be'],
+    [{ events: ['test_event'], min: 6, max: 9 }, 'unknown field "max"'],
+    [{ events: ['no_such_event'], min: 6 }, 'names event "no_such_event", which does not exist'],
+  ])('rejects %j', (monthsSince, expected) => {
+    expect(() => parseEvents([{ ...makeEvent(), conditions: { ageMin: 0, ageMax: 9, monthsSince } }])).toThrow(expected);
+  });
+});
+
 describe('environment effects (D57)', () => {
   it('change family wealth and warmth, clamped, with the real change recorded', () => {
     const state = makeState({ environment: { familyWealth: 5, familyWarmth: 40 } });
@@ -560,11 +595,32 @@ describe('real events over many lives (Monte Carlo)', () => {
       expect(afterJobLoss).toBeGreaterThan(0);
     });
 
-    it('a parent finds a new job only after losing one', () => {
+    it('a parent finds a new job only after losing one, at least 6 months later', () => {
+      const LOSSES = ['family_parent_lost_job', 'family_parent_lost_job_while_away'];
+      let found = 0;
       for (const end of ends) {
-        const found = indexOf(end, 'family_parent_new_job');
-        if (found >= 0) expect(indexOf(end, 'family_parent_lost_job')).toBeLessThan(found);
-        if (found >= 0) expect(indexOf(end, 'family_parent_lost_job')).toBeGreaterThanOrEqual(0);
+        let lostAt: number | undefined;
+        for (const record of end.eventHistory) {
+          if (LOSSES.includes(record.id)) lostAt = record.ageInMonths;
+          if (record.id === 'family_parent_new_job') {
+            found += 1;
+            expect(lostAt).toBeDefined();
+            expect(record.ageInMonths - lostAt!).toBeGreaterThanOrEqual(6);
+            lostAt = undefined; // back at work: the next new job needs a new loss
+          }
+        }
+      }
+      expect(found).toBeGreaterThan(0);
+    });
+
+    it('a job loss while living with the grandparents uses its own text (no tense home, no lost sleep)', () => {
+      for (const end of ends) {
+        const moveAt = Math.max(...GRANDPARENTS.map((id) => indexOf(end, id)));
+        const ids_ = ids(end);
+        ids_.forEach((id, i) => {
+          if (id === 'family_parent_lost_job') expect(moveAt < 0 || i < moveAt).toBe(true);
+          if (id === 'family_parent_lost_job_while_away') expect(moveAt >= 0 && i > moveAt).toBe(true);
+        });
       }
     });
   });

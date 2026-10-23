@@ -379,7 +379,10 @@
     "id": "family_parent_lost_job",
     "conditions": {
       "ageMin": 6,
-      "ageMax": 17
+      "ageMax": 17,
+      "flagsNone": [
+        "lives_with_grandparents"
+      ]
     },
     "frequency": "uncommon",
     "once": true,
@@ -402,16 +405,49 @@
     }
   },
   {
+    "id": "family_parent_lost_job_while_away",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "flagsAll": [
+        "lives_with_grandparents"
+      ],
+      "flagsNone": [
+        "parent_lost_job"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": -2
+      },
+      "environment": {
+        "familyWealth": -10
+      },
+      "setFlags": [
+        "parent_lost_job"
+      ]
+    }
+  },
+  {
     "id": "family_parent_new_job",
     "conditions": {
       "ageMin": 6,
       "ageMax": 17,
       "flagsAll": [
         "parent_lost_job"
-      ]
+      ],
+      "monthsSince": {
+        "events": [
+          "family_parent_lost_job",
+          "family_parent_lost_job_while_away"
+        ],
+        "min": 6
+      }
     },
     "frequency": "common",
-    "once": true,
+    "once": false,
     "effects": {
       "stats": {
         "mentalHealth": 1

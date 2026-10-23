@@ -95,6 +95,12 @@ export interface EventConditions extends CharacterConditions {
   ageMax: number;
   /** Calendar months 1–12; absent = every month. */
   months?: number[];
+  /**
+   * Only at least `min` months after the most recent of these events, and
+   * never before any of them happened. E.g. a new job at least 6 months
+   * after losing one: { events: ['family_parent_lost_job'], min: 6 }.
+   */
+  monthsSince?: { events: string[]; min: number };
 }
 
 /** A lifestyle change: a level (lasting), or a level for some months (D56). */
@@ -307,6 +313,7 @@ export function parseEvents(raw: unknown): EventDef[] {
   const check: Checker = { problems: [], flagsSet: new Set<string>(SYSTEM_FLAGS), flagsTested: [] };
   const { problems } = check;
   const ids = new Set<string>();
+  const eventsReferenced: { at: string; eventId: string }[] = [];
 
   raw.forEach((item: unknown, index) => {
     const where = `event #${index}`;
@@ -346,7 +353,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     if (!isRecord(c)) {
       problems.push(`${at}: conditions must be an object`);
     } else {
-      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months'])) {
+      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months', 'monthsSince'])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
       const { ageMin, ageMax } = c;
@@ -357,6 +364,15 @@ export function parseEvents(raw: unknown): EventDef[] {
       if (c.months !== undefined) {
         const ok = Array.isArray(c.months) && c.months.every((m) => Number.isInteger(m) && m >= 1 && m <= 12);
         if (!ok) problems.push(`${at}: months must be a list of numbers 1–12`);
+      }
+      if (c.monthsSince !== undefined) {
+        const since = c.monthsSince;
+        if (!isRecord(since) || !isStringArray(since.events) || since.events.length === 0 || !isPositiveInteger(since.min)) {
+          problems.push(`${at}: monthsSince must be { "events": [event ids], "min": whole number of months above 0 }`);
+        } else {
+          for (const key of unknownKeys(since, ['events', 'min'])) problems.push(`${at}: monthsSince: unknown field "${key}"`);
+          since.events.forEach((eventId) => eventsReferenced.push({ at, eventId }));
+        }
       }
     }
 
@@ -371,6 +387,10 @@ export function parseEvents(raw: unknown): EventDef[] {
     }
   });
 
+  // Waiting for an event that does not exist would block this one forever: almost certainly a typo.
+  for (const { at, eventId } of eventsReferenced) {
+    if (!ids.has(eventId)) problems.push(`${at}: monthsSince names event "${eventId}", which does not exist`);
+  }
   // A condition on a flag that nothing ever sets can never be true (or is always true): almost certainly a typo.
   for (const { at, flag } of check.flagsTested) {
     if (!check.flagsSet.has(flag)) problems.push(`${at}: tests flag "${flag}", but no event or system ever sets it`);
@@ -482,6 +502,10 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
     if (event.cooldownMonths !== undefined && state.ageInMonths - last < event.cooldownMonths) return false;
   }
   if (c.months && !c.months.includes(calendarMonth(state))) return false;
+  if (c.monthsSince) {
+    const times = c.monthsSince.events.flatMap((id) => happened.get(id) ?? []);
+    if (times.length === 0 || state.ageInMonths - Math.max(...times) < c.monthsSince.min) return false;
+  }
   if (event.lifetimeChance !== undefined && lifetimeRoll(state.seed, event.id) >= event.lifetimeChance) return false;
   return meetsCharacterConditions(state, c);
 }

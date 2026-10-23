@@ -7,6 +7,7 @@
  * Pure functions (no React), so they are unit-tested directly.
  */
 
+import { calendarMonth } from '../engine/events';
 import type { EnvironmentKey, EventRecord, GameState, HabitKey, Habits, StatTarget, TraitKey } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
@@ -28,7 +29,10 @@ export interface EffectChip {
 }
 
 export interface TimelineEntry {
-  /** Unique within a year: the event id, plus the choice for events with choices. */
+  /**
+   * Unique within a year: the event id, plus the choice for events with
+   * choices, plus `@<n>` for a later, separate occurrence of the same one.
+   */
   key: string;
   id: string;
   /** The choice made, for events with choices (the text then comes from the result). */
@@ -39,8 +43,10 @@ export interface TimelineEntry {
   habitMonths?: Partial<Record<HabitKey, number>>;
   /** Where the event moved the character (the latest occurrence wins). */
   residenceChange?: EventRecord['residenceChange'];
-  /** Age of the first occurrence in this year of age. */
+  /** Month of life of the LATEST occurrence in this year of age (entries are sorted by it, newest first). */
   ageInMonths: number;
+  /** Calendar month (1–12) of that occurrence, shown beside the title so the order is visible. */
+  calendarMonth: number;
   /** How many times it happened in this year of age (repeatable events). */
   count: number;
   /** What the event REALLY changed (after clamping to 0–100), summed over occurrences. */
@@ -53,7 +59,7 @@ export interface TimelineYear {
   entries: TimelineEntry[];
 }
 
-export type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog'>;
+export type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
 /**
  * The summary year that contains month `ageInMonths`, as a month range.
@@ -100,18 +106,33 @@ export function chipsOfRecord(state: TimelineSource, record: EventRecord): Effec
   return [...effectsOfOccurrence(state, record.id, record.ageInMonths), ...traitChips, ...environmentChips];
 }
 
-/** All years that had events, newest first; within a year, events in the order they happened. */
+/**
+ * All years that had events, NEWEST FIRST — and within a year too, so the
+ * whole card reads one way ("latest on top").
+ *
+ * An event that happened again RIGHT AFTER itself (nothing else in between,
+ * same year of age) is one entry with a count, placed by its latest time.
+ * If other events came in between, each occurrence keeps its own place:
+ * merging "new job" across a second "lost job" would tell the story wrong.
+ */
 export function buildTimeline(state: TimelineSource): TimelineYear[] {
   const years = new Map<number, Map<string, TimelineEntry>>();
+  // Position in the history of each entry's latest occurrence: the sort order.
+  const latestIndex = new Map<TimelineEntry, number>();
+  // The entry added or extended last in each year: only that one can absorb a repeat.
+  const lastInYear = new Map<number, TimelineEntry>();
 
-  for (const record of state.eventHistory) {
+  state.eventHistory.forEach((record, index) => {
     const age = Math.floor(record.ageInMonths / 12);
     const entries = years.get(age) ?? new Map<string, TimelineEntry>();
     years.set(age, entries);
 
     const effects = chipsOfRecord(state, record);
-    const key = record.choiceId === undefined ? record.id : `${record.id}:${record.choiceId}`;
-    const existing = entries.get(key);
+    const baseKey = record.choiceId === undefined ? record.id : `${record.id}:${record.choiceId}`;
+    const previous = lastInYear.get(age);
+    const existing = previous?.key.split('@')[0] === baseKey ? previous : undefined;
+    // A separate, later occurrence needs its own unique key (React list keys).
+    const key = entries.has(baseKey) ? `${baseKey}@${index}` : baseKey;
     if (existing) {
       existing.count += 1;
       for (const chip of effects) {
@@ -122,8 +143,12 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
       if (record.habitChanges) existing.habitChanges = { ...existing.habitChanges, ...record.habitChanges };
       if (record.habitMonths) existing.habitMonths = { ...existing.habitMonths, ...record.habitMonths };
       if (record.residenceChange) existing.residenceChange = record.residenceChange;
+      existing.ageInMonths = record.ageInMonths;
+      existing.calendarMonth = calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths });
+      latestIndex.set(existing, index);
+      lastInYear.set(age, existing);
     } else {
-      entries.set(key, {
+      const entry: TimelineEntry = {
         key,
         id: record.id,
         ...(record.choiceId !== undefined ? { choiceId: record.choiceId } : {}),
@@ -131,20 +156,26 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         ...(record.habitMonths ? { habitMonths: { ...record.habitMonths } } : {}),
         ...(record.residenceChange ? { residenceChange: record.residenceChange } : {}),
         ageInMonths: record.ageInMonths,
+        calendarMonth: calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths }),
         count: 1,
         effects,
-      });
+      };
+      entries.set(key, entry);
+      latestIndex.set(entry, index);
+      lastInYear.set(age, entry);
     }
-  }
+  });
 
   return [...years.entries()]
     .sort(([a], [b]) => b - a)
     .map(([age, entries]) => ({
       age,
-      entries: [...entries.values()].map((entry) => ({
-        ...entry,
-        effects: entry.effects.filter((chip) => Math.abs(chip.amount) >= MIN_VISIBLE),
-      })),
+      entries: [...entries.values()]
+        .sort((a, b) => latestIndex.get(b)! - latestIndex.get(a)!)
+        .map((entry) => ({
+          ...entry,
+          effects: entry.effects.filter((chip) => Math.abs(chip.amount) >= MIN_VISIBLE),
+        })),
     }));
 }
 

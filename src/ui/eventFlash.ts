@@ -23,7 +23,7 @@ export type FlashChanges = Partial<Record<FlashTarget, number>>;
 /** Same threshold as the timeline: a change that rounds to "0.0" is not shown. */
 const MIN_VISIBLE = 0.05;
 
-type FlashSource = Pick<GameState, 'seed' | 'eventHistory' | 'history' | 'yearLog'>;
+type FlashSource = Pick<GameState, 'seed' | 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
 /**
  * Is `next` the same life as `previous`, only further on? A new character,

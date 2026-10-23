@@ -32,6 +32,8 @@ export function TimelineYears({ years }: { years: TimelineYear[] }) {
               <li key={entry.key} className="timeline-event">
                 <strong>
                   {t(`event.${entry.id}.title`)}
+                  {/* The month makes the order visible (newest on top); for repeats, the latest time. */}
+                  <span className="muted small"> · {t(`month.${entry.calendarMonth}`)}</span>
                   {entry.count > 1 && <span className="muted small"> · {t('timeline.times', { count: entry.count })}</span>}
                 </strong>
                 <p>{entryText(entry)}</p>
