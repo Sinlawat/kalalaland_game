@@ -41,12 +41,35 @@
     "effects": {}
   },
   {
-    "id": "health_chickenpox",
+    "id": "health_chickenpox_preschool",
     "conditions": {
       "ageMin": 3,
+      "ageMax": 5,
+      "flagsNone": [
+        "extra_vaccines",
+        "had_chickenpox"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "physicalHealth": -4,
+        "mentalHealth": -1
+      },
+      "setFlags": [
+        "had_chickenpox"
+      ]
+    }
+  },
+  {
+    "id": "health_chickenpox",
+    "conditions": {
+      "ageMin": 6,
       "ageMax": 12,
       "flagsNone": [
-        "extra_vaccines"
+        "extra_vaccines",
+        "had_chickenpox"
       ]
     },
     "frequency": "uncommon",
@@ -56,7 +79,10 @@
         "physicalHealth": -4,
         "mentalHealth": -1,
         "knowledge": -1
-      }
+      },
+      "setFlags": [
+        "had_chickenpox"
+      ]
     }
   },
   {

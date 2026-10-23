@@ -163,6 +163,8 @@
   "event.health_infant_vaccine_extra.text": "ครอบครัวพาคุณไปรับวัคซีนพื้นฐานตามวัย และตัดสินใจรับวัคซีนเสริมตามคำแนะนำของแพทย์ด้วย",
   "event.health_infant_vaccine_basic.title": "รับวัคซีนพื้นฐานตามวัย",
   "event.health_infant_vaccine_basic.text": "ครอบครัวพาคุณไปรับวัคซีนพื้นฐานตามวัย ส่วนวัคซีนเสริมมีค่าใช้จ่ายสูงเกินกว่าที่ครอบครัวจะจ่ายได้",
+  "event.health_chickenpox_preschool.title": "ป่วยเป็นอีสุกอีใส",
+  "event.health_chickenpox_preschool.text": "คุณติดอีสุกอีใสจากเด็กๆ ที่เล่นด้วยกัน ตัวเต็มไปด้วยตุ่มคันจนงอแงไปหลายวัน",
   "event.health_chickenpox.title": "ป่วยเป็นอีสุกอีใส",
   "event.health_chickenpox.text": "คุณติดอีสุกอีใสจากเพื่อนที่โรงเรียน ต้องหยุดเรียนไปหลายวัน",
   "event.health_food_allergy.title": "การแพ้อาหารครั้งแรก",

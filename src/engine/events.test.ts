@@ -524,15 +524,35 @@ describe('real events over many lives (Monte Carlo)', () => {
     }
   });
 
+  const CHICKENPOX = ['health_chickenpox_preschool', 'health_chickenpox'];
+  const hadChickenpox = (end: (typeof ends)[number]) => ids(end).filter((id) => CHICKENPOX.includes(id)).length;
+
   it('children with extra vaccines never get chickenpox', () => {
     const vaccinated = ends.filter((end) => end.flags.includes('extra_vaccines'));
     expect(vaccinated.length).toBeGreaterThan(0);
-    expect(vaccinated.filter((end) => ids(end).includes('health_chickenpox'))).toEqual([]);
+    expect(vaccinated.filter((end) => hadChickenpox(end) > 0)).toEqual([]);
+  });
+
+  it('chickenpox happens at most once per life, in the version for the age (3–5 play, 6–12 school)', () => {
+    let preschool = 0;
+    for (const end of ends) {
+      expect(hadChickenpox(end)).toBeLessThanOrEqual(1);
+      for (const record of end.eventHistory) {
+        const age = Math.floor(record.ageInMonths / 12);
+        if (record.id === 'health_chickenpox_preschool') {
+          preschool += 1;
+          expect(age).toBeGreaterThanOrEqual(3);
+          expect(age).toBeLessThanOrEqual(5);
+        }
+        if (record.id === 'health_chickenpox') expect(age).toBeGreaterThanOrEqual(6);
+      }
+    }
+    expect(preschool).toBeGreaterThan(0);
   });
 
   it('children without extra vaccines nearly all get chickenpox by 13 (few childhood events compete in the pool yet)', () => {
     const basic = ends.filter((end) => !end.flags.includes('extra_vaccines') && end.ageInMonths >= 13 * 12);
-    const share = basic.filter((end) => ids(end).includes('health_chickenpox')).length / basic.length;
+    const share = basic.filter((end) => hadChickenpox(end) > 0).length / basic.length;
     expect(share).toBeGreaterThan(0.9);
   });
 
