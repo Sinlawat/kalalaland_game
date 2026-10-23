@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { BALANCE } from '../data/balance';
 import { knowsOwnTraits } from '../engine/passive';
 import type { Condition, Environment, GameState, StatTarget, Traits } from '../engine/types';
 import { t } from '../i18n/i18n';
+import { comparePoints } from './compare';
+import { CompareDialog } from './CompareDialog';
 import { habitSourceMonths } from './months';
 import { StatBar, type StatChange } from './StatBar';
 import { useEventFlash } from './useEventFlash';
@@ -33,11 +36,21 @@ function lastYearChange(game: GameState, target: StatTarget): StatChange | undef
 export function CharacterPanel({ game }: { game: GameState }) {
   const flashes = useEventFlash(game);
   const lastYear = game.history.at(-1);
+  const [compareOpen, setCompareOpen] = useState(false);
+  // Nothing to compare with in a save from before birth values were kept, until its first birthday.
+  const canCompare = comparePoints(game).length > 0;
 
   return (
     <div className="panels">
       <section className="card">
-        <h2>{t('layer.condition')}</h2>
+        <div className="card__header">
+          <h2>{t('layer.condition')}</h2>
+          {canCompare && (
+            <button type="button" className="button button--small" onClick={() => setCompareOpen(true)}>
+              {t('compare.open')}
+            </button>
+          )}
+        </div>
         {CONDITION_KEYS.map((key) => (
           <StatBar
             key={key}
@@ -51,6 +64,7 @@ export function CharacterPanel({ game }: { game: GameState }) {
         {lastYear !== undefined && (
           <p className="muted small stat-hint">{t('stat.changeHint', { from: lastYear.age - 1, to: lastYear.age })}</p>
         )}
+        {compareOpen && <CompareDialog game={game} onClose={() => setCompareOpen(false)} />}
       </section>
 
       <section className="card">

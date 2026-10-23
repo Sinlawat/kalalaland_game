@@ -16,6 +16,7 @@ import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } f
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
+import { snapshotOf } from './snapshot';
 import { applyContributions } from './stats';
 import type { GameState, StopReason } from './types';
 import { applyMonthlyWear, yearlyWearChange } from './wear';
@@ -41,7 +42,7 @@ function closeYear(state: GameState): void {
   state.history.push({
     age: state.ageInMonths / MONTHS_PER_YEAR,
     changes: state.yearLog,
-    snapshot: { ...state.condition, looks: state.outcome.looks },
+    snapshot: snapshotOf(state),
     habits: state.yearHabits,
   });
   state.yearLog = {};

@@ -1,6 +1,7 @@
 import type { HabitKey } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { changeClass, formatChange } from './format';
+import { residenceLabel } from './residence';
 import type { TimelineEntry, TimelineYear } from './timeline';
 
 function ageLabel(age: number): string {
@@ -46,6 +47,14 @@ export function TimelineYears({ years }: { years: TimelineYear[] }) {
                       </p>
                     );
                   })}
+                {entry.residenceChange && (
+                  <p className="muted small">
+                    {t('timeline.residenceChange', {
+                      from: residenceLabel(entry.residenceChange.from),
+                      to: residenceLabel(entry.residenceChange.to),
+                    })}
+                  </p>
+                )}
                 {entry.effects.length > 0 && (
                   <ul className="effect-chips" aria-label={t('timeline.effects')}>
                     {entry.effects.map((chip) => (

@@ -138,6 +138,17 @@ p { margin: 0 0 8px; }
 
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--gap); flex-wrap: wrap; }
 .topbar__name { font-size: 1.3rem; margin: 0; }
+.topbar__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+/* ── Residence popup ──────────────────────────────────────────────────── */
+.residence-now { display: grid; gap: 2px; padding: 14px 16px; margin: 12px 0; border-radius: 10px; background: var(--bg); }
+.residence-now__place { font-size: 1.1rem; }
+.residence-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 12px; }
+.residence-facts dd { margin: 0; }
+.residence-history__title { font-size: 1rem; margin: 0 0 6px; }
+.residence-history { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.residence-history__item { display: grid; grid-template-columns: 9.5em 1fr; gap: 12px; align-items: baseline; }
+@media (max-width: 480px) { .residence-history__item { grid-template-columns: 1fr; gap: 0; } }
 
 /* ── Start screen ─────────────────────────────────────────────────────── */
 .start { max-width: 520px; padding-top: 12vh; }
@@ -241,6 +252,26 @@ p { margin: 0 0 8px; }
   .stat__glow { animation: none; opacity: 0.3; }
 }
 .stat-hint { margin: 6px 0 0; }
+
+/* ── Compare years popup ──────────────────────────────────────────────── */
+.compare-picker { display: grid; gap: 4px; margin: 8px 0 12px; }
+.select {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.compare-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+.compare-table th, .compare-table td { padding: 5px 0 5px 8px; text-align: right; }
+.compare-table th:first-child { padding-left: 0; text-align: left; font-weight: 400; }
+.compare-table thead th { font-size: 0.8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.compare-table thead th:first-child { font-weight: 600; }
+.compare-table .compare-table__group { padding-top: 12px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+.compare-table td.up, .compare-table td.down { font-weight: 700; }
 .stat__change { font-size: 0.8rem; white-space: nowrap; }
 
 /* ── Lifestyle (read-only, D50) ───────────────────────────────────────── */
@@ -321,6 +352,7 @@ p { margin: 0 0 8px; }
 .choice-list__button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .choice-list__button:disabled { cursor: not-allowed; opacity: 0.55; }
 .choice-list__reason { margin: 4px 4px 0; font-size: 0.85rem; color: var(--muted); }
+.choice-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
 .trait-list { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
 .trait-list__item { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
 .trait-list__item p { margin: 4px 0 0; }

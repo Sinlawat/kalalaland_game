@@ -36,7 +36,7 @@ describe('createNewLife', () => {
       }
       expect(life.birthMonth).toBeGreaterThanOrEqual(1);
       expect(life.birthMonth).toBeLessThanOrEqual(12);
-      expect(REGION_IDS).toContain(life.regionId);
+      expect(REGION_IDS).toContain(life.birthRegionId);
       expect(life.name.first.length).toBeGreaterThan(0);
     }
   });
@@ -47,8 +47,24 @@ describe('createNewLife', () => {
     expect(life.rngState).not.toBe(10);
   });
 
+  it('starts at home with the parents, in the birth region', () => {
+    const life = createNewLife(5);
+    expect(life.residence).toEqual({ regionId: life.birthRegionId, homeId: 'parents' });
+  });
+
+  it('keeps the values at birth for the year comparison (copies, not shared objects)', () => {
+    const life = createNewLife(5);
+    expect(life.birthSnapshot).toEqual({
+      ...life.condition,
+      looks: life.outcome.looks,
+      traits: life.traits,
+      environment: life.environment,
+    });
+    expect(life.birthSnapshot!.traits).not.toBe(life.traits);
+  });
+
   it('produces every region over enough seeds', () => {
-    const regions = new Set(Array.from({ length: 200 }, (_, seed) => createNewLife(seed).regionId));
+    const regions = new Set(Array.from({ length: 200 }, (_, seed) => createNewLife(seed).birthRegionId));
     expect(regions).toEqual(new Set(REGION_IDS));
   });
 });

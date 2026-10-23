@@ -17,6 +17,16 @@ class MemoryStorage implements SaveStorage {
   }
 }
 
+/**
+ * A new life in the shape save version 6 wrote it: one `regionId`, no
+ * birth region / residence / birth values. Older-version tests remove
+ * more fields from this.
+ */
+function version6Life(seed: number): Record<string, unknown> & ReturnType<typeof createNewLife> {
+  const { birthRegionId, residence: _residence, birthSnapshot: _birth, ...rest } = createNewLife(seed);
+  return { ...rest, regionId: birthRegionId } as never;
+}
+
 /** Simulates a browser where storage access is blocked. */
 const brokenStorage: SaveStorage = {
   getItem: () => {
@@ -66,7 +76,7 @@ describe('save / load', () => {
   describe('migration v1 → v2 (accumulated wear)', () => {
     /** A save exactly as version 1 of the game wrote it: no `hidden` field. */
     function writeVersion1Save(): void {
-      const { hidden: _hidden, ...v1State } = createNewLife(77);
+      const { hidden: _hidden, ...v1State } = version6Life(77);
       storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 1, savedAt: '2026-10-21T00:00:00.000Z', state: v1State }));
     }
 
@@ -92,7 +102,7 @@ describe('save / load', () => {
 
   describe('migration v2 → v3 (event history)', () => {
     it('loads a version 2 save with an empty event history and keeps its wear', () => {
-      const { eventHistory: _events, ...v2State } = createNewLife(78);
+      const { eventHistory: _events, ...v2State } = version6Life(78);
       v2State.hidden = { physicalWear: 7 };
       storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 2, savedAt: '2026-10-21T00:00:00.000Z', state: v2State }));
       const result = loadGame(storage);
@@ -104,7 +114,7 @@ describe('save / load', () => {
 
   describe('migration v3 → v4 (habits per month)', () => {
     it('loads a version 3 save with an empty habit record for the running year', () => {
-      const { yearHabits: _habits, ...v3State } = createNewLife(79);
+      const { yearHabits: _habits, ...v3State } = version6Life(79);
       storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 3, savedAt: '2026-10-22T00:00:00.000Z', state: v3State }));
       const result = loadGame(storage);
       if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
@@ -115,7 +125,7 @@ describe('save / load', () => {
 
   describe('migration v4 → v5 (events with choices)', () => {
     it('loads a version 4 save with nothing waiting for a choice', () => {
-      const { pendingChoices: _pending, ...v4State } = createNewLife(80);
+      const { pendingChoices: _pending, ...v4State } = version6Life(80);
       storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 4, savedAt: '2026-10-22T00:00:00.000Z', state: v4State }));
       const result = loadGame(storage);
       if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
@@ -126,12 +136,38 @@ describe('save / load', () => {
 
   describe('migration v5 → v6 (temporary lifestyle)', () => {
     it('loads a version 5 save with no temporary lifestyle running', () => {
-      const { habitTimers: _timers, ...v5State } = createNewLife(81);
+      const { habitTimers: _timers, ...v5State } = version6Life(81);
       storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 5, savedAt: '2026-10-22T00:00:00.000Z', state: v5State }));
       const result = loadGame(storage);
       if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
       expect(result.state.habitTimers).toEqual({});
       expect(() => advanceUntilStop(result.state)).not.toThrow();
+    });
+  });
+
+  describe('migration v6 → v7 (birth region and residence)', () => {
+    function writeVersion6Save(flags: string[] = []): void {
+      const state = { ...version6Life(82), regionId: 'city', flags };
+      storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 6, savedAt: '2026-10-22T00:00:00.000Z', state }));
+    }
+
+    it('keeps the old region as the birth region and as home with the parents', () => {
+      writeVersion6Save();
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.birthRegionId).toBe('city');
+      expect(result.state.residence).toEqual({ regionId: 'city', homeId: 'parents' });
+      expect('regionId' in result.state).toBe(false);
+      expect(result.state.birthSnapshot).toBeUndefined();
+      expect(() => advanceUntilStop(result.state)).not.toThrow();
+    });
+
+    it('places a life that already moved to the grandparents (flag) in the countryside', () => {
+      writeVersion6Save(['lives_with_grandparents']);
+      const result = loadGame(storage);
+      if (result.status !== 'ok') throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+      expect(result.state.birthRegionId).toBe('city');
+      expect(result.state.residence).toEqual({ regionId: 'rural', homeId: 'grandparents' });
     });
   });
 

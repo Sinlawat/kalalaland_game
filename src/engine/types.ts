@@ -79,6 +79,16 @@ export type StatTarget = ConditionKey | 'looks';
 export const REGION_IDS = ['city', 'suburb', 'rural'] as const;
 export type RegionId = (typeof REGION_IDS)[number];
 
+/** Whose home the character lives in. Events change it (save version 7). */
+export const HOME_IDS = ['parents', 'grandparents'] as const;
+export type HomeId = (typeof HOME_IDS)[number];
+
+/** Where the character lives NOW. The birth region is kept separately. */
+export interface Residence {
+  regionId: RegionId;
+  homeId: HomeId;
+}
+
 // ── Log: "where did this change come from?" (design doc section 6) ─────────
 /**
  * `source` is an i18n key suffix, e.g. 'habit.exercise.regular'.
@@ -87,13 +97,23 @@ export type RegionId = (typeof REGION_IDS)[number];
  */
 export type YearLog = Partial<Record<StatTarget, Record<string, number>>>;
 
+/**
+ * Values at one moment of life (a birthday, or birth). Traits and environment
+ * were added in save version 7, so years closed before that lack them.
+ */
+export interface LifeSnapshot extends Condition {
+  looks: number;
+  traits?: Traits;
+  environment?: Environment;
+}
+
 export interface YearSummary {
   /** Age in years when the summary was closed: a whole number on a birthday,
    *  a fraction for the final, partial year in which the character died. */
   age: number;
   changes: YearLog;
-  /** Values at the end of the year, for the life summary chart. */
-  snapshot: Condition & { looks: number };
+  /** Values at the end of the year (on the birthday), for the life summary chart and the year comparison. */
+  snapshot: LifeSnapshot;
   /**
    * Habits in effect in each month of the year, in order (save version 4).
    * Missing for years played before version 4.
@@ -120,6 +140,8 @@ export interface EventRecord {
   habitChanges?: Partial<Habits>;
   /** For temporary changes (D56): how many months each one lasts. */
   habitMonths?: Partial<Record<HabitKey, number>>;
+  /** Where the character lived before and after, when the event moved them. */
+  residenceChange?: { from: Residence; to: Residence };
 }
 
 /**
@@ -152,7 +174,12 @@ export interface GameState {
   ageInMonths: number;
   /** Calendar month of birth, 1–12. Used later for seasonal events. */
   birthMonth: number;
-  regionId: RegionId;
+  /** Region of the family home at birth. Never changes (save version 7). */
+  birthRegionId: RegionId;
+  /** Where the character lives now; events can move them (save version 7). */
+  residence: Residence;
+  /** Values at birth, for the year comparison. Missing in lives started before save version 7. */
+  birthSnapshot?: LifeSnapshot;
 
   traits: Traits;
   environment: Environment;

@@ -14,7 +14,7 @@
 import type { GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 6;
+export const CURRENT_SAVE_VERSION = 7;
 
 /** The subset of the browser Storage API we use. */
 export type SaveStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -54,6 +54,20 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   4: (state) => (isRecord(state) ? { ...state, pendingChoices: [] } : state),
   // v5 → v6: temporary lifestyle changes (D56). Nothing was running before.
   5: (state) => (isRecord(state) ? { ...state, habitTimers: {} } : state),
+  // v6 → v7: birth region vs where the character lives now (events can move them).
+  // The one move that existed before v7 (to the grandparents, D-family events)
+  // only set a flag, so a life with that flag is placed there now.
+  // Values at birth (for the year comparison) cannot be recovered: left out.
+  6: (state) => {
+    if (!isRecord(state)) return state;
+    const { regionId, ...rest } = state;
+    const withGrandparents = Array.isArray(state.flags) && state.flags.includes('lives_with_grandparents');
+    return {
+      ...rest,
+      birthRegionId: regionId,
+      residence: withGrandparents ? { regionId: 'rural', homeId: 'grandparents' } : { regionId, homeId: 'parents' },
+    };
+  },
 };
 
 function migrate(state: unknown, fromVersion: number): unknown {
@@ -83,7 +97,10 @@ export function isValidGameState(value: unknown): value is GameState {
   if (!isRecord(value)) return false;
   return (
     hasNumbers(value, ['seed', 'rngState', 'ageInMonths', 'birthMonth']) &&
-    typeof value.regionId === 'string' &&
+    typeof value.birthRegionId === 'string' &&
+    isRecord(value.residence) &&
+    typeof value.residence.regionId === 'string' &&
+    typeof value.residence.homeId === 'string' &&
     isRecord(value.name) &&
     hasNumbers(value.traits, ['discipline', 'resilience', 'riskTaking']) &&
     hasNumbers(value.environment, ['familyWealth', 'familyWarmth', 'workStress', 'financialStress']) &&

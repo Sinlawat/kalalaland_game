@@ -306,7 +306,10 @@
     "id": "family_new_sibling",
     "conditions": {
       "ageMin": 6,
-      "ageMax": 12
+      "ageMax": 12,
+      "flagsNone": [
+        "lives_with_grandparents"
+      ]
     },
     "frequency": "normal",
     "once": true,
@@ -394,6 +397,29 @@
         "familyWealth": -10
       },
       "setFlags": [
+        "parent_lost_job"
+      ]
+    }
+  },
+  {
+    "id": "family_parent_new_job",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "flagsAll": [
+        "parent_lost_job"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 1
+      },
+      "environment": {
+        "familyWealth": 5
+      },
+      "removeFlags": [
         "parent_lost_job"
       ]
     }
@@ -517,6 +543,9 @@
           "op": ">=",
           "value": 50
         }
+      ],
+      "flagsNone": [
+        "lives_with_grandparents"
       ]
     },
     "frequency": "uncommon",
@@ -552,6 +581,7 @@
         }
       ],
       "flagsNone": [
+        "lives_with_grandparents",
         "parents_divorced"
       ],
       "habits": {
@@ -581,17 +611,63 @@
           "op": "<",
           "value": 40
         }
+      ],
+      "flagsNone": [
+        "parent_lost_job",
+        "lives_with_grandparents"
       ]
     },
     "frequency": "uncommon",
     "once": true,
     "effects": {
+      "stats": {
+        "mentalHealth": -2
+      },
       "habits": {
         "sleep": "enough",
         "exercise": "regular"
       },
+      "residence": {
+        "region": "rural",
+        "home": "grandparents"
+      },
+      "setFlags": [
+        "lives_with_grandparents"
+      ]
+    }
+  },
+  {
+    "id": "family_live_with_grandparents_after_job_loss",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 40
+        }
+      ],
+      "flagsAll": [
+        "parent_lost_job"
+      ],
+      "flagsNone": [
+        "lives_with_grandparents"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
       "stats": {
         "mentalHealth": -2
+      },
+      "habits": {
+        "sleep": "enough",
+        "exercise": "regular"
+      },
+      "residence": {
+        "region": "rural",
+        "home": "grandparents"
       },
       "setFlags": [
         "lives_with_grandparents"
@@ -609,6 +685,9 @@
           "op": ">=",
           "value": 60
         }
+      ],
+      "flagsNone": [
+        "lives_with_grandparents"
       ],
       "habits": {
         "sleep": "short"

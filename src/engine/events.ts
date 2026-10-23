@@ -29,11 +29,15 @@ import { createRng, type Rng } from './rng';
 import { applyContributions, clampStat, type Contribution } from './stats';
 import {
   HABIT_LEVELS,
+  HOME_IDS,
+  REGION_IDS,
   type EnvironmentKey,
   type EventRecord,
   type GameState,
   type HabitKey,
   type Habits,
+  type HomeId,
+  type RegionId,
   type StatTarget,
   type TraitKey,
 } from './types';
@@ -101,6 +105,8 @@ export interface EventEffects {
   traits?: Partial<Record<TraitKey, number>>;
   environment?: Partial<Record<EffectEnvironment, number>>;
   habits?: { [K in HabitKey]?: HabitEffect<K> };
+  /** Moves the character (save version 7), e.g. to the grandparents' home in the countryside. */
+  residence?: { region?: RegionId; home?: HomeId };
   setFlags?: string[];
   removeFlags?: string[];
 }
@@ -203,7 +209,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'setFlags', 'removeFlags'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -235,6 +241,20 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
           if (!isPositiveInteger(spec.months)) problems.push(`${at}: habit "${habit}": months must be a whole number above 0`);
         }
       }
+  }
+  if (e.residence !== undefined) {
+    const residence = e.residence;
+    if (!isRecord(residence) || (residence.region === undefined && residence.home === undefined)) {
+      problems.push(`${at}: effects.residence must name a region, a home, or both`);
+    } else {
+      for (const key of unknownKeys(residence, ['region', 'home'])) problems.push(`${at}: residence: unknown field "${key}"`);
+      if (residence.region !== undefined && !(REGION_IDS as readonly unknown[]).includes(residence.region)) {
+        problems.push(`${at}: residence: unknown region ${JSON.stringify(residence.region)}`);
+      }
+      if (residence.home !== undefined && !(HOME_IDS as readonly unknown[]).includes(residence.home)) {
+        problems.push(`${at}: residence: unknown home ${JSON.stringify(residence.home)}`);
+      }
+    }
   }
   for (const key of ['setFlags', 'removeFlags'] as const) {
     const list = e[key];
@@ -611,6 +631,18 @@ function applyEffects(state: GameState, eventId: string, effects: EventEffects, 
   }
   if (Object.keys(habitChanges).length > 0) record.habitChanges = habitChanges as Partial<Habits>;
   if (Object.keys(habitMonths).length > 0) record.habitMonths = habitMonths;
+
+  if (effects.residence) {
+    const from = { ...state.residence };
+    const to = {
+      regionId: effects.residence.region ?? from.regionId,
+      homeId: effects.residence.home ?? from.homeId,
+    };
+    if (to.regionId !== from.regionId || to.homeId !== from.homeId) {
+      state.residence = to;
+      record.residenceChange = { from, to };
+    }
+  }
 
   for (const flag of effects.setFlags ?? []) {
     if (!state.flags.includes(flag)) state.flags.push(flag);

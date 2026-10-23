@@ -81,7 +81,6 @@ export function ChoiceDialog({ game, onChoose }: Props) {
     >
       <h2 id="choice-title">{t(`event.${event.id}.title`)}</h2>
       <p id="choice-text">{t(`event.${event.id}.text`)}</p>
-      <p className="muted small">{t('choice.hint')}</p>
 
       <ul className="choice-list" aria-label={t('choice.label')}>
         {event.choices.map((choice) => {
@@ -109,7 +108,12 @@ export function ChoiceDialog({ game, onChoose }: Props) {
         })}
       </ul>
 
-      {waitingAfterThis > 0 && <p className="muted small">{t('choice.queue', { count: waitingAfterThis })}</p>}
+      {/* Secondary notes go AFTER the choices, so the story reads straight into
+          the buttons: how choosing works (left) and what is still waiting (right). */}
+      <div className="choice-footer muted small">
+        <span>{t('choice.hint')}</span>
+        {waitingAfterThis > 0 && <span>{t('choice.queue', { count: waitingAfterThis })}</span>}
+      </div>
     </dialog>
   );
 }

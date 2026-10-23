@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { shouldRevealTraits } from '../actions/traits';
 import { t } from '../i18n/i18n';
 import { CharacterPanel } from './CharacterPanel';
@@ -7,6 +8,8 @@ import { formatAge } from './format';
 import { LifeTimeline } from './LifeTimeline';
 import { LifestylePanel } from './LifestylePanel';
 import { PlaybackBar } from './PlaybackBar';
+import { residenceLabel } from './residence';
+import { ResidenceDialog } from './ResidenceDialog';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
 import { TraitRevealDialog } from './TraitRevealDialog';
@@ -15,6 +18,8 @@ import { useGame } from './useGame';
 export function App() {
   const controller = useGame();
   const { game } = controller;
+  // Hooks must run on every render, so this sits above the early returns.
+  const [residenceOpen, setResidenceOpen] = useState(false);
 
   if (game === null) {
     return (
@@ -45,11 +50,18 @@ export function App() {
             {game.name.first} {game.name.last}
           </h1>
           <p className="muted">
-            {formatAge(game.ageInMonths)} · {t(`region.${game.regionId}`)}
+            {formatAge(game.ageInMonths)} · {residenceLabel(game.residence)}
           </p>
+          <div className="topbar__actions">
+            <button type="button" className="button button--small" onClick={() => setResidenceOpen(true)}>
+              {t('residence.open')}
+            </button>
+          </div>
         </div>
         <span className="muted small">{t('status.seed', { seed: game.seed })}</span>
       </header>
+
+      {residenceOpen && <ResidenceDialog game={game} onClose={() => setResidenceOpen(false)} />}
 
       {/* Time sits right under who and how old: the two things read together. */}
       <div className="playback-dock">

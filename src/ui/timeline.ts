@@ -37,6 +37,8 @@ export interface TimelineEntry {
   habitChanges?: Partial<Habits>;
   /** Months for temporary changes (D56), matching `habitChanges`. */
   habitMonths?: Partial<Record<HabitKey, number>>;
+  /** Where the event moved the character (the latest occurrence wins). */
+  residenceChange?: EventRecord['residenceChange'];
   /** Age of the first occurrence in this year of age. */
   ageInMonths: number;
   /** How many times it happened in this year of age (repeatable events). */
@@ -119,6 +121,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
       }
       if (record.habitChanges) existing.habitChanges = { ...existing.habitChanges, ...record.habitChanges };
       if (record.habitMonths) existing.habitMonths = { ...existing.habitMonths, ...record.habitMonths };
+      if (record.residenceChange) existing.residenceChange = record.residenceChange;
     } else {
       entries.set(key, {
         key,
@@ -126,6 +129,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         ...(record.choiceId !== undefined ? { choiceId: record.choiceId } : {}),
         ...(record.habitChanges ? { habitChanges: { ...record.habitChanges } } : {}),
         ...(record.habitMonths ? { habitMonths: { ...record.habitMonths } } : {}),
+        ...(record.residenceChange ? { residenceChange: record.residenceChange } : {}),
         ageInMonths: record.ageInMonths,
         count: 1,
         effects,

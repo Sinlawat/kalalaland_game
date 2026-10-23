@@ -6,6 +6,7 @@
 import { BALANCE } from '../data/balance';
 import names from '../data/names.json';
 import { createRng, normalizeSeed, type Rng } from './rng';
+import { snapshotOf } from './snapshot';
 import { REGION_IDS, type GameState } from './types';
 
 /**
@@ -31,13 +32,18 @@ export function createNewLife(seed: number): GameState {
 
   // The ORDER of random draws below is part of the save format in a sense:
   // reordering lines changes which life a given seed produces.
+  const name = { first: rng.pick(names.first), last: rng.pick(names.last) };
+  const birthMonth = rng.int(1, 12);
+  const birthRegionId = rng.pick(REGION_IDS);
+
   const state: GameState = {
     seed: normalizedSeed,
     rngState: 0, // filled in at the end, after all draws
-    name: { first: rng.pick(names.first), last: rng.pick(names.last) },
+    name,
     ageInMonths: 0,
-    birthMonth: rng.int(1, 12),
-    regionId: rng.pick(REGION_IDS),
+    birthMonth,
+    birthRegionId,
+    residence: { regionId: birthRegionId, homeId: 'parents' },
     traits: {
       discipline: attribute(),
       resilience: attribute(),
@@ -71,6 +77,7 @@ export function createNewLife(seed: number): GameState {
   };
 
   state.rngState = rng.state;
+  state.birthSnapshot = snapshotOf(state);
   return state;
 }
 

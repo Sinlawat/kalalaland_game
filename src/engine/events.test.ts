@@ -361,6 +361,39 @@ describe('environment effects (D57)', () => {
   });
 });
 
+describe('residence effects (save version 7)', () => {
+  it('move the character and record where from and where to', () => {
+    const state = makeState({ residence: { regionId: 'city', homeId: 'parents' } });
+    applyEvent(state, makeEvent({ id: 'move', effects: { residence: { region: 'rural', home: 'grandparents' } } }));
+    expect(state.residence).toEqual({ regionId: 'rural', homeId: 'grandparents' });
+    expect(state.eventHistory[0]!.residenceChange).toEqual({
+      from: { regionId: 'city', homeId: 'parents' },
+      to: { regionId: 'rural', homeId: 'grandparents' },
+    });
+  });
+
+  it('may change only the home: the region stays', () => {
+    const state = makeState({ residence: { regionId: 'rural', homeId: 'parents' } });
+    applyEvent(state, makeEvent({ effects: { residence: { home: 'grandparents' } } }));
+    expect(state.residence).toEqual({ regionId: 'rural', homeId: 'grandparents' });
+  });
+
+  it('records nothing when the character already lives there', () => {
+    const state = makeState({ residence: { regionId: 'rural', homeId: 'grandparents' } });
+    applyEvent(state, makeEvent({ effects: { residence: { region: 'rural', home: 'grandparents' } } }));
+    expect(state.eventHistory[0]!.residenceChange).toBeUndefined();
+  });
+
+  it.each([
+    [{ residence: {} }, 'must name a region, a home, or both'],
+    [{ residence: { region: 'moon' } }, 'unknown region "moon"'],
+    [{ residence: { home: 'castle' } }, 'unknown home "castle"'],
+    [{ residence: { home: 'parents', street: 'x' } }, 'unknown field "street"'],
+  ])('rejects %j', (effects, expected) => {
+    expect(() => parseEvents([{ ...makeEvent(), effects }])).toThrow(expected);
+  });
+});
+
 describe('applyChoice', () => {
   const dream = makeEvent({
     id: 'dream',
@@ -475,10 +508,77 @@ describe('real events over many lives (Monte Carlo)', () => {
     expect(share).toBeLessThan(0.15);
   });
 
+  describe('family story stays consistent (job loss, grandparents)', () => {
+    const HOME_EVENTS = [
+      'family_new_sibling',
+      'family_dad_morning_run',
+      'family_bedtime_rule',
+      'family_home_atmosphere_better',
+      'family_market_helper',
+      'family_move_far_from_school',
+    ];
+    const GRANDPARENTS = ['family_live_with_grandparents', 'family_live_with_grandparents_after_job_loss'];
+    const indexOf = (end: (typeof ends)[number], id: string) => ids(end).indexOf(id);
+
+    it('moves to the grandparents at most once, and lives there (countryside) afterwards', () => {
+      let moved = 0;
+      for (const end of ends) {
+        const moves = ids(end).filter((id) => GRANDPARENTS.includes(id));
+        expect(moves.length).toBeLessThanOrEqual(1);
+        if (moves.length === 1) {
+          moved += 1;
+          expect(end.residence).toEqual({ regionId: 'rural', homeId: 'grandparents' });
+        } else {
+          expect(end.residence).toEqual({ regionId: end.birthRegionId, homeId: 'parents' });
+        }
+      }
+      expect(moved).toBeGreaterThan(0);
+    });
+
+    it('no event that needs the parents\' home happens after moving to the grandparents', () => {
+      for (const end of ends) {
+        const moveAt = Math.max(...GRANDPARENTS.map((id) => indexOf(end, id)));
+        if (moveAt < 0) continue;
+        expect(ids(end).slice(moveAt).filter((id) => HOME_EVENTS.includes(id))).toEqual([]);
+      }
+    });
+
+    it('the "after job loss" version happens only while a parent is out of work; the plain one never', () => {
+      let afterJobLoss = 0;
+      for (const end of ends) {
+        const lost = indexOf(end, 'family_parent_lost_job');
+        const found = indexOf(end, 'family_parent_new_job');
+        const unemployedAt = (at: number) => lost >= 0 && lost < at && (found < 0 || found > at);
+        const special = indexOf(end, 'family_live_with_grandparents_after_job_loss');
+        const plain = indexOf(end, 'family_live_with_grandparents');
+        if (special >= 0) {
+          afterJobLoss += 1;
+          expect(unemployedAt(special)).toBe(true);
+        }
+        if (plain >= 0) expect(unemployedAt(plain)).toBe(false);
+      }
+      expect(afterJobLoss).toBeGreaterThan(0);
+    });
+
+    it('a parent finds a new job only after losing one', () => {
+      for (const end of ends) {
+        const found = indexOf(end, 'family_parent_new_job');
+        if (found >= 0) expect(indexOf(end, 'family_parent_lost_job')).toBeLessThan(found);
+        if (found >= 0) expect(indexOf(end, 'family_parent_lost_job')).toBeGreaterThanOrEqual(0);
+      }
+    });
+  });
+
   it('malnutrition hits only poor families, at most once per 12 months', () => {
     for (const end of ends) {
       const months = end.eventHistory.filter((r) => r.id === 'health_malnutrition').map((r) => r.ageInMonths);
-      if (months.length > 0) expect(end.environment.familyWealth).toBeLessThan(31);
+      // Family wealth when it happened: only events change it, and each records its real change.
+      let wealth = createNewLife(end.seed).environment.familyWealth;
+      for (const record of end.eventHistory) {
+        if (record.id === 'health_malnutrition') expect(wealth).toBeLessThan(31);
+        wealth += record.environmentChanges?.familyWealth ?? 0;
+      }
+      expect(wealth).toBeCloseTo(end.environment.familyWealth, 5);
       months.slice(1).forEach((month, i) => expect(month - months[i]!).toBeGreaterThanOrEqual(12));
     }
   });
