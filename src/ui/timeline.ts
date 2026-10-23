@@ -179,6 +179,21 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
     }));
 }
 
+/**
+ * D35: before Grade 1 the child does not know their own traits, so the
+ * timeline must not show trait chips ("วินัย +2") either. The changes are
+ * real and stay in the data; they appear once the traits are revealed.
+ */
+export function withoutTraitChips(years: TimelineYear[]): TimelineYear[] {
+  return years.map((year) => ({
+    ...year,
+    entries: year.entries.map((entry) => ({
+      ...entry,
+      effects: entry.effects.filter((chip) => !(TRAIT_ORDER as string[]).includes(chip.target)),
+    })),
+  }));
+}
+
 /** Splits the timeline into the last `RECENT_YEARS` years of age and everything older. */
 export function splitRecent(timeline: TimelineYear[], currentAgeInMonths: number): {
   recent: TimelineYear[];

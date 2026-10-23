@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
 import type { GameState, YearSummary } from '../engine/types';
-import { buildTimeline, countEntries, splitRecent, type TimelineYear } from './timeline';
+import { buildTimeline, countEntries, splitRecent, withoutTraitChips, type TimelineYear } from './timeline';
 
 type Source = Pick<GameState, 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
@@ -205,3 +205,30 @@ describe('splitRecent', () => {
     expect(splitRecent(timeline, 2 * 12).older).toEqual([]);
   });
 });
+
+describe('withoutTraitChips (D35: traits secret before Grade 1)', () => {
+  it('drops trait chips and keeps stats and family chips', () => {
+    const years: TimelineYear[] = [
+      {
+        age: 2,
+        entries: [
+          {
+            key: 'growth_self_care',
+            id: 'growth_self_care',
+            ageInMonths: 30,
+            calendarMonth: 7,
+            count: 1,
+            effects: [
+              { target: 'knowledge', amount: 1 },
+              { target: 'discipline', amount: 2 },
+              { target: 'familyWarmth', amount: 3 },
+            ],
+          },
+        ],
+      },
+    ];
+    expect(withoutTraitChips(years)[0]!.entries[0]!.effects.map((c) => c.target)).toEqual(['knowledge', 'familyWarmth']);
+    expect(years[0]!.entries[0]!.effects).toHaveLength(3); // the input is not changed
+  });
+});
+

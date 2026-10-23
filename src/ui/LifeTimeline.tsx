@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { knowsOwnTraits } from '../engine/passive';
 import type { GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { LifeHistoryDialog } from './LifeHistoryDialog';
-import { buildTimeline, countEntries, RECENT_YEARS, splitRecent } from './timeline';
+import { buildTimeline, countEntries, RECENT_YEARS, splitRecent, withoutTraitChips } from './timeline';
 import { TimelineYears } from './TimelineYears';
 
 /**
@@ -13,7 +14,9 @@ import { TimelineYears } from './TimelineYears';
  */
 export function LifeTimeline({ game }: { game: GameState }) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const timeline = buildTimeline(game);
+  const built = buildTimeline(game);
+  // D35: traits stay secret until Grade 1, including what events did to them.
+  const timeline = knowsOwnTraits(game) ? built : withoutTraitChips(built);
   const { recent, older } = splitRecent(timeline, game.ageInMonths);
   const olderCount = countEntries(older);
 

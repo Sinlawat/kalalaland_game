@@ -645,6 +645,28 @@ describe('real events over many lives (Monte Carlo)', () => {
     });
   });
 
+  it('growth: at most one special interest per life, its flag set; milestones only in their age window', () => {
+    const INTERESTS = ['nature', 'machines', 'music', 'stories'];
+    let withInterest = 0;
+    for (const end of ends) {
+      const interests = ids(end).filter((id) => id.startsWith('growth_interest_'));
+      expect(interests.length).toBeLessThanOrEqual(1);
+      if (interests.length === 1) {
+        withInterest += 1;
+        const kind = interests[0]!.replace('growth_interest_', '');
+        expect(INTERESTS).toContain(kind);
+        expect(end.flags).toContain(`interest_${kind}`);
+      }
+      for (const record of end.eventHistory) {
+        const age = Math.floor(record.ageInMonths / 12);
+        if (record.id === 'growth_first_word') expect(age).toBe(1);
+        if (record.id === 'growth_first_sentence') expect(age).toBe(2);
+        if (record.id.startsWith('growth_')) expect(age).toBeLessThanOrEqual(6);
+      }
+    }
+    expect(withInterest).toBeGreaterThan(ends.length / 2);
+  });
+
   it('malnutrition hits only poor families, at most once per 12 months', () => {
     for (const end of ends) {
       const months = end.eventHistory.filter((r) => r.id === 'health_malnutrition').map((r) => r.ageInMonths);

@@ -329,6 +329,219 @@
     }
   },
   {
+    "id": "growth_first_word",
+    "conditions": {
+      "ageMin": 1,
+      "ageMax": 1
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1,
+        "mentalHealth": 1
+      }
+    }
+  },
+  {
+    "id": "growth_first_sentence",
+    "conditions": {
+      "ageMin": 2,
+      "ageMax": 2
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      }
+    }
+  },
+  {
+    "id": "growth_language_skills",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 5,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 40
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 2
+      }
+    }
+  },
+  {
+    "id": "growth_self_care",
+    "conditions": {
+      "ageMin": 2,
+      "ageMax": 4
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "traits": {
+        "discipline": 2
+      }
+    }
+  },
+  {
+    "id": "growth_toilet_training",
+    "conditions": {
+      "ageMin": 2,
+      "ageMax": 3
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "traits": {
+        "discipline": 1
+      }
+    }
+  },
+  {
+    "id": "growth_drawing",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 5
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 1,
+        "knowledge": 1
+      }
+    }
+  },
+  {
+    "id": "growth_numbers_letters",
+    "conditions": {
+      "ageMin": 4,
+      "ageMax": 6
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 2
+      }
+    }
+  },
+  {
+    "id": "growth_interest_nature",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 6,
+      "flagsNone": [
+        "interest_nature",
+        "interest_machines",
+        "interest_music",
+        "interest_stories"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "interest_nature"
+      ]
+    }
+  },
+  {
+    "id": "growth_interest_machines",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 6,
+      "flagsNone": [
+        "interest_nature",
+        "interest_machines",
+        "interest_music",
+        "interest_stories"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "interest_machines"
+      ]
+    }
+  },
+  {
+    "id": "growth_interest_music",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 6,
+      "flagsNone": [
+        "interest_nature",
+        "interest_machines",
+        "interest_music",
+        "interest_stories"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "interest_music"
+      ]
+    }
+  },
+  {
+    "id": "growth_interest_stories",
+    "conditions": {
+      "ageMin": 3,
+      "ageMax": 6,
+      "flagsNone": [
+        "interest_nature",
+        "interest_machines",
+        "interest_music",
+        "interest_stories"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 1
+      },
+      "setFlags": [
+        "interest_stories"
+      ]
+    }
+  },
+  {
+    "id": "growth_memory_problem_solving",
+    "conditions": {
+      "ageMin": 4,
+      "ageMax": 6
+    },
+    "frequency": "normal",
+    "once": true,
+    "effects": {
+      "stats": {
+        "knowledge": 2
+      }
+    }
+  },
+  {
     "id": "family_new_sibling",
     "conditions": {
       "ageMin": 6,

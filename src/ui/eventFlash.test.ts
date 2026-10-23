@@ -88,11 +88,24 @@ describe('newEventChanges with the real engine', () => {
     return states;
   }
 
-  it('flashes knowledge in the SAME month the event raises it (the case a player reported)', () => {
-    // Seed 26: an event at month 15 raises knowledge from 0 to 3; the ▲ only shows it at month 24.
-    const states = renders(26, 15);
-    const eventMonth = states.findIndex((s) => s.ageInMonths === 15);
-    expect(newEventChanges(states[eventMonth - 1], states[eventMonth]!).knowledge).toBeCloseTo(3, 5);
+  it('flashes knowledge in the SAME render the event raises it (the case a player reported)', () => {
+    // The ▲ beside the bar only shows a change at the next birthday; the flash must not wait.
+    // Not tied to one seed: content changes move events around. Every event that raised
+    // knowledge in the first 6 years of a few lives must flash in the render where it appears.
+    let checked = 0;
+    for (const seed of [1, 7, 26]) {
+      const states = renders(seed, 6 * 12);
+      for (let i = 1; i < states.length; i++) {
+        const previous = states[i - 1]!;
+        const next = states[i]!;
+        const flash = newEventChanges(previous, next).knowledge;
+        if (flash === undefined) continue;
+        checked += 1;
+        // The bar moved by the event's amount (plus at most a small monthly change from age and lifestyle).
+        expect(Math.abs(next.condition.knowledge - previous.condition.knowledge - flash)).toBeLessThan(0.5);
+      }
+    }
+    expect(checked).toBeGreaterThan(3);
   });
 
   it('always matches what events did to the family values (nothing else changes them)', () => {
