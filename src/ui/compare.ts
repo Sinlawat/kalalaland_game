@@ -8,7 +8,7 @@
  */
 
 import { knowsOwnTraits } from '../engine/passive';
-import type { EnvironmentKey, GameState, LifeSnapshot, TraitKey } from '../engine/types';
+import { SKILL_KEYS, TRAIT_KEYS, type EnvironmentKey, type GameState, type LifeSnapshot } from '../engine/types';
 import { t } from '../i18n/i18n';
 
 export interface ComparePoint {
@@ -38,7 +38,7 @@ export interface CompareGroup {
 
 type CompareSource = Pick<
   GameState,
-  'history' | 'birthSnapshot' | 'condition' | 'outcome' | 'traits' | 'environment' | 'ageInMonths' | 'flags'
+  'history' | 'birthSnapshot' | 'condition' | 'skills' | 'outcome' | 'traits' | 'environment' | 'ageInMonths' | 'flags'
 >;
 
 /** Points to compare with: birthdays newest first, then birth (when the save has it). */
@@ -66,17 +66,21 @@ function row(key: string, now: number, then: number | undefined): CompareRow {
   return { key, label: t(`stat.${key}`), then: shownThen, now: shownNow, diff: shownNow - shownThen };
 }
 
-const TRAIT_KEYS: TraitKey[] = ['discipline', 'resilience', 'riskTaking'];
 // Work and financial stress stay hidden until their systems exist (same as the cards).
 const ENVIRONMENT_KEYS: EnvironmentKey[] = ['familyWealth', 'familyWarmth'];
 
-/** The table, grouped like the cards on the play screen. Traits only once the child knows them (D35). */
+/** The table, grouped like the cards on the play screen: condition, skills, looks, traits (once the child knows them, D35), family. */
 export function compareGroups(state: CompareSource, then: LifeSnapshot): CompareGroup[] {
   const groups: CompareGroup[] = [
     {
       key: 'condition',
       title: t('layer.condition'),
-      rows: (['physicalHealth', 'mentalHealth', 'knowledge'] as const).map((key) => row(key, state.condition[key], then[key])),
+      rows: (['physicalHealth', 'mentalHealth'] as const).map((key) => row(key, state.condition[key], then[key])),
+    },
+    {
+      key: 'skills',
+      title: t('layer.skills'),
+      rows: SKILL_KEYS.map((key) => row(key, state.skills[key], then.skills[key])),
     },
     { key: 'outcome', title: t('layer.outcome'), rows: [row('looks', state.outcome.looks, then.looks)] },
   ];

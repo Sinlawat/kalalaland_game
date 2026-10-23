@@ -7,7 +7,7 @@
  * would silently stop matching the real value.
  */
 
-import type { GameState, StatTarget, YearLog } from './types';
+import { SKILL_KEYS, type GameState, type SkillKey, type StatTarget, type YearLog } from './types';
 
 export const STAT_MIN = 0;
 export const STAT_MAX = 100;
@@ -27,16 +27,21 @@ export function clampStat(value: number): number {
   return Math.min(STAT_MAX, Math.max(STAT_MIN, value));
 }
 
-function readStat(state: GameState, target: StatTarget): number {
-  return target === 'looks' ? state.outcome.looks : state.condition[target];
+export function isSkill(target: string): target is SkillKey {
+  return (SKILL_KEYS as readonly string[]).includes(target);
+}
+
+/** Current value of any stat contributions can change (condition, skill or looks). */
+export function readStat(state: Pick<GameState, 'condition' | 'skills' | 'outcome'>, target: StatTarget): number {
+  if (target === 'looks') return state.outcome.looks;
+  if (isSkill(target)) return state.skills[target];
+  return state.condition[target];
 }
 
 function writeStat(state: GameState, target: StatTarget, value: number): void {
-  if (target === 'looks') {
-    state.outcome.looks = value;
-  } else {
-    state.condition[target] = value;
-  }
+  if (target === 'looks') state.outcome.looks = value;
+  else if (isSkill(target)) state.skills[target] = value;
+  else state.condition[target] = value;
 }
 
 function addToLog(log: YearLog, contribution: Contribution, actualAmount: number): void {

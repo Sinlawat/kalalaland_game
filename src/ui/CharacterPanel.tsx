@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BALANCE } from '../data/balance';
 import { knowsOwnTraits } from '../engine/passive';
-import type { Condition, Environment, GameState, StatTarget, Traits } from '../engine/types';
+import { SKILL_KEYS, TRAIT_KEYS, type Condition, type Environment, type GameState, type StatTarget } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { comparePoints } from './compare';
 import { CompareDialog } from './CompareDialog';
@@ -10,8 +10,7 @@ import { StatBar, type StatChange } from './StatBar';
 import { useEventFlash } from './useEventFlash';
 
 // Explicit display order (Object.keys order is an implementation detail).
-const CONDITION_KEYS: (keyof Condition)[] = ['physicalHealth', 'mentalHealth', 'knowledge'];
-const TRAIT_KEYS: (keyof Traits)[] = ['discipline', 'resilience', 'riskTaking'];
+const CONDITION_KEYS: (keyof Condition)[] = ['physicalHealth', 'mentalHealth'];
 // Work/financial stress stay hidden until the systems that set them exist.
 const ENVIRONMENT_KEYS: (keyof Environment)[] = ['familyWealth', 'familyWarmth'];
 
@@ -65,6 +64,21 @@ export function CharacterPanel({ game }: { game: GameState }) {
           <p className="muted small stat-hint">{t('stat.changeHint', { from: lastYear.age - 1, to: lastYear.age })}</p>
         )}
         {compareOpen && <CompareDialog game={game} onClose={() => setCompareOpen(false)} />}
+      </section>
+
+      {/* D65: four skills instead of one "knowledge"; no total on purpose
+          (someone great at one thing would look average). */}
+      <section className="card">
+        <h2>{t('layer.skills')}</h2>
+        {SKILL_KEYS.map((key) => (
+          <StatBar
+            key={key}
+            label={t(`stat.${key}`)}
+            value={game.skills[key]}
+            change={lastYearChange(game, key)}
+            flash={flashes[key]}
+          />
+        ))}
       </section>
 
       <section className="card">

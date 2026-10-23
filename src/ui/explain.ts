@@ -42,8 +42,8 @@ export function explainParams({ age, physicalWear }: ExplainContext): Record<str
     playFrom: BALANCE.earlyChildhood.playFromAge,
     gradeOne: BALANCE.earlyChildhood.ownLifestyleFromAge,
     warmthForSleep: BALANCE.earlyChildhood.familyWarmthForEnoughSleep,
-    growFrom: BALANCE.knowledge.childhoodStartAge,
-    growTo: BALANCE.knowledge.childhoodEndAge,
+    growFrom: BALANCE.skills.childhoodStartAge,
+    growTo: BALANCE.skills.childhoodEndAge,
     resilienceMax: percent(BALANCE.traits.resilienceMaxReduction),
   };
 }

@@ -9,7 +9,7 @@
 
 import { BALANCE } from '../data/balance';
 import type { Contribution } from './stats';
-import type { GameState, Habits } from './types';
+import { SKILL_KEYS, type GameState, type Habits } from './types';
 
 const MONTHS_PER_YEAR = 12;
 
@@ -177,28 +177,36 @@ function mentalHealthContributions(state: GameState, age: number): Contribution[
   ];
 }
 
-function knowledgeContributions(state: GameState, age: number): Contribution[] {
-  const b = BALANCE.knowledge;
+/**
+ * D65: each skill grows while growing up (and a little in adult life),
+ * scaled by its own trait; all skills fade a little in old age.
+ * The trait's share is logged separately ("trait.<trait>.learning"), so the
+ * breakdown shows how much the trait helped or held the child back.
+ */
+function skillContributions(state: GameState, age: number): Contribution[] {
+  const b = BALANCE.skills;
+  const t = BALANCE.traits;
   const result: Contribution[] = [];
 
-  let baseYearly = 0;
-  let source = '';
-  if (age >= b.childhoodStartAge && age < b.childhoodEndAge) {
-    baseYearly = b.childhoodPerYear;
-    source = 'life.growingUp';
-  } else if (age >= b.childhoodEndAge) {
-    baseYearly = b.adultPerYear;
-    source = 'life.experience';
-  }
-
-  if (baseYearly > 0) {
-    const t = BALANCE.traits;
-    const factor = traitFactor(state.traits.discipline, t.disciplineLearningMin, t.disciplineLearningMax);
-    result.push({ target: 'knowledge', source, amount: perMonth(baseYearly) });
-    result.push({ target: 'knowledge', source: 'trait.discipline', amount: perMonth(baseYearly * (factor - 1)) });
-  }
-  if (age >= b.agingStartAge) {
-    result.push({ target: 'knowledge', source: 'body.aging', amount: perMonth(b.agingPerYear) });
+  for (const skill of SKILL_KEYS) {
+    let baseYearly = 0;
+    let source = '';
+    if (age >= b.childhoodStartAge && age < b.childhoodEndAge) {
+      baseYearly = b.childhoodPerYear[skill];
+      source = 'life.growingUp';
+    } else if (age >= b.childhoodEndAge) {
+      baseYearly = b.adultPerYear;
+      source = 'life.experience';
+    }
+    if (baseYearly > 0) {
+      const trait = b.learningTrait[skill];
+      const factor = traitFactor(state.traits[trait], t.learningMin, t.learningMax);
+      result.push({ target: skill, source, amount: perMonth(baseYearly) });
+      result.push({ target: skill, source: `trait.${trait}.learning`, amount: perMonth(baseYearly * (factor - 1)) });
+    }
+    if (age >= b.agingStartAge) {
+      result.push({ target: skill, source: 'body.aging', amount: perMonth(b.agingPerYear) });
+    }
   }
   return result;
 }
@@ -221,7 +229,7 @@ export function computePassiveContributions(state: GameState): Contribution[] {
   return [
     ...physicalHealthContributions(state, age),
     ...mentalHealthContributions(state, age),
-    ...knowledgeContributions(state, age),
+    ...skillContributions(state, age),
     ...looksContributions(state, age),
   ];
 }

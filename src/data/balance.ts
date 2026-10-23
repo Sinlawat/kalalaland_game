@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits } from '../engine/types';
+import type { Habits, SkillKey, Skills, TraitKey } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -20,7 +20,6 @@ export const BALANCE = {
     attributeMax: 90,
     physicalHealth: { min: 70, max: 95 },
     mentalHealth: { min: 60, max: 90 },
-    knowledge: 0,
     looks: { min: 10, max: 90 },
     habits: { exercise: 'light', sleep: 'enough', overtime: 'none' } satisfies Habits,
   },
@@ -111,14 +110,24 @@ export const BALANCE = {
     financialStressAt100PerYear: -4,
   },
 
-  knowledge: {
+  skills: {
     /** Basic learning while growing up (schooling comes with events later). */
     childhoodStartAge: 4,
     childhoodEndAge: 18,
-    childhoodPerYear: 4,
-    adultPerYear: 0.5,
+    /** Per year, before the trait factor (D65). Academic grows fastest: school is mostly that. */
+    childhoodPerYear: { academic: 2, creative: 1, communication: 1, practical: 1 } satisfies Skills,
+    /** Life experience for adults, every skill; careers will add more later. */
+    adultPerYear: 0.2,
     agingStartAge: 65,
+    /** Every skill, not scaled by traits. */
     agingPerYear: -0.3,
+    /** The trait that speeds up learning each skill (D65). */
+    learningTrait: {
+      academic: 'discipline',
+      creative: 'imagination',
+      communication: 'riskTaking',
+      practical: 'resilience',
+    } satisfies Record<SkillKey, TraitKey>,
   },
 
   looks: {
@@ -130,9 +139,9 @@ export const BALANCE = {
   traits: {
     /** Resilience 100 cancels this fraction of NEGATIVE mental-health effects. */
     resilienceMaxReduction: 0.5,
-    /** Discipline scales learning: factor = min + (max − min) × discipline/100. */
-    disciplineLearningMin: 0.6,
-    disciplineLearningMax: 1.4,
+    /** Each skill's trait scales its learning: factor = min + (max − min) × trait/100 (D65). */
+    learningMin: 0.6,
+    learningMax: 1.4,
     /** Risk-taking scales accident chance the same way. */
     riskAccidentMin: 0.7,
     riskAccidentMax: 1.3,

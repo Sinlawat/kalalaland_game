@@ -3,11 +3,18 @@ import { makeState } from '../engine/testUtils';
 import type { Habits, YearSummary } from '../engine/types';
 import { countHabitMonths, habitsAtMonth, habitSourceMonths, monthSlots, toneOf } from './months';
 
+const ZERO_SNAPSHOT: YearSummary['snapshot'] = {
+  physicalHealth: 0,
+  mentalHealth: 0,
+  looks: 0,
+  skills: { academic: 0, creative: 0, communication: 0, practical: 0 },
+};
+
 const regular: Habits = { exercise: 'regular', sleep: 'enough', overtime: 'none' };
 const lazy: Habits = { exercise: 'none', sleep: 'short', overtime: 'none' };
 
 function closedYear(age: number, habits: Habits[]): YearSummary {
-  return { age, changes: {}, snapshot: { physicalHealth: 0, mentalHealth: 0, knowledge: 0, looks: 0 }, habits };
+  return { age, changes: {}, snapshot: ZERO_SNAPSHOT, habits };
 }
 
 describe('toneOf', () => {

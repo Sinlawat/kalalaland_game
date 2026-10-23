@@ -6,7 +6,13 @@ import type { LifeSnapshot, YearSummary } from '../engine/types';
 import { compareGroups, comparePoints, formatDiff } from './compare';
 
 function snap(values: Partial<LifeSnapshot> = {}): LifeSnapshot {
-  return { physicalHealth: 70, mentalHealth: 70, knowledge: 50, looks: 50, ...values };
+  return {
+    physicalHealth: 70,
+    mentalHealth: 70,
+    looks: 50,
+    skills: { academic: 50, creative: 50, communication: 50, practical: 50 },
+    ...values,
+  };
 }
 function year(age: number, snapshot: LifeSnapshot): YearSummary {
   return { age, changes: {}, snapshot };
@@ -16,7 +22,7 @@ describe('comparePoints', () => {
   it('lists birthdays newest first, then birth', () => {
     const state = makeState({
       history: [year(1, snap()), year(2, snap())],
-      birthSnapshot: snap({ knowledge: 0 }),
+      birthSnapshot: snap({ looks: 40 }),
     });
     expect(comparePoints(state).map((p) => [p.id, p.label, p.shortLabel])).toEqual([
       ['age-2', 'วันเกิดอายุ 2 ปี', 'อายุ 2 ปี'],
@@ -39,23 +45,27 @@ describe('comparePoints', () => {
 describe('compareGroups', () => {
   const then = snap({
     physicalHealth: 80.4,
-    knowledge: 26.6,
     looks: 42,
-    traits: { discipline: 68, resilience: 50, riskTaking: 22 },
+    skills: { academic: 26.6, creative: 10, communication: 12, practical: 8 },
+    traits: { discipline: 68, resilience: 50, riskTaking: 22, imagination: 40 },
     environment: { familyWealth: 36, familyWarmth: 80, workStress: 0, financialStress: 0 },
   });
 
   it('compares the ROUNDED values the player sees, so the numbers add up on screen', () => {
-    const state = makeState({ ageInMonths: 119, condition: { physicalHealth: 81.6, knowledge: 30.4 } });
-    const condition = compareGroups(state, then).find((g) => g.key === 'condition')!;
+    const state = makeState({ ageInMonths: 119, condition: { physicalHealth: 81.6 }, skills: { academic: 30.4 } });
+    const groups = compareGroups(state, then);
+    const condition = groups.find((g) => g.key === 'condition')!;
+    const skills = groups.find((g) => g.key === 'skills')!;
     expect(condition.rows.find((r) => r.key === 'physicalHealth')).toMatchObject({ then: 80, now: 82, diff: 2 });
-    expect(condition.rows.find((r) => r.key === 'knowledge')).toMatchObject({ then: 27, now: 30, diff: 3 });
+    expect(skills.rows.find((r) => r.key === 'academic')).toMatchObject({ then: 27, now: 30, diff: 3 });
   });
 
-  it('groups like the cards: condition, looks, traits, family environment', () => {
+  it('groups like the cards: condition, skills, looks, traits, family environment', () => {
     const state = makeState({ ageInMonths: 119, environment: { familyWealth: 26, familyWarmth: 80 } });
     const groups = compareGroups(state, then);
-    expect(groups.map((g) => g.key)).toEqual(['condition', 'outcome', 'traits', 'environment']);
+    expect(groups.map((g) => g.key)).toEqual(['condition', 'skills', 'outcome', 'traits', 'environment']);
+    expect(groups.find((g) => g.key === 'skills')!.rows.map((r) => r.key)).toEqual(['academic', 'creative', 'communication', 'practical']);
+    expect(groups.find((g) => g.key === 'traits')!.rows.map((r) => r.key)).toContain('imagination');
     expect(groups.at(-1)!.rows.map((r) => [r.key, r.diff])).toEqual([
       ['familyWealth', -10],
       ['familyWarmth', 0],

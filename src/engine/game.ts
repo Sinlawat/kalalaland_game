@@ -136,11 +136,12 @@ function assertCanAdvance(state: GameState): void {
 /**
  * Advances exactly one month. Used by the real-time runner (D38: the UI
  * calls this once per tick, about every 1.25 s at normal speed).
+ * `events` is for tests that need a month without random events.
  */
-export function advanceOneMonth(state: GameState): MonthResult {
+export function advanceOneMonth(state: GameState, events: readonly EventDef[] = EVENTS): MonthResult {
   assertCanAdvance(state);
   const next = structuredClone(state);
-  const stop = simulateMonthInPlace(next);
+  const stop = simulateMonthInPlace(next, events);
   return { state: next, stop };
 }
 

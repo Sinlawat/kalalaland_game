@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, type HabitKey } from '../engine/types';
+import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, SKILL_KEYS, TRAIT_KEYS, type HabitKey } from '../engine/types';
 import { hasMessage, t } from './i18n';
 
 describe('t', () => {
@@ -27,9 +27,11 @@ describe('th.json completeness', () => {
     const keys = [
       ...REGION_IDS.map((id) => `region.${id}`),
       ...DEATH_CAUSES.map((cause) => `death.cause.${cause}`),
-      ...['discipline', 'resilience', 'riskTaking', 'familyWealth', 'familyWarmth', 'workStress',
-        'financialStress', 'physicalHealth', 'mentalHealth', 'knowledge', 'looks', 'fame'].map((s) => `stat.${s}`),
-      ...['discipline', 'resilience', 'riskTaking'].flatMap((trait) =>
+      ...[...TRAIT_KEYS, ...SKILL_KEYS, 'familyWealth', 'familyWarmth', 'workStress',
+        'financialStress', 'physicalHealth', 'mentalHealth', 'looks', 'fame'].map((s) => `stat.${s}`),
+      // D65: each skill's trait explains its own learning line in the breakdown.
+      ...TRAIT_KEYS.flatMap((trait) => [`source.trait.${trait}.learning`, `explain.trait.${trait}.learning`]),
+      ...TRAIT_KEYS.flatMap((trait) =>
         ['low', 'mid', 'high', 'effect'].map((part) => `trait.${trait}.${part}`),
       ),
       ...(Object.keys(HABIT_OPTIONS) as HabitKey[]).flatMap((habit) => [

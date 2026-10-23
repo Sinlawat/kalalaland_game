@@ -103,21 +103,38 @@ describe('computePassiveContributions', () => {
     expect(yearly(find(adult, 'mentalHealth', 'env.familyWarmth'))).toBeCloseTo(1.5);
   });
 
-  describe('knowledge', () => {
-    it('does not grow before the childhood start age', () => {
+  describe('skills (D65)', () => {
+    const SKILLS = ['academic', 'creative', 'communication', 'practical'] as const;
+
+    it('do not grow before the childhood start age', () => {
       const c = computePassiveContributions(makeState({ ageInMonths: 2 * 12 }));
-      expect(c.filter((x) => x.target === 'knowledge')).toEqual([]);
+      expect(c.filter((x) => (SKILLS as readonly string[]).includes(x.target))).toEqual([]);
     });
 
-    it('grows faster with high discipline, shown as a separate discipline line', () => {
-      const c = computePassiveContributions(makeState({ ageInMonths: 10 * 12, traits: { discipline: 100 } }));
-      expect(yearly(find(c, 'knowledge', 'life.growingUp'))).toBeCloseTo(4);
-      expect(yearly(find(c, 'knowledge', 'trait.discipline'))).toBeCloseTo(4 * 0.4);
+    it.each([
+      ['academic', 'discipline', 2],
+      ['creative', 'imagination', 1],
+      ['communication', 'riskTaking', 1],
+      ['practical', 'resilience', 1],
+    ] as const)('%s grows %d a year in childhood, faster with high %s (its own line)', (skill, trait, base) => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 10 * 12, traits: { [trait]: 100 } }));
+      expect(yearly(find(c, skill, 'life.growingUp'))).toBeCloseTo(base);
+      expect(yearly(find(c, skill, `trait.${trait}.learning`))).toBeCloseTo(base * 0.4);
     });
 
-    it('declines slowly in old age', () => {
+    it('a low trait slows its skill down (factor 0.6 at 0)', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 10 * 12, traits: { imagination: 0 } }));
+      expect(yearly(find(c, 'creative', 'trait.imagination.learning'))).toBeCloseTo(-0.4);
+    });
+
+    it('adults keep learning a little from life experience', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 30 * 12, traits: { discipline: 50 } }));
+      expect(yearly(find(c, 'academic', 'life.experience'))).toBeCloseTo(0.2);
+    });
+
+    it('every skill declines slowly in old age', () => {
       const c = computePassiveContributions(makeState({ ageInMonths: 70 * 12 }));
-      expect(yearly(find(c, 'knowledge', 'body.aging'))).toBeCloseTo(-0.3);
+      for (const skill of SKILLS) expect(yearly(find(c, skill, 'body.aging'))).toBeCloseTo(-0.3);
     });
   });
 

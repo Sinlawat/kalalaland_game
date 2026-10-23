@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { findEvent } from './events';
-import { advanceOneMonth, advanceUntilStop, firstAvailableChoice, resolveChoice, settlePendingChoices, simulateWholeLife } from './game';
+import { advanceOneMonth, advanceUntilStop, firstAvailableChoice, resolveChoice, settlePendingChoices, simulateWholeLife, type Chooser } from './game';
 import { createNewLife } from './newLife';
+import { readStat } from './stats';
 import type { GameState, StatTarget } from './types';
+
+/** Every stat the yearly log covers (D65: four skills instead of knowledge). */
+const EFFECT_ORDER_ALL: StatTarget[] = [
+  'physicalHealth', 'mentalHealth', 'academic', 'creative', 'communication', 'practical', 'looks',
+];
 
 /** One month the way the real-time runner does it, answering any choice popup like a simulation would. */
 function stepMonth(state: GameState): GameState {
@@ -15,7 +21,7 @@ function stepMonth(state: GameState): GameState {
 }
 
 function statValue(state: GameState, target: StatTarget): number {
-  return target === 'looks' ? state.outcome.looks : state.condition[target];
+  return readStat(state, target);
 }
 
 describe('advanceUntilStop', () => {
@@ -66,7 +72,7 @@ describe('yearly summary invariant', () => {
       const before = structuredClone(state);
       state = advanceUntilStop(state).state;
       const summary = state.history.at(-1)!;
-      for (const target of ['physicalHealth', 'mentalHealth', 'knowledge', 'looks'] as const) {
+      for (const target of EFFECT_ORDER_ALL) {
         const logged = Object.values(summary.changes[target] ?? {}).reduce((sum, value) => sum + value, 0);
         const real = statValue(state, target) - statValue(before, target);
         expect(logged).toBeCloseTo(real, 9);
@@ -199,7 +205,10 @@ describe('events with choices (D39)', () => {
   });
 
   it('simulations answer choices with the chooser they are given', () => {
-    const end = simulateWholeLife(createNewLife(12), { chooser: () => 'rider' });
+    // Other choice events (e.g. "dad's morning run") get the first available choice.
+    const chooser: Chooser = (state, event) =>
+      event.id === 'life_childhood_dream' ? 'rider' : firstAvailableChoice(state, event);
+    const end = simulateWholeLife(createNewLife(12), { chooser });
     if (end.ageInMonths >= 13 * 12) expect(end.flags).toContain('dream_rider');
   });
 

@@ -2,25 +2,32 @@ import { describe, expect, it } from 'vitest';
 import { findEvent } from '../engine/events';
 import { advanceOneMonth, firstAvailableChoice, resolveChoice } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import type { EnvironmentKey, GameState, YearSummary } from '../engine/types';
+import { SKILL_KEYS, type EnvironmentKey, type GameState, type YearSummary } from '../engine/types';
 import { newEventChanges } from './eventFlash';
+
+const ZERO_SNAPSHOT: YearSummary['snapshot'] = {
+  physicalHealth: 0,
+  mentalHealth: 0,
+  looks: 0,
+  skills: { academic: 0, creative: 0, communication: 0, practical: 0 },
+};
 
 type Source = Pick<GameState, 'seed' | 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
 function year(age: number, changes: YearSummary['changes'] = {}): YearSummary {
-  return { age, changes, snapshot: { physicalHealth: 0, mentalHealth: 0, knowledge: 0, looks: 0 } };
+  return { age, changes, snapshot: ZERO_SNAPSHOT };
 }
 
-const before: Source = { seed: 1, birthMonth: 1, eventHistory: [{ id: 'old', ageInMonths: 3 }], history: [], yearLog: { knowledge: { 'event.old': 2 } } };
+const before: Source = { seed: 1, birthMonth: 1, eventHistory: [{ id: 'old', ageInMonths: 3 }], history: [], yearLog: { academic: { 'event.old': 2 } } };
 
 describe('newEventChanges', () => {
   it('reports the real effect of an event recorded since the last render', () => {
     const after: Source = {
       ...before,
       eventHistory: [...before.eventHistory, { id: 'book', ageInMonths: 5, traitChanges: { discipline: 1.5 } }],
-      yearLog: { knowledge: { 'event.old': 2, 'event.book': 3 }, mentalHealth: { 'event.book': -1 } },
+      yearLog: { academic: { 'event.old': 2, 'event.book': 3 }, mentalHealth: { 'event.book': -1 } },
     };
-    expect(newEventChanges(before, after)).toEqual({ knowledge: 3, mentalHealth: -1, discipline: 1.5 });
+    expect(newEventChanges(before, after)).toEqual({ academic: 3, mentalHealth: -1, discipline: 1.5 });
   });
 
   it('includes family values (environment) changed by an event', () => {
@@ -35,9 +42,9 @@ describe('newEventChanges', () => {
     const after: Source = {
       ...before,
       eventHistory: [...before.eventHistory, { id: 'a', ageInMonths: 4 }, { id: 'b', ageInMonths: 5 }],
-      yearLog: { knowledge: { 'event.old': 2, 'event.a': 3, 'event.b': -1 } },
+      yearLog: { academic: { 'event.old': 2, 'event.a': 3, 'event.b': -1 } },
     };
-    expect(newEventChanges(before, after)).toEqual({ knowledge: 2 });
+    expect(newEventChanges(before, after)).toEqual({ academic: 2 });
   });
 
   it('finds the effect in history when the event month was also the birthday (year closed)', () => {
@@ -64,7 +71,7 @@ describe('newEventChanges', () => {
     const after: Source = {
       ...before,
       eventHistory: [...before.eventHistory, { id: 'rule', ageInMonths: 5, habitChanges: { sleep: 'enough' } }],
-      yearLog: { knowledge: { 'event.old': 2, 'event.rule': 0.01 } },
+      yearLog: { academic: { 'event.old': 2, 'event.rule': 0.01 } },
     };
     expect(newEventChanges(before, after)).toEqual({});
   });
@@ -88,7 +95,7 @@ describe('newEventChanges with the real engine', () => {
     return states;
   }
 
-  it('flashes knowledge in the SAME render the event raises it (the case a player reported)', () => {
+  it('flashes a skill in the SAME render the event raises it (the case a player reported)', () => {
     // The ▲ beside the bar only shows a change at the next birthday; the flash must not wait.
     // Not tied to one seed: content changes move events around. Every event that raised
     // knowledge in the first 6 years of a few lives must flash in the render where it appears.
@@ -98,11 +105,14 @@ describe('newEventChanges with the real engine', () => {
       for (let i = 1; i < states.length; i++) {
         const previous = states[i - 1]!;
         const next = states[i]!;
-        const flash = newEventChanges(previous, next).knowledge;
-        if (flash === undefined) continue;
-        checked += 1;
-        // The bar moved by the event's amount (plus at most a small monthly change from age and lifestyle).
-        expect(Math.abs(next.condition.knowledge - previous.condition.knowledge - flash)).toBeLessThan(0.5);
+        const flashes = newEventChanges(previous, next);
+        for (const skill of SKILL_KEYS) {
+          const flash = flashes[skill];
+          if (flash === undefined) continue;
+          checked += 1;
+          // The bar moved by the event's amount (plus at most a small monthly change from age and traits).
+          expect(Math.abs(next.skills[skill] - previous.skills[skill] - flash)).toBeLessThan(0.5);
+        }
       }
     }
     expect(checked).toBeGreaterThan(3);

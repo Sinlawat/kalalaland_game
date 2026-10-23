@@ -47,6 +47,15 @@ describe('createNewLife', () => {
     expect(life.rngState).not.toBe(10);
   });
 
+  it('starts every skill at 0 and draws the imagination trait like the others (D65)', () => {
+    for (let seed = 0; seed < 50; seed++) {
+      const life = createNewLife(seed);
+      expect(life.skills).toEqual({ academic: 0, creative: 0, communication: 0, practical: 0 });
+      expect(life.traits.imagination).toBeGreaterThanOrEqual(10);
+      expect(life.traits.imagination).toBeLessThanOrEqual(90);
+    }
+  });
+
   it('starts at home with the parents, in the birth region', () => {
     const life = createNewLife(5);
     expect(life.residence).toEqual({ regionId: life.birthRegionId, homeId: 'parents' });
@@ -57,6 +66,7 @@ describe('createNewLife', () => {
     expect(life.birthSnapshot).toEqual({
       ...life.condition,
       looks: life.outcome.looks,
+      skills: life.skills,
       traits: life.traits,
       environment: life.environment,
     });

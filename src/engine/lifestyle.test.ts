@@ -46,7 +46,7 @@ describe('temporary lifestyle (D56)', () => {
     setHabitFromEvent(state, 'sleep', 'short', 2);
     const sleepByMonth: string[] = [];
     for (let i = 0; i < 3; i++) {
-      state = advanceOneMonth(state).state;
+      state = advanceOneMonth(state, []).state; // no random events: only the timer may change sleep
       sleepByMonth.push(state.yearHabits.at(-1)!.sleep);
     }
     expect(sleepByMonth).toEqual(['short', 'short', 'enough']);

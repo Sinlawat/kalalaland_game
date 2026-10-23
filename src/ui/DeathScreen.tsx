@@ -1,4 +1,4 @@
-import type { GameState } from '../engine/types';
+import { SKILL_KEYS, type GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatStat } from './format';
 
@@ -40,6 +40,10 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
   const age = Math.floor(game.death.ageInMonths / 12);
   const peak = (pick: (s: GameState['history'][number]['snapshot']) => number) =>
     Math.max(...game.history.map((h) => pick(h.snapshot)));
+  // D65: no single "knowledge" any more; show the skill that got the highest.
+  const topSkill = SKILL_KEYS.map((key) => ({ key, value: peak((s) => s.skills[key]) })).reduce((best, next) =>
+    next.value > best.value ? next : best,
+  );
 
   return (
     <main className="screen">
@@ -58,7 +62,7 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
         <h2>{t('death.peaks')}</h2>
         <ul className="peaks">
           <li>
-            {t('stat.knowledge')} <strong>{formatStat(peak((s) => s.knowledge))}</strong>
+            {t('death.topSkill', { skill: t(`stat.${topSkill.key}`) })} <strong>{formatStat(topSkill.value)}</strong>
           </li>
           <li>
             {t('stat.looks')} <strong>{formatStat(peak((s) => s.looks))}</strong>

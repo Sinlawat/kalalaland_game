@@ -8,15 +8,17 @@
  */
 
 import { calendarMonth } from '../engine/events';
-import type { EnvironmentKey, EventRecord, GameState, HabitKey, Habits, StatTarget, TraitKey } from '../engine/types';
+import { TRAIT_KEYS, type EnvironmentKey, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
 
 /** Order of stat chips under an event. */
-export const EFFECT_ORDER: StatTarget[] = ['physicalHealth', 'mentalHealth', 'knowledge', 'looks'];
+export const EFFECT_ORDER: StatTarget[] = [
+  'physicalHealth', 'mentalHealth', 'academic', 'creative', 'communication', 'practical', 'looks',
+];
 /** Trait chips come after the stat chips, then the family environment. */
-const TRAIT_ORDER: TraitKey[] = ['discipline', 'resilience', 'riskTaking'];
+const TRAIT_ORDER: readonly TraitKey[] = TRAIT_KEYS;
 const ENVIRONMENT_ORDER: EnvironmentKey[] = ['familyWealth', 'familyWarmth'];
 
 /** Effects smaller than this are hidden (they would show as "0"). */
@@ -189,7 +191,7 @@ export function withoutTraitChips(years: TimelineYear[]): TimelineYear[] {
     ...year,
     entries: year.entries.map((entry) => ({
       ...entry,
-      effects: entry.effects.filter((chip) => !(TRAIT_ORDER as string[]).includes(chip.target)),
+      effects: entry.effects.filter((chip) => !(TRAIT_ORDER as readonly string[]).includes(chip.target)),
     })),
   }));
 }

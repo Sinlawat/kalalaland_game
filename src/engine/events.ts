@@ -50,18 +50,22 @@ export type PoolFrequency = Exclude<Frequency, 'guaranteed'>;
 
 /** Values a condition may test. */
 export const CONDITION_STATS = [
-  'physicalHealth', 'mentalHealth', 'knowledge', 'looks', 'fame',
-  'discipline', 'resilience', 'riskTaking',
+  'physicalHealth', 'mentalHealth', 'looks', 'fame',
+  'academic', 'creative', 'communication', 'practical',
+  'discipline', 'resilience', 'riskTaking', 'imagination',
   'familyWealth', 'familyWarmth', 'workStress', 'financialStress',
 ] as const;
 export type ConditionStat = (typeof CONDITION_STATS)[number];
 
 /** Stats an effect may change: the ones the yearly log handles. */
-export const EFFECT_STATS = ['physicalHealth', 'mentalHealth', 'knowledge', 'looks'] as const satisfies readonly StatTarget[];
+export const EFFECT_STATS = [
+  'physicalHealth', 'mentalHealth', 'looks',
+  'academic', 'creative', 'communication', 'practical',
+] as const satisfies readonly StatTarget[];
 export type EffectStat = (typeof EFFECT_STATS)[number];
 
 /** Traits an effect may change (D41: halved from age 15). */
-export const EFFECT_TRAITS = ['discipline', 'resilience', 'riskTaking'] as const satisfies readonly TraitKey[];
+export const EFFECT_TRAITS = ['discipline', 'resilience', 'riskTaking', 'imagination'] as const satisfies readonly TraitKey[];
 
 /**
  * The family environment an event may change (D57), e.g. a parent losing
@@ -101,6 +105,12 @@ export interface EventConditions extends CharacterConditions {
    * after losing one: { events: ['family_parent_lost_job'], min: 6 }.
    */
   monthsSince?: { events: string[]; min: number };
+  /**
+   * Not within `months` months after any of these events. Passes when none
+   * of them ever happened. Keeps big life changes apart, e.g. no move to the
+   * grandparents a month after the family moved house.
+   */
+  notWithin?: { events: string[]; months: number };
 }
 
 /** A lifestyle change: a level (lasting), or a level for some months (D56). */
@@ -313,7 +323,7 @@ export function parseEvents(raw: unknown): EventDef[] {
   const check: Checker = { problems: [], flagsSet: new Set<string>(SYSTEM_FLAGS), flagsTested: [] };
   const { problems } = check;
   const ids = new Set<string>();
-  const eventsReferenced: { at: string; eventId: string }[] = [];
+  const eventsReferenced: { at: string; eventId: string; field: string }[] = [];
 
   raw.forEach((item: unknown, index) => {
     const where = `event #${index}`;
@@ -353,7 +363,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     if (!isRecord(c)) {
       problems.push(`${at}: conditions must be an object`);
     } else {
-      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months', 'monthsSince'])) {
+      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin'])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
       const { ageMin, ageMax } = c;
@@ -371,7 +381,16 @@ export function parseEvents(raw: unknown): EventDef[] {
           problems.push(`${at}: monthsSince must be { "events": [event ids], "min": whole number of months above 0 }`);
         } else {
           for (const key of unknownKeys(since, ['events', 'min'])) problems.push(`${at}: monthsSince: unknown field "${key}"`);
-          since.events.forEach((eventId) => eventsReferenced.push({ at, eventId }));
+          since.events.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'monthsSince' }));
+        }
+      }
+      if (c.notWithin !== undefined) {
+        const apart = c.notWithin;
+        if (!isRecord(apart) || !isStringArray(apart.events) || apart.events.length === 0 || !isPositiveInteger(apart.months)) {
+          problems.push(`${at}: notWithin must be { "events": [event ids], "months": whole number of months above 0 }`);
+        } else {
+          for (const key of unknownKeys(apart, ['events', 'months'])) problems.push(`${at}: notWithin: unknown field "${key}"`);
+          apart.events.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'notWithin' }));
         }
       }
     }
@@ -387,9 +406,9 @@ export function parseEvents(raw: unknown): EventDef[] {
     }
   });
 
-  // Waiting for an event that does not exist would block this one forever: almost certainly a typo.
-  for (const { at, eventId } of eventsReferenced) {
-    if (!ids.has(eventId)) problems.push(`${at}: monthsSince names event "${eventId}", which does not exist`);
+  // Naming an event that does not exist: almost certainly a typo (monthsSince would block forever, notWithin never).
+  for (const { at, eventId, field } of eventsReferenced) {
+    if (!ids.has(eventId)) problems.push(`${at}: ${field} names event "${eventId}", which does not exist`);
   }
   // A condition on a flag that nothing ever sets can never be true (or is always true): almost certainly a typo.
   for (const { at, flag } of check.flagsTested) {
@@ -424,14 +443,19 @@ export function readConditionStat(state: GameState, stat: ConditionStat): number
   switch (stat) {
     case 'physicalHealth':
     case 'mentalHealth':
-    case 'knowledge':
       return state.condition[stat];
+    case 'academic':
+    case 'creative':
+    case 'communication':
+    case 'practical':
+      return state.skills[stat];
     case 'looks':
     case 'fame':
       return state.outcome[stat];
     case 'discipline':
     case 'resilience':
     case 'riskTaking':
+    case 'imagination':
       return state.traits[stat];
     case 'familyWealth':
     case 'familyWarmth':
@@ -505,6 +529,10 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
   if (c.monthsSince) {
     const times = c.monthsSince.events.flatMap((id) => happened.get(id) ?? []);
     if (times.length === 0 || state.ageInMonths - Math.max(...times) < c.monthsSince.min) return false;
+  }
+  if (c.notWithin) {
+    const times = c.notWithin.events.flatMap((id) => happened.get(id) ?? []);
+    if (times.length > 0 && state.ageInMonths - Math.max(...times) < c.notWithin.months) return false;
   }
   if (event.lifetimeChance !== undefined && lifetimeRoll(state.seed, event.id) >= event.lifetimeChance) return false;
   return meetsCharacterConditions(state, c);

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { findEvent, lockReasons, type EventChoice, type LockReason } from '../engine/events';
 import { knowsOwnTraits } from '../engine/passive';
-import type { GameState } from '../engine/types';
+import { TRAIT_KEYS, type GameState } from '../engine/types';
 import { hasMessage, t } from '../i18n/i18n';
 import { formatStat } from './format';
 
@@ -10,7 +10,6 @@ interface Props {
   onChoose(choiceId: string): void;
 }
 
-const TRAIT_STATS = ['discipline', 'resilience', 'riskTaking'];
 
 /** Text the game writes itself for one unmet condition. */
 function automaticReason(game: GameState, reason: LockReason): string {
@@ -21,7 +20,7 @@ function automaticReason(game: GameState, reason: LockReason): string {
       return t('choice.locked.habit', { habit: t(`habit.${reason.habit}`), level: t(`habit.${reason.habit}.${reason.level}`) });
     case 'stat':
       // Before Grade 1 the child does not know their traits (D35): don't spell them out.
-      if (TRAIT_STATS.includes(reason.stat) && !knowsOwnTraits(game)) return t('choice.locked.generic');
+      if ((TRAIT_KEYS as readonly string[]).includes(reason.stat) && !knowsOwnTraits(game)) return t('choice.locked.generic');
       return t(reason.op === '>=' ? 'choice.locked.atLeast' : 'choice.locked.below', {
         stat: t(`stat.${reason.stat}`),
         value: reason.value,

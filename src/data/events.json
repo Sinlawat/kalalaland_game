@@ -78,7 +78,7 @@
       "stats": {
         "physicalHealth": -4,
         "mentalHealth": -1,
-        "knowledge": -1
+        "academic": -1
       },
       "setFlags": [
         "had_chickenpox"
@@ -272,7 +272,8 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": -2
+        "academic": -1,
+        "communication": -1
       }
     }
   },
@@ -293,7 +294,9 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 3
+        "academic": 1,
+        "communication": 1,
+        "creative": 1
       }
     }
   },
@@ -319,9 +322,10 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": -3,
         "physicalHealth": -1,
-        "mentalHealth": -2
+        "mentalHealth": -2,
+        "communication": -2,
+        "creative": -1
       },
       "setFlags": [
         "early_screen_time"
@@ -348,8 +352,8 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1,
-        "mentalHealth": 1
+        "mentalHealth": 1,
+        "communication": 1
       },
       "setFlags": [
         "spoke_first_word"
@@ -376,7 +380,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "communication": 1
       },
       "setFlags": [
         "spoke_first_word"
@@ -393,7 +397,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "communication": 1
       }
     }
   },
@@ -414,7 +418,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 2
+        "communication": 2
       }
     }
   },
@@ -427,6 +431,9 @@
     "frequency": "common",
     "once": true,
     "effects": {
+      "stats": {
+        "practical": 1
+      },
       "traits": {
         "discipline": 2
       }
@@ -467,7 +474,7 @@
     "effects": {
       "stats": {
         "mentalHealth": 1,
-        "knowledge": 1
+        "creative": 1
       },
       "setFlags": [
         "started_drawing"
@@ -494,7 +501,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "creative": 1
       },
       "setFlags": [
         "started_drawing"
@@ -511,7 +518,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 2
+        "academic": 2
       }
     }
   },
@@ -531,7 +538,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "academic": 1
       },
       "setFlags": [
         "interest_nature"
@@ -554,7 +561,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "practical": 1
       },
       "setFlags": [
         "interest_machines"
@@ -577,7 +584,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "creative": 1
       },
       "setFlags": [
         "interest_music"
@@ -600,7 +607,7 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 1
+        "creative": 1
       },
       "setFlags": [
         "interest_stories"
@@ -617,7 +624,8 @@
     "once": true,
     "effects": {
       "stats": {
-        "knowledge": 2
+        "academic": 1,
+        "practical": 1
       }
     }
   },
@@ -651,7 +659,13 @@
       "ageMax": 17,
       "flagsNone": [
         "lives_with_grandparents"
-      ]
+      ],
+      "notWithin": {
+        "events": [
+          "family_parents_divorce"
+        ],
+        "months": 12
+      }
     },
     "frequency": "normal",
     "once": true,
@@ -810,7 +824,15 @@
           "op": "<",
           "value": 31
         }
-      ]
+      ],
+      "notWithin": {
+        "events": [
+          "family_move_far_from_school",
+          "family_live_with_grandparents",
+          "family_live_with_grandparents_after_job_loss"
+        ],
+        "months": 12
+      }
     },
     "frequency": "rare",
     "once": true,
@@ -970,7 +992,14 @@
       "flagsNone": [
         "parent_lost_job",
         "lives_with_grandparents"
-      ]
+      ],
+      "notWithin": {
+        "events": [
+          "family_move_far_from_school",
+          "family_parents_divorce"
+        ],
+        "months": 12
+      }
     },
     "frequency": "uncommon",
     "once": true,
@@ -988,6 +1017,9 @@
       },
       "setFlags": [
         "lives_with_grandparents"
+      ],
+      "removeFlags": [
+        "long_commute"
       ]
     }
   },
@@ -1008,7 +1040,14 @@
       ],
       "flagsNone": [
         "lives_with_grandparents"
-      ]
+      ],
+      "notWithin": {
+        "events": [
+          "family_move_far_from_school",
+          "family_parents_divorce"
+        ],
+        "months": 12
+      }
     },
     "frequency": "uncommon",
     "once": true,
@@ -1026,6 +1065,9 @@
       },
       "setFlags": [
         "lives_with_grandparents"
+      ],
+      "removeFlags": [
+        "long_commute"
       ]
     }
   },

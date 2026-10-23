@@ -33,9 +33,10 @@ describe('applyContributions', () => {
 
   it('sums repeated sources across months', () => {
     const state = makeState();
-    applyContributions(state, [{ target: 'knowledge', source: 'x', amount: 1 }]);
-    applyContributions(state, [{ target: 'knowledge', source: 'x', amount: 1 }]);
-    expect(state.yearLog.knowledge).toEqual({ x: 2 });
+    applyContributions(state, [{ target: 'academic', source: 'x', amount: 1 }]);
+    applyContributions(state, [{ target: 'academic', source: 'x', amount: 1 }]);
+    expect(state.yearLog.academic).toEqual({ x: 2 });
+    expect(state.skills.academic).toBe(52); // skills are stats too (D65)
   });
 
   it('logs only the part of a change that was actually applied at the cap', () => {
@@ -54,7 +55,7 @@ describe('applyContributions', () => {
 
   it('skips zero contributions', () => {
     const state = makeState();
-    applyContributions(state, [{ target: 'knowledge', source: 'nothing', amount: 0 }]);
+    applyContributions(state, [{ target: 'creative', source: 'nothing', amount: 0 }]);
     expect(state.yearLog).toEqual({});
   });
 });

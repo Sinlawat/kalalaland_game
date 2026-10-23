@@ -4,10 +4,17 @@ import { createNewLife } from '../engine/newLife';
 import type { GameState, YearSummary } from '../engine/types';
 import { buildTimeline, countEntries, splitRecent, withoutTraitChips, type TimelineYear } from './timeline';
 
+const ZERO_SNAPSHOT: YearSummary['snapshot'] = {
+  physicalHealth: 0,
+  mentalHealth: 0,
+  looks: 0,
+  skills: { academic: 0, creative: 0, communication: 0, practical: 0 },
+};
+
 type Source = Pick<GameState, 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
 
 function year(age: number, changes: YearSummary['changes'] = {}): YearSummary {
-  return { age, changes, snapshot: { physicalHealth: 0, mentalHealth: 0, knowledge: 0, looks: 0 } };
+  return { age, changes, snapshot: ZERO_SNAPSHOT };
 }
 
 describe('buildTimeline', () => {
@@ -33,12 +40,12 @@ describe('buildTimeline', () => {
       birthMonth: 1,
       eventHistory: [{ id: 'pox', ageInMonths: 65 }],
       // months 61–72 close at age 6
-      history: [year(5), year(6, { physicalHealth: { 'event.pox': -4, 'habit.sleep.enough': 0.5 }, knowledge: { 'event.pox': -1 } })],
+      history: [year(5), year(6, { physicalHealth: { 'event.pox': -4, 'habit.sleep.enough': 0.5 }, academic: { 'event.pox': -1 } })],
       yearLog: {},
     };
     expect(buildTimeline(state)[0]!.entries[0]!.effects).toEqual([
       { target: 'physicalHealth', amount: -4 },
-      { target: 'knowledge', amount: -1 },
+      { target: 'academic', amount: -1 },
     ]);
   });
 
@@ -219,7 +226,7 @@ describe('withoutTraitChips (D35: traits secret before Grade 1)', () => {
             calendarMonth: 7,
             count: 1,
             effects: [
-              { target: 'knowledge', amount: 1 },
+              { target: 'practical', amount: 1 },
               { target: 'discipline', amount: 2 },
               { target: 'familyWarmth', amount: 3 },
             ],
@@ -227,7 +234,7 @@ describe('withoutTraitChips (D35: traits secret before Grade 1)', () => {
         ],
       },
     ];
-    expect(withoutTraitChips(years)[0]!.entries[0]!.effects.map((c) => c.target)).toEqual(['knowledge', 'familyWarmth']);
+    expect(withoutTraitChips(years)[0]!.entries[0]!.effects.map((c) => c.target)).toEqual(['practical', 'familyWarmth']);
     expect(years[0]!.entries[0]!.effects).toHaveLength(3); // the input is not changed
   });
 });

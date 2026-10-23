@@ -14,7 +14,9 @@
 import type { GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 7;
+export const CURRENT_SAVE_VERSION = 8;
+/** Saves older than this cannot be upgraded (D65); the player starts a new life. */
+export const OLDEST_LOADABLE_SAVE_VERSION = 8;
 
 /** The subset of the browser Storage API we use. */
 export type SaveStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -28,7 +30,7 @@ interface SaveEnvelope {
 export type LoadResult =
   | { status: 'ok'; state: GameState }
   | { status: 'empty' }
-  | { status: 'error'; reason: 'unreadable' | 'corrupt' | 'tooNew' };
+  | { status: 'error'; reason: 'unreadable' | 'corrupt' | 'tooNew' | 'outdated' };
 
 export type SaveResult = { status: 'ok' } | { status: 'error'; reason: 'unwritable' };
 
@@ -42,32 +44,9 @@ export type SaveResult = { status: 'ok' } | { status: 'error'; reason: 'unwritab
  * - Each step is tested with a real save of the older version.
  */
 const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
-  // v1 → v2: hidden state for accumulated physical wear (D36).
-  // Older lives start with no wear: we cannot know their past habits.
-  1: (state) => (isRecord(state) ? { ...state, hidden: { physicalWear: 0 } } : state),
-  // v2 → v3: event history (event system). Older lives have no recorded events.
-  2: (state) => (isRecord(state) ? { ...state, eventHistory: [] } : state),
-  // v3 → v4: habits per month (D38). The current year starts empty; older
-  // history entries simply have no `habits` (the field is optional there).
-  3: (state) => (isRecord(state) ? { ...state, yearHabits: [] } : state),
-  // v4 → v5: events with choices (D39). Older lives have nothing waiting.
-  4: (state) => (isRecord(state) ? { ...state, pendingChoices: [] } : state),
-  // v5 → v6: temporary lifestyle changes (D56). Nothing was running before.
-  5: (state) => (isRecord(state) ? { ...state, habitTimers: {} } : state),
-  // v6 → v7: birth region vs where the character lives now (events can move them).
-  // The one move that existed before v7 (to the grandparents, D-family events)
-  // only set a flag, so a life with that flag is placed there now.
-  // Values at birth (for the year comparison) cannot be recovered: left out.
-  6: (state) => {
-    if (!isRecord(state)) return state;
-    const { regionId, ...rest } = state;
-    const withGrandparents = Array.isArray(state.flags) && state.flags.includes('lives_with_grandparents');
-    return {
-      ...rest,
-      birthRegionId: regionId,
-      residence: withGrandparents ? { regionId: 'rural', homeId: 'grandparents' } : { regionId, homeId: 'parents' },
-    };
-  },
+  // Empty since version 8: D65 split knowledge into four skills, a change
+  // older lives cannot be converted to, so saves before 8 are "outdated".
+  // New steps go here: key N upgrades a version-N state to version N+1.
 };
 
 function migrate(state: unknown, fromVersion: number): unknown {
@@ -102,11 +81,12 @@ export function isValidGameState(value: unknown): value is GameState {
     typeof value.residence.regionId === 'string' &&
     typeof value.residence.homeId === 'string' &&
     isRecord(value.name) &&
-    hasNumbers(value.traits, ['discipline', 'resilience', 'riskTaking']) &&
+    hasNumbers(value.traits, ['discipline', 'resilience', 'riskTaking', 'imagination']) &&
     hasNumbers(value.environment, ['familyWealth', 'familyWarmth', 'workStress', 'financialStress']) &&
     isRecord(value.habits) &&
     isRecord(value.habitTimers) &&
-    hasNumbers(value.condition, ['physicalHealth', 'mentalHealth', 'knowledge']) &&
+    hasNumbers(value.condition, ['physicalHealth', 'mentalHealth']) &&
+    hasNumbers(value.skills, ['academic', 'creative', 'communication', 'practical']) &&
     hasNumbers(value.outcome, ['looks', 'fame']) &&
     hasNumbers(value.hidden, ['physicalWear']) &&
     Array.isArray(value.flags) &&
@@ -155,6 +135,9 @@ export function loadGame(storage: SaveStorage): LoadResult {
   if (parsed.saveVersion > CURRENT_SAVE_VERSION) {
     // Saved by a newer version of the game (e.g. another open tab after a deploy).
     return { status: 'error', reason: 'tooNew' };
+  }
+  if (parsed.saveVersion < OLDEST_LOADABLE_SAVE_VERSION) {
+    return { status: 'error', reason: 'outdated' };
   }
 
   let state: unknown;

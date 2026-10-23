@@ -48,6 +48,7 @@ export function createNewLife(seed: number): GameState {
       discipline: attribute(),
       resilience: attribute(),
       riskTaking: attribute(),
+      imagination: attribute(),
     },
     environment: {
       familyWealth: attribute(),
@@ -59,8 +60,9 @@ export function createNewLife(seed: number): GameState {
     condition: {
       physicalHealth: uniformRandom(rng, b.physicalHealth.min, b.physicalHealth.max),
       mentalHealth: uniformRandom(rng, b.mentalHealth.min, b.mentalHealth.max),
-      knowledge: b.knowledge,
     },
+    // D65: every skill starts at 0; they grow with age, traits and events.
+    skills: { academic: 0, creative: 0, communication: 0, practical: 0 },
     outcome: {
       looks: centeredRandom(rng, b.looks.min, b.looks.max),
       fame: 0,

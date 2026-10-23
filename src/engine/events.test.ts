@@ -94,7 +94,7 @@ describe('parseEvents (data validation)', () => {
     };
 
     it('accepts a valid choice event', () => {
-      const locked: EventChoice = { id: 'b', conditions: { stats: [{ stat: 'knowledge', op: '>=', value: 70 }] }, effects: {} };
+      const locked: EventChoice = { id: 'b', conditions: { stats: [{ stat: 'academic', op: '>=', value: 70 }] }, effects: {} };
       expect(() => parseEvents([choiceEvent([open('a'), locked])])).not.toThrow();
     });
 
@@ -182,17 +182,17 @@ describe('isEligible', () => {
 describe('lockReasons', () => {
   const choice: EventChoice = {
     id: 'tech',
-    conditions: { stats: [{ stat: 'knowledge', op: '>=', value: 70 }], flagsNone: ['expelled'] },
+    conditions: { stats: [{ stat: 'academic', op: '>=', value: 70 }], flagsNone: ['expelled'] },
     effects: {},
   };
 
   it('is empty when every condition is met (70 is enough for >= 70)', () => {
-    expect(lockReasons(choice, makeState({ condition: { knowledge: 70 } }))).toEqual([]);
+    expect(lockReasons(choice, makeState({ skills: { academic: 70 } }))).toEqual([]);
   });
 
   it('names the missing stat with the current value, and a separate reason for flags', () => {
-    expect(lockReasons(choice, makeState({ condition: { knowledge: 45 }, flags: ['expelled'] }))).toEqual([
-      { kind: 'stat', stat: 'knowledge', op: '>=', value: 70, current: 45 },
+    expect(lockReasons(choice, makeState({ skills: { academic: 45 }, flags: ['expelled'] }))).toEqual([
+      { kind: 'stat', stat: 'academic', op: '>=', value: 70, current: 45 },
       { kind: 'flag' },
     ]);
   });
@@ -375,6 +375,35 @@ describe('monthsSince: waiting after another event', () => {
   });
 });
 
+describe('notWithin: keeping big life changes apart', () => {
+  const move = makeEvent({
+    id: 'to_grandparents',
+    conditions: { ageMin: 0, ageMax: 99, notWithin: { events: ['moved_house', 'divorce'], months: 12 } },
+  });
+
+  it('passes when none of the events ever happened', () => {
+    expect(isEligible(move, makeState({ eventHistory: [] }))).toBe(true);
+  });
+
+  it('waits `months` after the most recent of them (boundary: 11 no, 12 yes)', () => {
+    const history = [
+      { id: 'divorce', ageInMonths: 80 },
+      { id: 'moved_house', ageInMonths: 100 },
+    ];
+    expect(isEligible(move, makeState({ ageInMonths: 111, eventHistory: history }))).toBe(false);
+    expect(isEligible(move, makeState({ ageInMonths: 112, eventHistory: history }))).toBe(true);
+  });
+
+  it.each([
+    [{ events: [], months: 12 }, 'notWithin must be'],
+    [{ events: ['test_event'], months: 0 }, 'notWithin must be'],
+    [{ events: ['test_event'], months: 12, min: 1 }, 'unknown field "min"'],
+    [{ events: ['nope'], months: 12 }, 'notWithin names event "nope", which does not exist'],
+  ])('rejects %j', (notWithin, expected) => {
+    expect(() => parseEvents([{ ...makeEvent(), conditions: { ageMin: 0, ageMax: 9, notWithin } }])).toThrow(expected);
+  });
+});
+
 describe('environment effects (D57)', () => {
   it('change family wealth and warmth, clamped, with the real change recorded', () => {
     const state = makeState({ environment: { familyWealth: 5, familyWarmth: 40 } });
@@ -435,7 +464,7 @@ describe('applyChoice', () => {
     effects: undefined as never,
     choices: [
       { id: 'rider', effects: { stats: { mentalHealth: 2 }, setFlags: ['dream_rider'] } },
-      { id: 'tech', conditions: { stats: [{ stat: 'knowledge', op: '>=', value: 70 }] }, effects: {} },
+      { id: 'tech', conditions: { stats: [{ stat: 'academic', op: '>=', value: 70 }] }, effects: {} },
     ],
   });
 
@@ -449,7 +478,7 @@ describe('applyChoice', () => {
   });
 
   it('refuses a locked or unknown choice', () => {
-    expect(() => applyChoice(makeState({ condition: { knowledge: 10 } }), dream, 'tech', 144)).toThrow('locked');
+    expect(() => applyChoice(makeState({ skills: { academic: 10 } }), dream, 'tech', 144)).toThrow('locked');
     expect(() => applyChoice(makeState(), dream, 'pilot', 144)).toThrow('no choice "pilot"');
   });
 });
@@ -613,6 +642,20 @@ describe('real events over many lives (Monte Carlo)', () => {
         if (plain >= 0) expect(unemployedAt(plain)).toBe(false);
       }
       expect(afterJobLoss).toBeGreaterThan(0);
+    });
+
+    it('big family changes (moves, divorce) never happen within 12 months of each other', () => {
+      const BIG = ['family_move_far_from_school', ...GRANDPARENTS, 'family_parents_divorce'];
+      for (const end of ends) {
+        const big = end.eventHistory.filter((r) => BIG.includes(r.id));
+        big.slice(1).forEach((record, i) => expect(record.ageInMonths - big[i]!.ageInMonths).toBeGreaterThanOrEqual(12));
+      }
+    });
+
+    it('moving to the grandparents ends the long commute from the old home', () => {
+      for (const end of ends) {
+        if (GRANDPARENTS.some((id) => ids(end).includes(id))) expect(end.flags).not.toContain('long_commute');
+      }
     });
 
     it('a parent finds a new job only after losing one, at least 6 months later', () => {

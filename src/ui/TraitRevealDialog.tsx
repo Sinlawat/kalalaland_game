@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { GameState, TraitKey } from '../engine/types';
+import { TRAIT_KEYS, type GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatStat, traitBand } from './format';
 
@@ -8,8 +8,6 @@ interface Props {
   /** Called when the player closes the popup (button or Escape). */
   onClose(): void;
 }
-
-const TRAIT_ORDER: TraitKey[] = ['discipline', 'resilience', 'riskTaking'];
 
 /**
  * One-time popup at Grade 1: "this is who you are" (D35).
@@ -35,7 +33,7 @@ export function TraitRevealDialog({ game, onClose }: Props) {
       <h2 id="trait-reveal-title">{t('traitReveal.title')}</h2>
       <p className="muted">{t('traitReveal.intro', { name: game.name.first })}</p>
       <ul className="trait-list">
-        {TRAIT_ORDER.map((key) => {
+        {TRAIT_KEYS.map((key) => {
           const value = game.traits[key];
           return (
             <li key={key} className="trait-list__item">

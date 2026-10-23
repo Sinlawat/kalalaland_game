@@ -11,8 +11,12 @@ export interface Traits {
   discipline: number;
   resilience: number;
   riskTaking: number;
+  /** D65: speeds up the creative skill. */
+  imagination: number;
 }
 export type TraitKey = keyof Traits;
+/** Display and iteration order of the traits. */
+export const TRAIT_KEYS = ['discipline', 'resilience', 'riskTaking', 'imagination'] as const satisfies readonly TraitKey[];
 
 // ── Layer 2: Environment (0–100). Changes when life changes. ────────────────
 export interface Environment {
@@ -54,9 +58,13 @@ export type HabitTimers = { [K in HabitKey]?: { revertTo: Habits[K]; untilMonth:
 export interface Condition {
   physicalHealth: number;
   mentalHealth: number;
-  knowledge: number;
 }
 export type ConditionKey = keyof Condition;
+
+// ── Skills (D65): "knowledge" split in four, each sped up by one trait ──────
+export const SKILL_KEYS = ['academic', 'creative', 'communication', 'practical'] as const;
+export type SkillKey = (typeof SKILL_KEYS)[number];
+export type Skills = Record<SkillKey, number>;
 
 // ── Layer 5: Outcome ────────────────────────────────────────────────────────
 // Wealth is NOT stored here: it is net worth, computed by the finance system.
@@ -73,7 +81,7 @@ export interface HiddenState {
 }
 
 /** Attributes that monthly contributions may change. */
-export type StatTarget = ConditionKey | 'looks';
+export type StatTarget = ConditionKey | SkillKey | 'looks';
 
 // ── Regions (design doc section 12) ─────────────────────────────────────────
 export const REGION_IDS = ['city', 'suburb', 'rural'] as const;
@@ -103,6 +111,7 @@ export type YearLog = Partial<Record<StatTarget, Record<string, number>>>;
  */
 export interface LifeSnapshot extends Condition {
   looks: number;
+  skills: Skills;
   traits?: Traits;
   environment?: Environment;
 }
@@ -188,6 +197,8 @@ export interface GameState {
   /** Temporary lifestyle changes still running (save version 6). */
   habitTimers: HabitTimers;
   condition: Condition;
+  /** D65: four skills instead of one knowledge value (save version 8). */
+  skills: Skills;
   outcome: Outcome;
   /** Values the engine uses but the player never sees as numbers. */
   hidden: HiddenState;
