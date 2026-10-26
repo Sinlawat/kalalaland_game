@@ -56,6 +56,9 @@ describe('th.json completeness', () => {
         exercise: HABIT_OPTIONS.exercise[seed % 3]!,
         sleep: HABIT_OPTIONS.sleep[seed % 2]!,
         overtime: HABIT_OPTIONS.overtime[seed % 3]!,
+        // D69: addictions too, so their breakdown lines are checked for labels.
+        smoking: HABIT_OPTIONS.smoking[seed % 2]!,
+        drinking: HABIT_OPTIONS.drinking[(seed >> 1) % 2]!,
       };
       for (const year of simulateWholeLife(life).history) {
         for (const bySource of Object.values(year.changes)) {

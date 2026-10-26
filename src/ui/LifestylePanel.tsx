@@ -1,6 +1,6 @@
 import { BALANCE } from '../data/balance';
 import { hasOwnLifestyle, isWorking } from '../engine/passive';
-import type { GameState, HabitKey, Habits } from '../engine/types';
+import { ADDICTION_HABITS, type GameState, type HabitKey, type Habits } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { habitReason, type HabitReason } from './lifestyle';
 import { countHabitMonths, monthSlots } from './months';
@@ -9,14 +9,21 @@ interface Props {
   game: GameState;
 }
 
-const HABIT_ORDER: HabitKey[] = ['exercise', 'sleep', 'overtime'];
+const HABIT_ORDER: HabitKey[] = ['exercise', 'sleep', 'overtime', 'smoking', 'drinking'];
 
 /** Colour of each level: is it good for you? */
 const LEVEL_TONE: { [K in HabitKey]: Record<Habits[K], 'good' | 'mid' | 'bad'> } = {
   exercise: { none: 'bad', light: 'mid', regular: 'good' },
   sleep: { short: 'bad', enough: 'good' },
   overtime: { none: 'good', some: 'mid', heavy: 'bad' },
+  smoking: { none: 'good', addicted: 'bad' },
+  drinking: { none: 'good', addicted: 'bad' },
 };
+
+/** D69: an addiction is listed only while it lasts; "not smoking" is not news. */
+function isHidden(game: GameState, habit: HabitKey): boolean {
+  return (ADDICTION_HABITS as readonly HabitKey[]).includes(habit) && game.habits[habit] === 'none';
+}
 
 function toneOf<K extends HabitKey>(habit: K, level: Habits[K]): 'good' | 'mid' | 'bad' {
   return LEVEL_TONE[habit][level];
@@ -83,7 +90,7 @@ export function LifestylePanel({ game }: Props) {
       <h2>{t('layer.habits')}</h2>
       <p className="muted small">{t('habit.hint')}</p>
       <ul className="lifestyle">
-        {HABIT_ORDER.map((habit) => {
+        {HABIT_ORDER.filter((habit) => !isHidden(game, habit)).map((habit) => {
           const level = game.habits[habit];
           if (habit === 'overtime' && !working) {
             return (

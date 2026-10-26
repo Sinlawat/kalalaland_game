@@ -33,11 +33,16 @@ export type EnvironmentKey = keyof Environment;
 export const EXERCISE_LEVELS = ['none', 'light', 'regular'] as const;
 export const SLEEP_LEVELS = ['short', 'enough'] as const;
 export const OVERTIME_LEVELS = ['none', 'some', 'heavy'] as const;
+/** D69: smoking and drinking. Events start and end an addiction; nobody picks it. */
+export const ADDICTION_LEVELS = ['none', 'addicted'] as const;
+export type AddictionLevel = (typeof ADDICTION_LEVELS)[number];
 
 export interface Habits {
   exercise: (typeof EXERCISE_LEVELS)[number];
   sleep: (typeof SLEEP_LEVELS)[number];
   overtime: (typeof OVERTIME_LEVELS)[number];
+  smoking: AddictionLevel;
+  drinking: AddictionLevel;
 }
 export type HabitKey = keyof Habits;
 
@@ -46,7 +51,12 @@ export const HABIT_LEVELS: { readonly [K in HabitKey]: readonly Habits[K][] } = 
   exercise: EXERCISE_LEVELS,
   sleep: SLEEP_LEVELS,
   overtime: OVERTIME_LEVELS,
+  smoking: ADDICTION_LEVELS,
+  drinking: ADDICTION_LEVELS,
 };
+
+/** D69: the habits that are an addiction (shown only while addicted). */
+export const ADDICTION_HABITS = ['smoking', 'drinking'] as const satisfies readonly HabitKey[];
 
 /**
  * D56: a lifestyle change that lasts a limited time. When the game month

@@ -14,7 +14,7 @@
 import type { GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 8;
+export const CURRENT_SAVE_VERSION = 9;
 /** Saves older than this cannot be upgraded (D65); the player starts a new life. */
 export const OLDEST_LOADABLE_SAVE_VERSION = 8;
 
@@ -44,10 +44,30 @@ export type SaveResult = { status: 'ok' } | { status: 'error'; reason: 'unwritab
  * - Each step is tested with a real save of the older version.
  */
 const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
-  // Empty since version 8: D65 split knowledge into four skills, a change
-  // older lives cannot be converted to, so saves before 8 are "outdated".
+  // Saves before 8 are "outdated": D65 split knowledge into four skills, a
+  // change older lives cannot be converted to.
   // New steps go here: key N upgrades a version-N state to version N+1.
+  8: addAddictionHabits,
 };
+
+/**
+ * 8 → 9 (D69): smoking and drinking became habits. Nobody was addicted
+ * before, so every recorded set of habits gets both at 'none': the current
+ * habits, the running year's months and every closed year's months.
+ */
+function addAddictionHabits(state: unknown): unknown {
+  if (!isRecord(state)) return state;
+  const withNone = (habits: unknown): unknown => (isRecord(habits) ? { smoking: 'none', drinking: 'none', ...habits } : habits);
+  const everyMonth = (list: unknown): unknown => (Array.isArray(list) ? list.map(withNone) : list);
+  return {
+    ...state,
+    habits: withNone(state.habits),
+    yearHabits: everyMonth(state.yearHabits),
+    history: Array.isArray(state.history)
+      ? state.history.map((year: unknown) => (isRecord(year) && year.habits !== undefined ? { ...year, habits: everyMonth(year.habits) } : year))
+      : state.history,
+  };
+}
 
 function migrate(state: unknown, fromVersion: number): unknown {
   let current = state;
@@ -84,6 +104,7 @@ export function isValidGameState(value: unknown): value is GameState {
     hasNumbers(value.traits, ['discipline', 'resilience', 'riskTaking', 'imagination']) &&
     hasNumbers(value.environment, ['familyWealth', 'familyWarmth', 'workStress', 'financialStress']) &&
     isRecord(value.habits) &&
+    ['exercise', 'sleep', 'overtime', 'smoking', 'drinking'].every((habit) => typeof (value.habits as Record<string, unknown>)[habit] === 'string') &&
     isRecord(value.habitTimers) &&
     hasNumbers(value.condition, ['physicalHealth', 'mentalHealth']) &&
     hasNumbers(value.skills, ['academic', 'creative', 'communication', 'practical']) &&

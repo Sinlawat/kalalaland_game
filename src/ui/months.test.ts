@@ -10,8 +10,8 @@ const ZERO_SNAPSHOT: YearSummary['snapshot'] = {
   skills: { academic: 0, creative: 0, communication: 0, practical: 0 },
 };
 
-const regular: Habits = { exercise: 'regular', sleep: 'enough', overtime: 'none' };
-const lazy: Habits = { exercise: 'none', sleep: 'short', overtime: 'none' };
+const regular: Habits = { exercise: 'regular', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none' };
+const lazy: Habits = { exercise: 'none', sleep: 'short', overtime: 'none', smoking: 'none', drinking: 'none' };
 
 function closedYear(age: number, habits: Habits[]): YearSummary {
   return { age, changes: {}, snapshot: ZERO_SNAPSHOT, habits };

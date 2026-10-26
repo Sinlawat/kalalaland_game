@@ -9,7 +9,7 @@
 
 import { BALANCE } from '../data/balance';
 import type { Contribution } from './stats';
-import { SCHOOL_IDS, SKILL_KEYS, type GameState, type Habits, type SchoolId, type SkillKey, type Skills } from './types';
+import { ADDICTION_HABITS, SCHOOL_IDS, SKILL_KEYS, type AddictionLevel, type GameState, type Habits, type SchoolId, type SkillKey, type Skills } from './types';
 
 const MONTHS_PER_YEAR = 12;
 
@@ -63,6 +63,19 @@ function perMonth(yearlyAmount: number): number {
   return yearlyAmount / MONTHS_PER_YEAR;
 }
 
+/**
+ * D69: smoking and drinking, while addicted. Only non-zero lines are listed,
+ * so a life without an addiction shows nothing about it in the breakdown.
+ */
+function addictionEffects(state: GameState, table: Record<(typeof ADDICTION_HABITS)[number], Record<AddictionLevel, number>>): YearlyEffect[] {
+  if (!hasOwnLifestyle(state)) return [];
+  return ADDICTION_HABITS.flatMap((habit) => {
+    const level = state.habits[habit];
+    const yearly = table[habit][level];
+    return yearly === 0 ? [] : [{ source: `habit.${habit}.${level}`, yearly }];
+  });
+}
+
 /** Yearly effect tables for exercise and sleep (physical and mental use different ones). */
 interface ExerciseSleepTable {
   exercise: Record<Habits['exercise'], number>;
@@ -107,7 +120,7 @@ function exerciseAndSleepEffects(state: GameState, table: ExerciseSleepTable): Y
 export function physicalLifestyleEffects(state: GameState): YearlyEffect[] {
   const b = BALANCE.physicalHealth;
   const { habits, environment } = state;
-  const effects = exerciseAndSleepEffects(state, b.habitsPerYear);
+  const effects = [...exerciseAndSleepEffects(state, b.habitsPerYear), ...addictionEffects(state, b.habitsPerYear)];
   if (isWorking(state)) {
     effects.push({ source: `habit.overtime.${habits.overtime}`, yearly: b.habitsPerYear.overtime[habits.overtime] });
     effects.push({ source: 'env.workStress', yearly: (environment.workStress / 100) * b.workStressAt100PerYear });
@@ -146,6 +159,7 @@ function mentalHealthContributions(state: GameState, age: number): Contribution[
   };
 
   for (const effect of exerciseAndSleepEffects(state, b.habitsPerYear)) add(effect.source, effect.yearly);
+  for (const effect of addictionEffects(state, b.habitsPerYear)) add(effect.source, effect.yearly);
   if (isWorking(state)) {
     add(`habit.overtime.${habits.overtime}`, b.habitsPerYear.overtime[habits.overtime]);
     add('env.workStress', (environment.workStress / 100) * b.workStressAt100PerYear);

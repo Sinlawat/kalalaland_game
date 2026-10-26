@@ -27,7 +27,7 @@ export function makeState(overrides: StateOverrides = {}): GameState {
     ageInMonths: 30 * 12,
     traits: { discipline: 50, resilience: 0, riskTaking: 50, imagination: 50, ...traits },
     environment: { familyWealth: 50, familyWarmth: 50, workStress: 0, financialStress: 0, ...environment },
-    habits: { exercise: 'light', sleep: 'enough', overtime: 'none', ...habits },
+    habits: { exercise: 'light', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none', ...habits },
     condition: { physicalHealth: 70, mentalHealth: 70, ...condition },
     skills: { academic: 50, creative: 50, communication: 50, practical: 50, ...skills },
     outcome: { looks: 50, fame: 0, ...outcome },

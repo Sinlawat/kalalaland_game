@@ -1113,6 +1113,65 @@ describe('real events over many lives (Monte Carlo)', () => {
     });
   });
 
+  describe('smoking and drinking (D69)', () => {
+    const KINDS = [
+      { key: 'smoking', tryFrom: 13, tryTo: 17 },
+      { key: 'drinking', tryFrom: 18, tryTo: 30 },
+    ] as const;
+
+    it('try only in its age range; addicted only after trying; quitting only after deciding to quit', () => {
+      let hooked = 0;
+      let quit = 0;
+      for (const end of ends) {
+        for (const { key, tryFrom, tryTo } of KINDS) {
+          const p = `health_${key}`;
+          let tried = false;
+          let addicted = false;
+          let quitting = false;
+          for (const record of end.eventHistory) {
+            const age = Math.floor(record.ageInMonths / 12);
+            if (record.id === `${p}_try`) {
+              expect(age).toBeGreaterThanOrEqual(tryFrom);
+              expect(age).toBeLessThanOrEqual(tryTo);
+              tried = record.choiceId === 'try';
+            }
+            if (record.id === `${p}_hooked`) {
+              expect(tried).toBe(true);
+              addicted = true;
+              hooked += 1;
+            }
+            if (record.id === `${p}_cost` || record.id === `${p}_want_to_quit`) expect(addicted).toBe(true);
+            if (record.id === `${p}_want_to_quit` && record.choiceId !== 'not_now') quitting = true;
+            if (record.id === `${p}_relapse`) {
+              expect(quitting).toBe(true);
+              quitting = false;
+            }
+            if (record.id === `${p}_quit_with_clinic` || record.id === `${p}_quit_alone`) {
+              expect(quitting).toBe(true);
+              addicted = false;
+              quitting = false;
+              quit += 1;
+            }
+          }
+          // The habit at the end of the life tells the same story as the events.
+          expect(end.habits[key]).toBe(addicted ? 'addicted' : 'none');
+        }
+      }
+      expect(hooked).toBeGreaterThan(0);
+      expect(quit).toBeGreaterThan(0);
+    });
+
+    it('late-night gaming only in families that can afford a phone or computer (wealth ≥ 31)', () => {
+      for (const end of ends) {
+        let wealth = createNewLife(end.seed).environment.familyWealth;
+        for (const record of end.eventHistory) {
+          if (record.id === 'social_late_night_gaming') expect(wealth).toBeGreaterThanOrEqual(31);
+          wealth += record.environmentChanges?.familyWealth ?? 0;
+        }
+      }
+    });
+  });
+
   it('malnutrition hits only poor families, at most once per 12 months', () => {
     for (const end of ends) {
       const months = end.eventHistory.filter((r) => r.id === 'health_malnutrition').map((r) => r.ageInMonths);

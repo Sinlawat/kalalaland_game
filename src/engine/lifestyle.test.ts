@@ -8,27 +8,29 @@ describe('starting lifestyle at Grade 1 (D51)', () => {
   it.each([
     [50, 'enough'],
     [49, 'short'],
-  ] as const)('family warmth %i → sleep %s; light exercise, no overtime', (warmth, sleep) => {
+  ] as const)('family warmth %i → sleep %s; light exercise, no overtime, no addiction', (warmth, sleep) => {
     expect(startingLifestyle(makeState({ environment: { familyWarmth: warmth } }))).toEqual({
       exercise: 'light',
       sleep,
       overtime: 'none',
+      smoking: 'none',
+      drinking: 'none',
     });
   });
 
   it('is applied in the first month of age 6, before that month is recorded', () => {
     const life = { ...createNewLife(4), ageInMonths: OWN_LIFESTYLE_FROM_MONTH - 1, yearHabits: [] };
     life.environment.familyWarmth = 20;
-    life.habits = { exercise: 'regular', sleep: 'enough', overtime: 'none' };
+    life.habits = { exercise: 'regular', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none' };
     const after = advanceOneMonth(life).state;
-    expect(after.habits).toEqual({ exercise: 'light', sleep: 'short', overtime: 'none' });
+    expect(after.habits).toEqual({ exercise: 'light', sleep: 'short', overtime: 'none', smoking: 'none', drinking: 'none' });
     // Month 72 is also the 6th birthday: the year was closed into history.
     expect(after.history.at(-1)!.habits!.at(-1)).toEqual(after.habits);
   });
 
   it('later months keep whatever events set', () => {
     const life = { ...createNewLife(4), ageInMonths: OWN_LIFESTYLE_FROM_MONTH + 5 };
-    life.habits = { exercise: 'regular', sleep: 'enough', overtime: 'none' };
+    life.habits = { exercise: 'regular', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none' };
     expect(advanceOneMonth(life).state.habits.exercise).toBe('regular');
   });
 

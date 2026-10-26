@@ -3,6 +3,7 @@ import { BALANCE } from '../data/balance';
 import { computePassiveContributions, currentSchool, physicalSetPoint, schoolLearningFactor, traitFactor } from './passive';
 import type { Contribution } from './stats';
 import { makeState } from './testUtils';
+import { yearlyWearChange } from './wear';
 import type { GameState, StatTarget } from './types';
 
 function find(contributions: Contribution[], target: StatTarget, source: string): Contribution | undefined {
@@ -135,6 +136,27 @@ describe('computePassiveContributions', () => {
     it('every skill declines slowly in old age', () => {
       const c = computePassiveContributions(makeState({ ageInMonths: 70 * 12 }));
       for (const skill of SKILLS) expect(yearly(find(c, skill, 'body.aging'))).toBeCloseTo(-0.3);
+    });
+  });
+
+  describe('smoking and drinking (D69)', () => {
+    it('add nothing to the breakdown while not addicted', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 20 * 12 }));
+      expect(c.filter((x) => x.source.startsWith('habit.smoking') || x.source.startsWith('habit.drinking'))).toEqual([]);
+    });
+
+    it('smoking: physical health −3 a year; drinking: physical −2 and mental −2 a year, each its own line', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 20 * 12, habits: { smoking: 'addicted', drinking: 'addicted' } }));
+      expect(yearly(find(c, 'physicalHealth', 'habit.smoking.addicted'))).toBeCloseTo(-3);
+      expect(find(c, 'mentalHealth', 'habit.smoking.addicted')).toBeUndefined();
+      expect(yearly(find(c, 'physicalHealth', 'habit.drinking.addicted'))).toBeCloseTo(-2);
+      expect(yearly(find(c, 'mentalHealth', 'habit.drinking.addicted'))).toBeCloseTo(-2);
+    });
+
+    it('add long-term wear like any unhealthy habit', () => {
+      const clean = makeState({ ageInMonths: 20 * 12 });
+      const smoker = makeState({ ageInMonths: 20 * 12, habits: { smoking: 'addicted' } });
+      expect(yearlyWearChange(smoker) - yearlyWearChange(clean)).toBeCloseTo(3 * BALANCE.wear.gainFactor);
     });
   });
 

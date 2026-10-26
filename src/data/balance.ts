@@ -21,7 +21,7 @@ export const BALANCE = {
     physicalHealth: { min: 70, max: 95 },
     mentalHealth: { min: 60, max: 90 },
     looks: { min: 10, max: 90 },
-    habits: { exercise: 'light', sleep: 'enough', overtime: 'none' } satisfies Habits,
+    habits: { exercise: 'light', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none' } satisfies Habits,
   },
 
   earlyChildhood: {
@@ -75,6 +75,9 @@ export const BALANCE = {
       exercise: { none: -1, light: 1, regular: 2.5 },
       sleep: { short: -2, enough: 0.5 },
       overtime: { none: 0, some: -1, heavy: -3 },
+      /** D69: an addiction hurts like heavy overtime (smoking) and adds wear like any unhealthy habit. */
+      smoking: { none: 0, addicted: -3 },
+      drinking: { none: 0, addicted: -2 },
     },
     /** At stress 100 the yearly effect is this value; scales linearly. */
     workStressAt100PerYear: -2,
@@ -101,6 +104,8 @@ export const BALANCE = {
       exercise: { none: 0, light: 0.5, regular: 1 },
       sleep: { short: -2, enough: 1 },
       overtime: { none: 0, some: -1, heavy: -2 },
+      smoking: { none: 0, addicted: 0 },
+      drinking: { none: 0, addicted: -2 },
     },
     /** Family warmth 100 → +value, 0 → −value, 50 → 0. */
     familyWarmthMaxPerYear: 3,

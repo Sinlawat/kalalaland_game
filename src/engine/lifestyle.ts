@@ -25,6 +25,9 @@ export function startingLifestyle(state: Pick<GameState, 'environment'>): Habits
     exercise: ec.startingExercise,
     sleep: state.environment.familyWarmth >= ec.familyWarmthForEnoughSleep ? 'enough' : 'short',
     overtime: ec.startingOvertime,
+    // Nobody is addicted at six; events start an addiction later (D69).
+    smoking: 'none',
+    drinking: 'none',
   };
 }
 

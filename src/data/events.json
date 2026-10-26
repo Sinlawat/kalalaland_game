@@ -454,7 +454,7 @@
         "practical": 1
       },
       "traits": {
-        "discipline": 2
+        "discipline": 1
       }
     }
   },
@@ -466,11 +466,7 @@
     },
     "frequency": "window",
     "once": true,
-    "effects": {
-      "traits": {
-        "discipline": 1
-      }
-    }
+    "effects": {}
   },
   {
     "id": "growth_drawing",
@@ -2871,5 +2867,591 @@
         }
       }
     ]
+  },
+  {
+    "id": "social_late_night_gaming",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 12,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 31
+        }
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "every_night",
+        "effects": {
+          "traits": {
+            "discipline": -2
+          },
+          "stats": {
+            "communication": 1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          }
+        }
+      },
+      {
+        "id": "weekends_only",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "health_smoking_try",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 17,
+      "habits": {
+        "smoking": "none"
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "try",
+        "effects": {
+          "stats": {
+            "physicalHealth": -1
+          },
+          "setFlags": [
+            "tried_smoking"
+          ]
+        }
+      },
+      {
+        "id": "refuse",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "health_smoking_hooked",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "tried_smoking"
+      ],
+      "habits": {
+        "smoking": "none"
+      },
+      "eventsNone": [
+        "health_smoking_lost_interest"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": -1
+      },
+      "habits": {
+        "smoking": "addicted"
+      }
+    }
+  },
+  {
+    "id": "health_smoking_lost_interest",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "tried_smoking"
+      ],
+      "habits": {
+        "smoking": "none"
+      },
+      "eventsNone": [
+        "health_smoking_hooked"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "removeFlags": [
+        "tried_smoking"
+      ]
+    }
+  },
+  {
+    "id": "health_smoking_cost",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "habits": {
+        "smoking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "traits": {
+        "discipline": -1
+      }
+    }
+  },
+  {
+    "id": "health_smoking_want_to_quit",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsNone": [
+        "quitting_smoking"
+      ],
+      "habits": {
+        "smoking": "addicted"
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "clinic",
+        "effects": {
+          "setFlags": [
+            "quitting_smoking",
+            "quitting_smoking_clinic"
+          ]
+        }
+      },
+      {
+        "id": "alone",
+        "effects": {
+          "setFlags": [
+            "quitting_smoking"
+          ]
+        }
+      },
+      {
+        "id": "not_now",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "health_smoking_quit_with_clinic",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_smoking_clinic"
+      ],
+      "habits": {
+        "smoking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      },
+      "traits": {
+        "discipline": 1
+      },
+      "habits": {
+        "smoking": "none"
+      },
+      "removeFlags": [
+        "quitting_smoking",
+        "quitting_smoking_clinic"
+      ]
+    }
+  },
+  {
+    "id": "health_smoking_quit_alone",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_smoking"
+      ],
+      "flagsNone": [
+        "quitting_smoking_clinic"
+      ],
+      "habits": {
+        "smoking": "addicted"
+      }
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      },
+      "traits": {
+        "discipline": 1
+      },
+      "habits": {
+        "smoking": "none"
+      },
+      "removeFlags": [
+        "quitting_smoking"
+      ]
+    }
+  },
+  {
+    "id": "health_smoking_relapse",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_smoking"
+      ],
+      "habits": {
+        "smoking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": -1
+      },
+      "removeFlags": [
+        "quitting_smoking",
+        "quitting_smoking_clinic"
+      ]
+    }
+  },
+  {
+    "id": "health_drinking_try",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "habits": {
+        "drinking": "none"
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "try",
+        "effects": {
+          "stats": {
+            "physicalHealth": -1
+          },
+          "setFlags": [
+            "tried_drinking"
+          ]
+        }
+      },
+      {
+        "id": "refuse",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "health_drinking_hooked",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "tried_drinking"
+      ],
+      "habits": {
+        "drinking": "none"
+      },
+      "eventsNone": [
+        "health_drinking_lost_interest"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": -1
+      },
+      "habits": {
+        "drinking": "addicted"
+      }
+    }
+  },
+  {
+    "id": "health_drinking_lost_interest",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "tried_drinking"
+      ],
+      "habits": {
+        "drinking": "none"
+      },
+      "eventsNone": [
+        "health_drinking_hooked"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "removeFlags": [
+        "tried_drinking"
+      ]
+    }
+  },
+  {
+    "id": "health_drinking_cost",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "habits": {
+        "drinking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "traits": {
+        "discipline": -1
+      }
+    }
+  },
+  {
+    "id": "health_drinking_want_to_quit",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsNone": [
+        "quitting_drinking"
+      ],
+      "habits": {
+        "drinking": "addicted"
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "clinic",
+        "effects": {
+          "setFlags": [
+            "quitting_drinking",
+            "quitting_drinking_clinic"
+          ]
+        }
+      },
+      {
+        "id": "alone",
+        "effects": {
+          "setFlags": [
+            "quitting_drinking"
+          ]
+        }
+      },
+      {
+        "id": "not_now",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "health_drinking_quit_with_clinic",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_drinking_clinic"
+      ],
+      "habits": {
+        "drinking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      },
+      "traits": {
+        "discipline": 1
+      },
+      "habits": {
+        "drinking": "none"
+      },
+      "removeFlags": [
+        "quitting_drinking",
+        "quitting_drinking_clinic"
+      ]
+    }
+  },
+  {
+    "id": "health_drinking_quit_alone",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_drinking"
+      ],
+      "flagsNone": [
+        "quitting_drinking_clinic"
+      ],
+      "habits": {
+        "drinking": "addicted"
+      }
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      },
+      "traits": {
+        "discipline": 1
+      },
+      "habits": {
+        "drinking": "none"
+      },
+      "removeFlags": [
+        "quitting_drinking"
+      ]
+    }
+  },
+  {
+    "id": "health_drinking_relapse",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 80,
+      "flagsAll": [
+        "quitting_drinking"
+      ],
+      "habits": {
+        "drinking": "addicted"
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "mentalHealth": -1
+      },
+      "removeFlags": [
+        "quitting_drinking",
+        "quitting_drinking_clinic"
+      ]
+    }
   }
 ]
