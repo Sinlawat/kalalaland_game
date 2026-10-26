@@ -2179,5 +2179,697 @@
         }
       }
     ]
+  },
+  {
+    "id": "school_perfectionism",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "discipline",
+          "op": ">=",
+          "value": 70
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "keep_going",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2,
+            "academic": 1
+          }
+        }
+      },
+      {
+        "id": "let_go",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "school_procrastination",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "discipline",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "all_nighter",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2,
+            "academic": 1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "hand_in_incomplete",
+        "effects": {
+          "stats": {
+            "academic": -1,
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "life_everyone_thinks_fine",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "resilience",
+          "op": ">=",
+          "value": 70
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "resilience",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "ask_for_help",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWarmth",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "handle_alone",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "life_small_things_pile_up",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "resilience",
+          "op": "<",
+          "value": 31
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "resilience",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "talk_to_adult",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWarmth",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "traits": {
+            "resilience": 1
+          }
+        }
+      },
+      {
+        "id": "leave_it",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_reckless_dare",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "riskTaking",
+          "op": ">=",
+          "value": 70
+        }
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "do_it",
+        "effects": {
+          "stats": {
+            "physicalHealth": -2,
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "think_first",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "social_missed_opportunity",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "riskTaking",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "try_anyway",
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": -1
+          },
+          "traits": {
+            "riskTaking": 1
+          }
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_daydreaming",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "imagination",
+          "op": ">=",
+          "value": 70
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "imagination",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "note_idea",
+        "effects": {
+          "stats": {
+            "creative": 1,
+            "academic": -1
+          }
+        }
+      },
+      {
+        "id": "keep_dreaming",
+        "effects": {
+          "stats": {
+            "academic": -2,
+            "mentalHealth": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_open_ended_task",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "imagination",
+          "op": "<",
+          "value": 31
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "imagination",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "copy_example",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      },
+      {
+        "id": "ask_for_ideas",
+        "effects": {
+          "traits": {
+            "imagination": 1
+          },
+          "stats": {
+            "academic": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_class_project_leader",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "academic",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "discipline": 2
+      },
+      "stats": {
+        "mentalHealth": 1
+      }
+    }
+  },
+  {
+    "id": "family_praise_only_when_perfect",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "discipline": 1,
+        "imagination": -2
+      }
+    }
+  },
+  {
+    "id": "family_supported_through_hard_time",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14,
+      "monthsSince": {
+        "events": [
+          "family_parent_lost_job",
+          "family_parent_lost_job_while_away",
+          "family_parents_divorce",
+          "family_relative_seriously_ill",
+          "family_live_with_grandparents",
+          "family_live_with_grandparents_after_job_loss"
+        ],
+        "min": 1
+      }
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "resilience": 2
+      },
+      "stats": {
+        "mentalHealth": 2
+      }
+    }
+  },
+  {
+    "id": "family_harsh_scolding",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "resilience": -2
+      },
+      "stats": {
+        "mentalHealth": -2
+      }
+    }
+  },
+  {
+    "id": "school_stage_performance",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "communication",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "riskTaking": 2
+      },
+      "stats": {
+        "communication": 1
+      }
+    }
+  },
+  {
+    "id": "family_overprotective",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14,
+      "eventsNone": [
+        "family_freedom_to_experiment"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "riskTaking": -2
+      },
+      "stats": {
+        "practical": -1
+      }
+    }
+  },
+  {
+    "id": "family_art_supplies",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWealth",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "imagination": 2
+      },
+      "stats": {
+        "creative": 1
+      }
+    }
+  },
+  {
+    "id": "family_freedom_to_experiment",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14,
+      "eventsNone": [
+        "family_overprotective"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "traits": {
+        "imagination": 2,
+        "riskTaking": 1
+      }
+    }
+  },
+  {
+    "id": "family_no_homework_supervision",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 14
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "low"
+      }
+    ],
+    "effects": {
+      "traits": {
+        "discipline": -2
+      }
+    }
+  },
+  {
+    "id": "social_skip_class_with_friends",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_public",
+        "school_scholarship",
+        "school_local"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "go_along",
+        "effects": {
+          "traits": {
+            "discipline": -2
+          },
+          "stats": {
+            "mentalHealth": 1
+          },
+          "setFlags": [
+            "skipped_class"
+          ]
+        }
+      },
+      {
+        "id": "stay",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
   }
 ]

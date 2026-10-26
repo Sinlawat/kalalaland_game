@@ -6,6 +6,7 @@ import {
   applyEvent,
   calendarMonth,
   EVENTS,
+  findEvent,
   hasHappened,
   isEligible,
   lockReasons,
@@ -1024,6 +1025,92 @@ describe('real events over many lives (Monte Carlo)', () => {
       return group.filter((end) => ids(end).includes('school_bullied')).length / group.length;
     };
     expect(rate((r) => r < 40)).toBeGreaterThan(rate((r) => r >= 60) * 1.5);
+  });
+
+  describe('traits: downsides and events that change them', () => {
+    const TRAITS = ['discipline', 'resilience', 'riskTaking', 'imagination'] as const;
+    type TraitValues = Record<(typeof TRAITS)[number], number>;
+
+    /**
+     * Traits right before each record's MONTH: only events change traits, and
+     * each record keeps its real change, so the birth values plus the changes
+     * so far rebuild them exactly. Event conditions are checked before any
+     * event of the month is applied, hence "before the month".
+     */
+    function traitsBeforeEachMonth(end: (typeof ends)[number]): TraitValues[] {
+      const running: TraitValues = { ...createNewLife(end.seed).traits };
+      let monthStart: TraitValues = { ...running };
+      let month = -1;
+      return end.eventHistory.map((record) => {
+        if (record.ageInMonths !== month) {
+          month = record.ageInMonths;
+          monthStart = { ...running };
+        }
+        for (const [trait, change] of Object.entries(record.traitChanges ?? {})) running[trait as keyof TraitValues] += change;
+        return monthStart;
+      });
+    }
+
+    it('rebuilding traits from the records matches the final traits (the check below relies on it)', () => {
+      for (const end of ends) {
+        const running = { ...createNewLife(end.seed).traits };
+        for (const r of end.eventHistory) for (const [t, c] of Object.entries(r.traitChanges ?? {})) running[t as keyof TraitValues] += c;
+        for (const t of TRAITS) expect(running[t]).toBeCloseTo(end.traits[t], 6);
+      }
+    });
+
+    it('every event that needs a trait level (e.g. discipline ≥ 70) only happened at that level', () => {
+      let checked = 0;
+      for (const end of ends) {
+        const before = traitsBeforeEachMonth(end);
+        end.eventHistory.forEach((record, i) => {
+          for (const s of findEvent(record.id)!.conditions.stats ?? []) {
+            if (!(TRAITS as readonly string[]).includes(s.stat)) continue;
+            const value = before[i]![s.stat as keyof TraitValues];
+            expect(s.op === '>=' ? value >= s.value : value < s.value).toBe(true);
+            checked += 1;
+          }
+        });
+      }
+      expect(checked).toBeGreaterThan(500);
+    });
+
+    it('opposite parenting styles never happen in the same life (overprotected vs free to experiment)', () => {
+      for (const end of ends) {
+        expect(ids(end).includes('family_overprotective') && ids(end).includes('family_freedom_to_experiment')).toBe(false);
+      }
+    });
+
+    it('"someone stood by you" only comes after a hard time in the family', () => {
+      const HARD = [
+        'family_parent_lost_job', 'family_parent_lost_job_while_away', 'family_parents_divorce',
+        'family_relative_seriously_ill', 'family_live_with_grandparents', 'family_live_with_grandparents_after_job_loss',
+      ];
+      let seen = 0;
+      for (const end of ends) {
+        const at = ids(end).indexOf('family_supported_through_hard_time');
+        if (at < 0) continue;
+        seen += 1;
+        expect(ids(end).slice(0, at).some((id) => HARD.includes(id))).toBe(true);
+      }
+      expect(seen).toBeGreaterThan(0);
+    });
+
+    it('balance guard: content keeps every trait roughly where it started (mean, spread)', () => {
+      // Growing up raises discipline for everyone (self-care, toilet training, class rules: about +4),
+      // which shifts all children together; the guard catches content that pushes a trait much further,
+      // or squeezes or stretches the spread so that a trait stops telling children apart.
+      const grown = ends.filter((end) => end.ageInMonths >= 19 * 12);
+      for (const t of TRAITS) {
+        const birth = grown.map((end) => createNewLife(end.seed).traits[t]);
+        const at18 = grown.map((end) => end.history.find((y) => y.age === 18)!.snapshot.traits![t]);
+        const mean = (v: number[]) => v.reduce((a, x) => a + x, 0) / v.length;
+        const sd = (v: number[]) => Math.sqrt(mean(v.map((x) => (x - mean(v)) ** 2)));
+        expect(Math.abs(mean(at18) - mean(birth)), `${t}: mean moved too far`).toBeLessThan(5);
+        expect(sd(at18) / sd(birth), `${t}: spread changed`).toBeGreaterThan(0.85);
+        expect(sd(at18) / sd(birth), `${t}: spread changed`).toBeLessThan(1.15);
+      }
+    });
   });
 
   it('malnutrition hits only poor families, at most once per 12 months', () => {
