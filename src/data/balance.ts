@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits, SkillKey, Skills, TraitKey } from '../engine/types';
+import type { Habits, SchoolId, SkillKey, Skills, TraitKey } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -111,7 +111,7 @@ export const BALANCE = {
   },
 
   skills: {
-    /** Basic learning while growing up (schooling comes with events later). */
+    /** Basic learning while growing up; the school multiplies it (schoolLearning). */
     childhoodStartAge: 4,
     childhoodEndAge: 18,
     /** Per year, before the trait factor (D65). Academic grows fastest: school is mostly that. */
@@ -128,6 +128,18 @@ export const BALANCE = {
       communication: 'riskTaking',
       practical: 'resilience',
     } satisfies Record<SkillKey, TraitKey>,
+    /**
+     * D66: the school speeds up (or slows down) learning while growing up,
+     * on top of the trait. Skills not listed learn at the normal speed (×1).
+     * Ages 6–17 in practice: the school flag is set at Grade 1.
+     */
+    schoolLearning: {
+      international: { academic: 1.3, communication: 1.2 },
+      private: { academic: 1.15 },
+      scholarship: { academic: 1.15 },
+      public: {},
+      local: { academic: 0.9 },
+    } satisfies Record<SchoolId, Partial<Skills>>,
   },
 
   looks: {

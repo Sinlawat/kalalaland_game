@@ -87,7 +87,11 @@ export interface StatCondition {
 /** Conditions on the character, shared by events and by single choices. */
 export interface CharacterConditions {
   stats?: StatCondition[];
+  /** Every one of these flags. */
   flagsAll?: string[];
+  /** At least one of these flags, e.g. "goes to any school" or "goes to a school that charges fees". */
+  flagsAny?: string[];
+  /** None of these flags. */
   flagsNone?: string[];
   /** The lifestyle the character must have right now, e.g. { overtime: 'heavy' }. */
   habits?: Partial<Habits>;
@@ -111,6 +115,17 @@ export interface EventConditions extends CharacterConditions {
    * grandparents a month after the family moved house.
    */
   notWithin?: { events: string[]; months: number };
+  /**
+   * None of these events ever happened. Keeps the versions of one moment
+   * apart (D61), e.g. the first-term results: once a child got "top of the
+   * class", a later "behind" must not happen too, even if the grades change.
+   */
+  eventsNone?: string[];
+  /**
+   * Where the character lives right now. Each field given must match one of
+   * its values, e.g. { regions: ['city', 'suburb'] } = "not in the countryside".
+   */
+  residence?: { regions?: RegionId[]; homes?: HomeId[] };
 }
 
 /** A lifestyle change: a level (lasting), or a level for some months (D56). */
@@ -186,7 +201,7 @@ interface Checker {
   flagsTested: { at: string; flag: string }[];
 }
 
-/** stats / flagsAll / flagsNone / habits: shared by event conditions and choice conditions. */
+/** stats / flagsAll / flagsAny / flagsNone / habits: shared by event conditions and choice conditions. */
 function checkCharacterConditions(c: Record<string, unknown>, at: string, check: Checker): void {
   if (c.stats !== undefined) {
     if (!Array.isArray(c.stats)) check.problems.push(`${at}: conditions.stats must be a list`);
@@ -204,10 +219,12 @@ function checkCharacterConditions(c: Record<string, unknown>, at: string, check:
         }
       });
   }
-  for (const key of ['flagsAll', 'flagsNone'] as const) {
+  for (const key of ['flagsAll', 'flagsAny', 'flagsNone'] as const) {
     const list = c[key];
     if (list === undefined) continue;
     if (!isStringArray(list)) check.problems.push(`${at}: ${key} must be a list of flag names`);
+    // An empty "at least one of" can never be met: the event or choice would be dead.
+    else if (key === 'flagsAny' && list.length === 0) check.problems.push(`${at}: flagsAny must name at least one flag`);
     else list.forEach((flag) => check.flagsTested.push({ at, flag }));
   }
   if (c.habits !== undefined) {
@@ -280,6 +297,32 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   }
 }
 
+/** { regions?: [...], homes?: [...] }: at least one field, each a non-empty list of known ids. */
+function checkResidenceCondition(residence: unknown, at: string, problems: string[]): void {
+  if (!isRecord(residence)) {
+    problems.push(`${at}: conditions.residence must list regions, homes, or both`);
+    return;
+  }
+  for (const key of unknownKeys(residence, ['regions', 'homes'])) problems.push(`${at}: conditions.residence: unknown field "${key}"`);
+  if (residence.regions === undefined && residence.homes === undefined) {
+    problems.push(`${at}: conditions.residence must list regions, homes, or both`);
+  }
+  for (const [field, known] of [
+    ['regions', REGION_IDS],
+    ['homes', HOME_IDS],
+  ] as const) {
+    const list = residence[field];
+    if (list === undefined) continue;
+    if (!isStringArray(list) || list.length === 0) {
+      problems.push(`${at}: conditions.residence.${field} must be a non-empty list`);
+      continue;
+    }
+    for (const id of list) {
+      if (!(known as readonly string[]).includes(id)) problems.push(`${at}: conditions.residence: unknown ${field === 'regions' ? 'region' : 'home'} "${id}"`);
+    }
+  }
+}
+
 function checkChoices(choices: unknown, at: string, check: Checker): void {
   const { problems } = check;
   if (!Array.isArray(choices) || choices.length < 2) {
@@ -303,7 +346,7 @@ function checkChoices(choices: unknown, at: string, check: Checker): void {
     if (choice.conditions === undefined) alwaysAvailable += 1;
     else if (!isRecord(choice.conditions)) problems.push(`${where}: conditions must be an object`);
     else {
-      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsNone', 'habits'])) {
+      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits'])) {
         problems.push(`${where}: unknown condition "${key}" (a choice may only test stats, flags and lifestyle)`);
       }
       checkCharacterConditions(choice.conditions, where, check);
@@ -363,7 +406,10 @@ export function parseEvents(raw: unknown): EventDef[] {
     if (!isRecord(c)) {
       problems.push(`${at}: conditions must be an object`);
     } else {
-      for (const key of unknownKeys(c, ['ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin'])) {
+      for (const key of unknownKeys(c, [
+        'ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin', 'eventsNone',
+        'residence',
+      ])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
       const { ageMin, ageMax } = c;
@@ -393,6 +439,11 @@ export function parseEvents(raw: unknown): EventDef[] {
           apart.events.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'notWithin' }));
         }
       }
+      if (c.eventsNone !== undefined) {
+        if (!isStringArray(c.eventsNone) || c.eventsNone.length === 0) problems.push(`${at}: eventsNone must be a non-empty list of event ids`);
+        else c.eventsNone.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'eventsNone' }));
+      }
+      if (c.residence !== undefined) checkResidenceCondition(c.residence, at, problems);
     }
 
     const hasEffects = item.effects !== undefined;
@@ -476,6 +527,7 @@ function habitEntries(habits: Partial<Habits> | undefined): [HabitKey, string][]
 
 function meetsCharacterConditions(state: GameState, c: CharacterConditions): boolean {
   if (c.flagsAll && !c.flagsAll.every((flag) => state.flags.includes(flag))) return false;
+  if (c.flagsAny && !c.flagsAny.some((flag) => state.flags.includes(flag))) return false;
   if (c.flagsNone && c.flagsNone.some((flag) => state.flags.includes(flag))) return false;
   if (habitEntries(c.habits).some(([habit, level]) => state.habits[habit] !== level)) return false;
   return (c.stats ?? []).every((s) => meetsStat(state, s));
@@ -534,6 +586,11 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
     const times = c.notWithin.events.flatMap((id) => happened.get(id) ?? []);
     if (times.length > 0 && state.ageInMonths - Math.max(...times) < c.notWithin.months) return false;
   }
+  if (c.eventsNone && c.eventsNone.some((id) => happened.has(id))) return false;
+  if (c.residence) {
+    if (c.residence.regions && !c.residence.regions.includes(state.residence.regionId)) return false;
+    if (c.residence.homes && !c.residence.homes.includes(state.residence.homeId)) return false;
+  }
   if (event.lifetimeChance !== undefined && lifetimeRoll(state.seed, event.id) >= event.lifetimeChance) return false;
   return meetsCharacterConditions(state, c);
 }
@@ -557,6 +614,7 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
   }
   const flagsOk =
     (c.flagsAll ?? []).every((flag) => state.flags.includes(flag)) &&
+    (c.flagsAny === undefined || c.flagsAny.some((flag) => state.flags.includes(flag))) &&
     !(c.flagsNone ?? []).some((flag) => state.flags.includes(flag));
   if (!flagsOk) reasons.push({ kind: 'flag' });
   return reasons;

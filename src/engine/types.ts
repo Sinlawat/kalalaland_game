@@ -91,6 +91,14 @@ export type RegionId = (typeof REGION_IDS)[number];
 export const HOME_IDS = ['parents', 'grandparents'] as const;
 export type HomeId = (typeof HOME_IDS)[number];
 
+/**
+ * D66: the kind of school the child goes to from Grade 1. Stored as the flag
+ * `school_<id>` (set by the school-start events), so events can test it
+ * like any other flag; the engine reads it for the school's learning speed.
+ */
+export const SCHOOL_IDS = ['international', 'private', 'scholarship', 'public', 'local'] as const;
+export type SchoolId = (typeof SCHOOL_IDS)[number];
+
 /** Where the character lives NOW. The birth region is kept separately. */
 export interface Residence {
   regionId: RegionId;

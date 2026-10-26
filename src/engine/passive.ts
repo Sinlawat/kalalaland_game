@@ -9,7 +9,7 @@
 
 import { BALANCE } from '../data/balance';
 import type { Contribution } from './stats';
-import { SKILL_KEYS, type GameState, type Habits } from './types';
+import { SCHOOL_IDS, SKILL_KEYS, type GameState, type Habits, type SchoolId, type SkillKey, type Skills } from './types';
 
 const MONTHS_PER_YEAR = 12;
 
@@ -178,20 +178,41 @@ function mentalHealthContributions(state: GameState, age: number): Contribution[
 }
 
 /**
+ * D66: the school the child goes to, read from its `school_<id>` flag;
+ * undefined before Grade 1. If content ever left two school flags, the
+ * first in SCHOOL_IDS wins (a test checks that real lives only ever have one).
+ */
+export function currentSchool(state: Pick<GameState, 'flags'>): SchoolId | undefined {
+  return SCHOOL_IDS.find((id) => state.flags.includes(`school_${id}`));
+}
+
+/** D66: how much the school speeds up learning a skill (1 = normal, or no school yet). */
+export function schoolLearningFactor(state: Pick<GameState, 'flags'>, skill: SkillKey): number {
+  const school = currentSchool(state);
+  if (school === undefined) return 1;
+  const table: Readonly<Record<SchoolId, Partial<Skills>>> = BALANCE.skills.schoolLearning;
+  return table[school][skill] ?? 1;
+}
+
+/**
  * D65: each skill grows while growing up (and a little in adult life),
  * scaled by its own trait; all skills fade a little in old age.
- * The trait's share is logged separately ("trait.<trait>.learning"), so the
- * breakdown shows how much the trait helped or held the child back.
+ * D66: while growing up, the school scales it once more.
+ * Each multiplier's share is its own log line ("trait.<trait>.learning",
+ * "school.<id>.learning"), so the breakdown shows what helped or held the
+ * child back. The lines add up to base × trait factor × school factor.
  */
 function skillContributions(state: GameState, age: number): Contribution[] {
   const b = BALANCE.skills;
   const t = BALANCE.traits;
   const result: Contribution[] = [];
+  const growingUp = age >= b.childhoodStartAge && age < b.childhoodEndAge;
+  const school = currentSchool(state);
 
   for (const skill of SKILL_KEYS) {
     let baseYearly = 0;
     let source = '';
-    if (age >= b.childhoodStartAge && age < b.childhoodEndAge) {
+    if (growingUp) {
       baseYearly = b.childhoodPerYear[skill];
       source = 'life.growingUp';
     } else if (age >= b.childhoodEndAge) {
@@ -203,6 +224,14 @@ function skillContributions(state: GameState, age: number): Contribution[] {
       const factor = traitFactor(state.traits[trait], t.learningMin, t.learningMax);
       result.push({ target: skill, source, amount: perMonth(baseYearly) });
       result.push({ target: skill, source: `trait.${trait}.learning`, amount: perMonth(baseYearly * (factor - 1)) });
+      const schoolFactor = growingUp ? schoolLearningFactor(state, skill) : 1;
+      if (school !== undefined && schoolFactor !== 1) {
+        result.push({
+          target: skill,
+          source: `school.${school}.learning`,
+          amount: perMonth(baseYearly * factor * (schoolFactor - 1)),
+        });
+      }
     }
     if (age >= b.agingStartAge) {
       result.push({ target: skill, source: 'body.aging', amount: perMonth(b.agingPerYear) });

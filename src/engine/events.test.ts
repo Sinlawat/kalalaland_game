@@ -23,6 +23,7 @@ import { simulateWholeLife } from './game';
 import { createNewLife } from './newLife';
 import { createRng } from './rng';
 import { makeState } from './testUtils';
+import { SCHOOL_IDS } from './types';
 
 /** A valid event to start from; each test changes only what it checks. */
 function makeEvent(overrides: Partial<EventDef> = {}): EventDef {
@@ -49,7 +50,7 @@ describe('parseEvents (data validation)', () => {
         `event.${e.id}.choice.${c.id}`,
         `event.${e.id}.result.${c.id}`,
         // A flag condition cannot explain itself: the writer must say why the choice is locked.
-        ...(c.conditions?.flagsAll || c.conditions?.flagsNone ? [`event.${e.id}.choice.${c.id}.locked`] : []),
+        ...(c.conditions?.flagsAll || c.conditions?.flagsAny || c.conditions?.flagsNone ? [`event.${e.id}.choice.${c.id}.locked`] : []),
       ]),
     ]);
     expect(keys.filter((k) => !hasMessage(k))).toEqual([]);
@@ -82,6 +83,14 @@ describe('parseEvents (data validation)', () => {
     ['effect on unsupported stat', { effects: { stats: { wealth: 10 } } }, 'unsupported stat "wealth"'],
     ['flag nobody sets', { conditions: { ageMin: 0, ageMax: 1, flagsAll: ['never_set'] } }, 'no event or system ever sets it'],
     ['bad frequency', { frequency: 'sometimes' }, 'frequency must be one of'],
+    ['empty flagsAny (could never be met)', { conditions: { ageMin: 0, ageMax: 1, flagsAny: [] } }, 'flagsAny must name at least one flag'],
+    ['flagsAny on a flag nobody sets', { conditions: { ageMin: 0, ageMax: 1, flagsAny: ['never_set'] } }, 'no event or system ever sets it'],
+    ['empty eventsNone', { conditions: { ageMin: 0, ageMax: 1, eventsNone: [] } }, 'eventsNone must be a non-empty list'],
+    ['eventsNone naming a missing event', { conditions: { ageMin: 0, ageMax: 1, eventsNone: ['ghost'] } }, 'eventsNone names event "ghost"'],
+    ['empty residence condition', { conditions: { ageMin: 0, ageMax: 1, residence: {} } }, 'must list regions, homes, or both'],
+    ['unknown region in a condition', { conditions: { ageMin: 0, ageMax: 1, residence: { regions: ['moon'] } } }, 'unknown region "moon"'],
+    ['empty home list', { conditions: { ageMin: 0, ageMax: 1, residence: { homes: [] } } }, 'residence.homes must be a non-empty list'],
+    ['typo in a residence condition', { conditions: { ageMin: 0, ageMax: 1, residence: { region: ['rural'] } } }, 'unknown field "region"'],
   ])('rejects %s', (_label, change, expected) => {
     expect(() => parseEvents([{ ...makeEvent(), ...change }])).toThrow(expected);
   });
@@ -166,6 +175,31 @@ describe('isEligible', () => {
     expect([isEligible(forbids, withA), isEligible(forbids, without)]).toEqual([false, true]);
   });
 
+  it('checks "at least one of" flags (D66: goes to any school)', () => {
+    const anySchool = makeEvent({ conditions: { ageMin: 0, ageMax: 99, flagsAny: ['school_public', 'school_local'] } });
+    expect(isEligible(anySchool, makeState({ flags: ['school_local'] }))).toBe(true);
+    expect(isEligible(anySchool, makeState({ flags: ['school_public', 'school_local'] }))).toBe(true);
+    expect(isEligible(anySchool, makeState({ flags: ['other'] }))).toBe(false);
+  });
+
+  it('eventsNone: blocked forever once a listed event happened (versions of one moment)', () => {
+    const behind = makeEvent({ id: 'behind', conditions: { ageMin: 0, ageMax: 99, eventsNone: ['top', 'mid'] } });
+    expect(isEligible(behind, makeState({ eventHistory: [] }))).toBe(true);
+    expect(isEligible(behind, makeState({ eventHistory: [{ id: 'mid', ageInMonths: 12 }] }))).toBe(false);
+    expect(isEligible(behind, makeState({ eventHistory: [{ id: 'other', ageInMonths: 12 }] }))).toBe(true);
+  });
+
+  it('checks where the character lives now: every given field must match one of its values', () => {
+    const town = makeEvent({ conditions: { ageMin: 0, ageMax: 99, residence: { regions: ['city', 'suburb'] } } });
+    const village = makeEvent({ conditions: { ageMin: 0, ageMax: 99, residence: { regions: ['rural'], homes: ['grandparents'] } } });
+    const inCity = makeState({ residence: { regionId: 'city', homeId: 'parents' } });
+    const ruralParents = makeState({ residence: { regionId: 'rural', homeId: 'parents' } });
+    const ruralGrandparents = makeState({ residence: { regionId: 'rural', homeId: 'grandparents' } });
+    expect([town, village].map((e) => isEligible(e, inCity))).toEqual([true, false]);
+    expect([town, village].map((e) => isEligible(e, ruralParents))).toEqual([false, false]);
+    expect([town, village].map((e) => isEligible(e, ruralGrandparents))).toEqual([false, true]);
+  });
+
   it('checks the calendar month', () => {
     const rainy = makeEvent({ conditions: { ageMin: 0, ageMax: 99, months: [6, 7] } });
     expect(isEligible(rainy, makeState({ birthMonth: 6, ageInMonths: 30 * 12 }))).toBe(true);
@@ -195,6 +229,12 @@ describe('lockReasons', () => {
       { kind: 'stat', stat: 'academic', op: '>=', value: 70, current: 45 },
       { kind: 'flag' },
     ]);
+  });
+
+  it('locks a choice whose "at least one of" flags are all missing', () => {
+    const anyClub: EventChoice = { id: 'captain', conditions: { flagsAny: ['club_sports', 'club_scouts'] }, effects: {} };
+    expect(lockReasons(anyClub, makeState({ flags: ['club_scouts'] }))).toEqual([]);
+    expect(lockReasons(anyClub, makeState({ flags: [] }))).toEqual([{ kind: 'flag' }]);
   });
 
   it('a choice without conditions is always available', () => {
@@ -725,6 +765,122 @@ describe('real events over many lives (Monte Carlo)', () => {
       }
     }
     expect(cold).toBeGreaterThan(0);
+  });
+
+  describe('school (D66)', () => {
+    const SCHOOL_FLAGS = SCHOOL_IDS.map((id) => `school_${id}`);
+    const schoolFlags = (flags: string[]) => flags.filter((flag) => SCHOOL_FLAGS.includes(flag));
+    const monthOf = (end: (typeof ends)[number], ageInMonths: number) => calendarMonth({ birthMonth: end.birthMonth, ageInMonths });
+    /** Family wealth just before each event: only events change it, and each records its real change. */
+    const wealthBefore = (end: (typeof ends)[number]) => {
+      let wealth = createNewLife(end.seed).environment.familyWealth;
+      return end.eventHistory.map((record) => {
+        const before = wealth;
+        wealth += record.environmentChanges?.familyWealth ?? 0;
+        return before;
+      });
+    };
+    const inSchool = ends.filter((end) => end.ageInMonths >= 8 * 12);
+
+    it('every school in the balance table has a school-start event that sets its flag', () => {
+      for (const id of SCHOOL_IDS) {
+        const start = EVENTS.find((e) => e.id === `school_start_${id}`);
+        expect(start?.effects?.setFlags).toContain(`school_${id}`);
+      }
+    });
+
+    it('every child starts school exactly once, in May at age 6, in the school the family can afford', () => {
+      expect(inSchool.length).toBeGreaterThan(400);
+      const seen = new Set<string>();
+      for (const end of inSchool) {
+        const wealth = wealthBefore(end);
+        const starts = end.eventHistory.map((r, i) => [r, i] as const).filter(([r]) => r.id.startsWith('school_start_'));
+        expect(starts).toHaveLength(1);
+        const [record, index] = starts[0]!;
+        seen.add(record.id);
+        expect(Math.floor(record.ageInMonths / 12)).toBe(6);
+        expect(monthOf(end, record.ageInMonths)).toBe(5);
+        const w = wealth[index]!;
+        const expected =
+          w >= 80 ? ['school_start_international'] : w >= 60 ? ['school_start_private'] : w >= 31 ? ['school_start_public'] : ['school_start_scholarship', 'school_start_local'];
+        expect(expected).toContain(record.id);
+      }
+      // All five kinds show up over 500 lives (international is only ~2%).
+      expect(seen.size).toBeGreaterThanOrEqual(4);
+    });
+
+    it('each moment comes in one version only: first month, uniform, rules, commute, first term', () => {
+      for (const end of ends) {
+        for (const prefix of ['school_first_month_', 'school_supplies_', 'school_rules_', 'school_commute_', 'school_first_term_']) {
+          expect(end.eventHistory.filter((r) => r.id.startsWith(prefix)).length).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+
+    it('a child always has exactly one school after starting', () => {
+      for (const end of inSchool) expect(schoolFlags(end.flags)).toHaveLength(1);
+    });
+
+    it('no school event happens before the school year starts', () => {
+      for (const end of ends) {
+        const startAt = end.eventHistory.findIndex((r) => r.id.startsWith('school_start_'));
+        end.eventHistory.forEach((record, i) => {
+          if (record.id.startsWith('school_') && !record.id.startsWith('school_start_')) expect(startAt >= 0 && i > startAt).toBe(true);
+        });
+      }
+    });
+
+    it('first month (the month after starting) and first-term results (October) happen exactly once each', () => {
+      for (const end of inSchool) {
+        const start = end.eventHistory.find((r) => r.id.startsWith('school_start_'))!;
+        const firstMonth = end.eventHistory.filter((r) => r.id.startsWith('school_first_month_'));
+        const firstTerm = end.eventHistory.filter((r) => r.id.startsWith('school_first_term_'));
+        expect(firstMonth).toHaveLength(1);
+        expect(firstMonth[0]!.ageInMonths).toBe(start.ageInMonths + 1);
+        expect(firstTerm).toHaveLength(1);
+        expect(monthOf(end, firstTerm[0]!.ageInMonths)).toBe(10);
+        expect(firstTerm[0]!.ageInMonths).toBe(start.ageInMonths + 5);
+      }
+    });
+
+    it('moving to the grandparents happens only after school started, and switches to the village school', () => {
+      let moved = 0;
+      for (const end of ends) {
+        const moveAt = end.eventHistory.findIndex((r) => r.id.startsWith('family_live_with_grandparents'));
+        if (moveAt < 0) continue;
+        moved += 1;
+        const startAt = end.eventHistory.findIndex((r) => r.id.startsWith('school_start_'));
+        expect(startAt).toBeGreaterThanOrEqual(0);
+        expect(startAt).toBeLessThan(moveAt);
+        expect(schoolFlags(end.flags)).toEqual(['school_local']);
+      }
+      expect(moved).toBeGreaterThan(0);
+    });
+
+    it('school fees become a burden only for fee-paying schools, and the child moves to a public school', () => {
+      for (const end of ends) {
+        const at = end.eventHistory.findIndex((r) => r.id === 'school_fees_burden');
+        if (at < 0) continue;
+        const start = end.eventHistory.find((r) => r.id.startsWith('school_start_'))!;
+        expect(['school_start_private', 'school_start_international']).toContain(start.id);
+        expect(wealthBefore(end)[at]).toBeLessThan(50);
+        const later = end.eventHistory.slice(at).some((r) => r.id.startsWith('family_live_with_grandparents'));
+        expect(schoolFlags(end.flags)).toEqual([later ? 'school_local' : 'school_public']);
+      }
+    });
+
+    it('at most one favourite subject per life, matching the early interest when there was one', () => {
+      for (const end of ends) {
+        const favourites = end.eventHistory.filter((r) => r.id.startsWith('school_favorite_'));
+        expect(favourites.length).toBeLessThanOrEqual(1);
+        const interest = end.flags.find((flag) => flag.startsWith('interest_'));
+        if (favourites[0] && interest) {
+          const match = { interest_nature: 'science', interest_machines: 'crafts', interest_music: 'music', interest_stories: 'language' }[interest];
+          expect(favourites[0].id).toBe(`school_favorite_${match}`);
+        }
+        if (favourites[0]?.id === 'school_favorite_pe') expect(interest).toBeUndefined();
+      }
+    });
   });
 
   it('malnutrition hits only poor families, at most once per 12 months', () => {

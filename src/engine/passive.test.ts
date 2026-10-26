@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
-import { computePassiveContributions, physicalSetPoint, traitFactor } from './passive';
+import { computePassiveContributions, currentSchool, physicalSetPoint, schoolLearningFactor, traitFactor } from './passive';
 import type { Contribution } from './stats';
 import { makeState } from './testUtils';
 import type { GameState, StatTarget } from './types';
@@ -135,6 +135,46 @@ describe('computePassiveContributions', () => {
     it('every skill declines slowly in old age', () => {
       const c = computePassiveContributions(makeState({ ageInMonths: 70 * 12 }));
       for (const skill of SKILLS) expect(yearly(find(c, skill, 'body.aging'))).toBeCloseTo(-0.3);
+    });
+  });
+
+  describe('school learning (D66)', () => {
+    const SKILLS = ['academic', 'creative', 'communication', 'practical'] as const;
+    const total = (c: Contribution[], skill: StatTarget) =>
+      c.filter((x) => x.target === skill).reduce((sum, x) => sum + x.amount * 12, 0);
+
+    it('reads the school from its flag; no school before Grade 1', () => {
+      expect(currentSchool(makeState({ flags: [] }))).toBeUndefined();
+      expect(currentSchool(makeState({ flags: ['traits_revealed', 'school_local'] }))).toBe('local');
+      expect(schoolLearningFactor(makeState({ flags: [] }), 'academic')).toBe(1);
+    });
+
+    it('international: academic ×1.3 and communication ×1.2, on top of the trait, as its own line', () => {
+      // Discipline 100 → trait factor 1.4: base 2 + trait 0.8 = 2.8, school adds 2.8 × 0.3 = 0.84.
+      const c = computePassiveContributions(
+        makeState({ ageInMonths: 10 * 12, traits: { discipline: 100, riskTaking: 50 }, flags: ['school_international'] }),
+      );
+      expect(yearly(find(c, 'academic', 'school.international.learning'))).toBeCloseTo(0.84);
+      expect(total(c, 'academic')).toBeCloseTo(2 * 1.4 * 1.3);
+      expect(total(c, 'communication')).toBeCloseTo(1 * 1.0 * 1.2);
+      expect(find(c, 'creative', 'school.international.learning')).toBeUndefined();
+    });
+
+    it('the community school slows academic learning (×0.9) and leaves the other skills alone', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 8 * 12, traits: { discipline: 50 }, flags: ['school_local'] }));
+      expect(yearly(find(c, 'academic', 'school.local.learning'))).toBeCloseTo(-0.2);
+      expect(total(c, 'academic')).toBeCloseTo(2 * 0.9);
+    });
+
+    it('a public school is the normal speed: no extra line at all', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 8 * 12, flags: ['school_public'] }));
+      expect(c.filter((x) => x.source.startsWith('school.'))).toEqual([]);
+    });
+
+    it('stops with childhood learning at 18, even though the flag stays', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 18 * 12, flags: ['school_international'] }));
+      expect(c.filter((x) => x.source.startsWith('school.'))).toEqual([]);
+      for (const skill of SKILLS) expect(find(c, skill, 'life.experience')).toBeDefined();
     });
   });
 
