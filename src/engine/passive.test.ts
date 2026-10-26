@@ -182,6 +182,14 @@ describe('computePassiveContributions', () => {
       expect(find(c, 'creative', 'school.international.learning')).toBeUndefined();
     });
 
+    it('the selective public school (from ม.1, D70) speeds up academic learning ×1.25 and nothing else', () => {
+      const c = computePassiveContributions(makeState({ ageInMonths: 13 * 12, traits: { discipline: 50 }, flags: ['school_top_public'] }));
+      expect(currentSchool(makeState({ flags: ['school_top_public'] }))).toBe('top_public');
+      expect(yearly(find(c, 'academic', 'school.top_public.learning'))).toBeCloseTo(0.5);
+      expect(total(c, 'academic')).toBeCloseTo(2 * 1.25);
+      expect(c.filter((x) => x.source === 'school.top_public.learning').map((x) => x.target)).toEqual(['academic']);
+    });
+
     it('the community school slows academic learning (×0.9) and leaves the other skills alone', () => {
       const c = computePassiveContributions(makeState({ ageInMonths: 8 * 12, traits: { discipline: 50 }, flags: ['school_local'] }));
       expect(yearly(find(c, 'academic', 'school.local.learning'))).toBeCloseTo(-0.2);

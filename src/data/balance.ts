@@ -137,10 +137,12 @@ export const BALANCE = {
      * D66: the school speeds up (or slows down) learning while growing up,
      * on top of the trait. Skills not listed learn at the normal speed (×1).
      * Ages 6–17 in practice: the school flag is set at Grade 1.
+     * D70: top_public only from Grade 7 (ม.1), after passing its entrance exam.
      */
     schoolLearning: {
       international: { academic: 1.3, communication: 1.2 },
       private: { academic: 1.15 },
+      top_public: { academic: 1.25 },
       scholarship: { academic: 1.15 },
       public: {},
       local: { academic: 0.9 },

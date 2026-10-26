@@ -105,9 +105,13 @@ export type HomeId = (typeof HOME_IDS)[number];
  * D66: the kind of school the child goes to from Grade 1. Stored as the flag
  * `school_<id>` (set by the school-start events), so events can test it
  * like any other flag; the engine reads it for the school's learning speed.
+ * D70: 'top_public' (a selective public school) is only reached by passing
+ * the entrance exam for Grade 7 (ม.1).
  */
-export const SCHOOL_IDS = ['international', 'private', 'scholarship', 'public', 'local'] as const;
+export const SCHOOL_IDS = ['international', 'private', 'top_public', 'scholarship', 'public', 'local'] as const;
 export type SchoolId = (typeof SCHOOL_IDS)[number];
+/** The flag of every school. A child is in one school at a time (the event validator enforces it). */
+export const SCHOOL_FLAGS: readonly string[] = SCHOOL_IDS.map((id) => `school_${id}`);
 
 /** Where the character lives NOW. The birth region is kept separately. */
 export interface Residence {

@@ -21,11 +21,11 @@ import {
   type EventChoice,
   type EventDef,
 } from './events';
-import { simulateWholeLife } from './game';
+import { advanceUntilStop, firstAvailableChoice, simulateWholeLife, type Chooser } from './game';
 import { createNewLife } from './newLife';
 import { createRng } from './rng';
 import { makeState } from './testUtils';
-import { SCHOOL_IDS } from './types';
+import { SCHOOL_FLAGS, SCHOOL_IDS, type GameState } from './types';
 
 /** A valid event to start from; each test changes only what it checks. */
 function makeEvent(overrides: Partial<EventDef> = {}): EventDef {
@@ -105,6 +105,7 @@ describe('parseEvents (data validation)', () => {
     ['unknown region in a condition', { conditions: { ageMin: 0, ageMax: 1, residence: { regions: ['moon'] } } }, 'unknown region "moon"'],
     ['empty home list', { conditions: { ageMin: 0, ageMax: 1, residence: { homes: [] } } }, 'residence.homes must be a non-empty list'],
     ['typo in a residence condition', { conditions: { ageMin: 0, ageMax: 1, residence: { region: ['rural'] } } }, 'unknown field "region"'],
+    ['putting a child in a school without leaving every other one (D70)', { effects: { setFlags: ['school_top_public'], removeFlags: ['school_public'] } }, 'sets "school_top_public" but does not remove school_international, school_private, school_scholarship, school_local'],
   ])('rejects %s', (_label, change, expected) => {
     expect(() => parseEvents([{ ...makeEvent(), ...change }])).toThrow(expected);
   });
@@ -891,11 +892,25 @@ describe('real events over many lives (Monte Carlo)', () => {
     };
     const inSchool = ends.filter((end) => end.ageInMonths >= 8 * 12);
 
-    it('every school in the balance table has a school-start event that sets its flag', () => {
+    it('every school in the balance table has an event that puts the child there (Grade 1, or Grade 7 for the selective school)', () => {
       for (const id of SCHOOL_IDS) {
-        const start = EVENTS.find((e) => e.id === `school_start_${id}`);
+        const start = EVENTS.find((e) => e.id === (id === 'top_public' ? 'school_m1_start_top_public' : `school_start_${id}`));
         expect(start?.effects?.setFlags).toContain(`school_${id}`);
       }
+    });
+
+    it('a condition meaning "in any school" lists every school, including ones added later (D70)', () => {
+      // A list naming most schools but not all is almost certainly an old list that missed a new school:
+      // the child in the missing school would silently never get the event. Short lists (e.g. fee-paying schools only) are deliberate.
+      const conditions = EVENTS.flatMap((e) => [
+        { at: e.id, flags: e.conditions.flagsAny },
+        ...(e.choices ?? []).map((c) => ({ at: `${e.id}.${c.id}`, flags: c.conditions?.flagsAny })),
+      ]);
+      const incomplete = conditions
+        .filter(({ flags }) => (flags ?? []).filter((flag) => SCHOOL_FLAGS.includes(flag)).length >= 3)
+        .filter(({ flags }) => !SCHOOL_FLAGS.every((flag) => flags!.includes(flag)))
+        .map(({ at }) => at);
+      expect(incomplete).toEqual([]);
     });
 
     it('every child starts school exactly once, in May at age 6, in the school the family can afford', () => {
@@ -989,6 +1004,145 @@ describe('real events over many lives (Monte Carlo)', () => {
         }
         if (favourites[0]?.id === 'school_favorite_pe') expect(interest).toBeUndefined();
       }
+    });
+  });
+
+  describe('choosing a school for Grade 7 / ม.1 (D70)', () => {
+    const CHOICE_IDS = ['school_m1_choice', 'school_m1_choice_private', 'school_m1_family_decides'];
+    const monthOf = (end: GameState, ageInMonths: number) => calendarMonth({ birthMonth: end.birthMonth, ageInMonths });
+    const schoolStart = (end: GameState) => end.eventHistory.find((r) => r.id.startsWith('school_start_'))!;
+    const schoolOf = (end: GameState) => end.flags.filter((flag) => SCHOOL_FLAGS.includes(flag));
+
+    /** Runs a life up to an age (or death), answering the ม.1 question with `pick`; other choices as usual. */
+    function liveUntil13(seed: number, pick: (available: string[], state: GameState) => string): GameState {
+      const chooser: Chooser = (state, event) => {
+        if (!CHOICE_IDS.includes(event.id)) return firstAvailableChoice(state, event);
+        const available = event.choices!.filter((c) => lockReasons(c, state).length === 0).map((c) => c.id);
+        return pick(available, state);
+      };
+      let state = createNewLife(seed);
+      while (state.death === null && state.ageInMonths < 13 * 12) state = advanceUntilStop(state, { chooser }).state;
+      return state;
+    }
+    const grown = (lives: GameState[]) => lives.filter((end) => end.ageInMonths >= 13 * 12);
+    // Every child who can takes the exam; the ambitious one asks for the most expensive school the family can pay for.
+    const examLives = grown(Array.from({ length: 400 }, (_, seed) => liveUntil13(seed, (a) => (a.includes('exam') ? 'exam' : a[0]!))));
+    const ambitiousLives = grown(
+      Array.from({ length: 400 }, (_, seed) =>
+        liveUntil13(seed + 1000, (a) => ['international', 'private', 'exam', 'stay'].find((id) => a.includes(id))!),
+      ),
+    );
+
+    it('every child in Grade 6 meets the question once, in January, 68 months after starting school', () => {
+      const all = [...grown(ends), ...examLives, ...ambitiousLives];
+      expect(all.length).toBeGreaterThan(1000);
+      let asked = 0;
+      for (const end of all) {
+        const records = end.eventHistory.filter((r) => CHOICE_IDS.includes(r.id));
+        // Bilingual schools teach up to Grade 12: their children are not asked (unless fees moved them out).
+        if (schoolStart(end).id !== 'school_start_international') expect(records).toHaveLength(1);
+        expect(records.length).toBeLessThanOrEqual(1);
+        if (records[0] === undefined) continue;
+        asked += 1;
+        expect(records[0].ageInMonths).toBe(schoolStart(end).ageInMonths + 68);
+        expect(monthOf(end, records[0].ageInMonths)).toBe(1);
+      }
+      expect(asked).toBeGreaterThan(900);
+    });
+
+    it('a cold family decides for the child; a child already in a private school is not offered "move to private"', () => {
+      let decided = 0;
+      for (const end of [...grown(ends), ...examLives]) {
+        const record = end.eventHistory.find((r) => CHOICE_IDS.includes(r.id));
+        if (record?.id === 'school_m1_family_decides') decided += 1;
+        if (record?.id === 'school_m1_choice_private') expect(findEvent(record.id)!.choices!.map((c) => c.id)).not.toContain('private');
+      }
+      expect(decided).toBeGreaterThan(0);
+    });
+
+    it('the exam result comes in March (70 months), and the new school starts in May (72 months)', () => {
+      let passed = 0;
+      for (const end of [...examLives, ...ambitiousLives]) {
+        const start = schoolStart(end).ageInMonths;
+        for (const r of end.eventHistory.filter((x) => x.id.startsWith('school_m1_exam_'))) {
+          expect(r.ageInMonths).toBe(start + 70);
+          expect(monthOf(end, r.ageInMonths)).toBe(3);
+        }
+        for (const r of end.eventHistory.filter((x) => x.id.startsWith('school_m1_start_'))) {
+          expect(r.ageInMonths).toBe(start + 72);
+          expect(monthOf(end, r.ageInMonths)).toBe(5);
+        }
+        if (end.eventHistory.some((r) => r.id === 'school_m1_exam_pass')) passed += 1;
+      }
+      expect(passed).toBeGreaterThan(0);
+    });
+
+    it('only children who chose the exam get a result, and exactly one result (pass or fail)', () => {
+      for (const end of [...grown(ends), ...examLives]) {
+        const results = end.eventHistory.filter((r) => r.id.startsWith('school_m1_exam_'));
+        const tookExam = end.eventHistory.some((r) => CHOICE_IDS.includes(r.id) && r.choiceId === 'exam');
+        expect(results).toHaveLength(tookExam ? 1 : 0);
+      }
+    });
+
+    it('passing needs academic at the threshold (boundary), measured at the result', () => {
+      const pass = findEvent('school_m1_exam_pass')!;
+      const fail = findEvent('school_m1_exam_fail')!;
+      const threshold = pass.conditions.stats!.find((s) => s.stat === 'academic')!.value;
+      const atResult = (academic: number) =>
+        makeState({ ageInMonths: 12 * 12, skills: { academic }, flags: ['plan_m1_exam'], eventHistory: [{ id: 'school_start_public', ageInMonths: 12 * 12 - 70 }] });
+      expect(isEligible(pass, atResult(threshold))).toBe(true);
+      expect(isEligible(fail, atResult(threshold))).toBe(false);
+      expect(isEligible(pass, atResult(threshold - 0.1))).toBe(false);
+      expect(isEligible(fail, atResult(threshold - 0.1))).toBe(true);
+    });
+
+    it('balance guard: if every child took the exam, 15–35% would pass (the top quarter)', () => {
+      const took = examLives.filter((end) => end.eventHistory.some((r) => r.id.startsWith('school_m1_exam_')));
+      const passed = took.filter((end) => end.eventHistory.some((r) => r.id === 'school_m1_exam_pass'));
+      expect(took.length).toBeGreaterThan(300);
+      expect(passed.length / took.length).toBeGreaterThan(0.15);
+      expect(passed.length / took.length).toBeLessThan(0.35);
+    });
+
+    it('after ม.1 starts, the child is in exactly the school they got into', () => {
+      const expected: Record<string, string> = {
+        school_m1_start_top_public: 'school_top_public',
+        school_m1_start_private: 'school_private',
+        school_m1_start_international: 'school_international',
+      };
+      const moved = new Set<string>();
+      for (const end of [...examLives, ...ambitiousLives]) {
+        const start = end.eventHistory.find((r) => r.id.startsWith('school_m1_start_'));
+        if (start === undefined) continue;
+        moved.add(start.id);
+        const later = end.eventHistory.filter((r) => r.ageInMonths > start.ageInMonths);
+        // The grandparents and school fees can still move the child afterwards: check only lives where nothing did.
+        if (later.some((r) => r.id.startsWith('family_live_with_grandparents') || r.id === 'school_fees_burden')) continue;
+        expect(schoolOf(end)).toEqual([expected[start.id]]);
+      }
+      expect(moved).toContain('school_m1_start_top_public');
+    });
+
+    it('each ม.1 start event leaves the child in its own school only, whichever school they came from', () => {
+      // Moving to private or bilingual at ม.1 is rare in real lives (families who can pay chose it at Grade 1),
+      // so every path is checked directly here.
+      const expected: Record<string, string> = {
+        school_m1_start_top_public: 'school_top_public',
+        school_m1_start_private: 'school_private',
+        school_m1_start_international: 'school_international',
+      };
+      for (const [eventId, school] of Object.entries(expected)) {
+        for (const before of SCHOOL_FLAGS) {
+          const state = makeState({ ageInMonths: 12 * 12, flags: [before, 'plan_m1_exam'] });
+          applyEvent(state, findEvent(eventId)!);
+          expect(schoolOf(state)).toEqual([school]);
+        }
+      }
+    });
+
+    it('whatever the player picks, a child is never in two schools', () => {
+      for (const end of [...examLives, ...ambitiousLives]) expect(schoolOf(end)).toHaveLength(1);
     });
   });
 

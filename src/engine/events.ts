@@ -33,6 +33,7 @@ import {
   HABIT_LEVELS,
   HOME_IDS,
   REGION_IDS,
+  SCHOOL_FLAGS,
   type EnvironmentKey,
   type EventRecord,
   type GameState,
@@ -310,6 +311,14 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     if (list === undefined) continue;
     if (!isStringArray(list)) problems.push(`${at}: ${key} must be a list of flag names`);
     else if (key === 'setFlags') list.forEach((flag) => check.flagsSet.add(flag));
+  }
+  // D70: a child is in one school at a time, so putting them in a school must
+  // take them out of every other one (even at Grade 1, when there is none yet:
+  // one rule for every event is easier to trust than a list of exceptions).
+  const removed = isStringArray(e.removeFlags) ? e.removeFlags : [];
+  for (const school of (isStringArray(e.setFlags) ? e.setFlags : []).filter((flag) => SCHOOL_FLAGS.includes(flag))) {
+    const kept = SCHOOL_FLAGS.filter((other) => other !== school && !removed.includes(other));
+    if (kept.length > 0) problems.push(`${at}: sets "${school}" but does not remove ${kept.join(', ')} (a child is in one school at a time)`);
   }
 }
 
