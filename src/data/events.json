@@ -2622,7 +2622,14 @@
     "id": "family_praise_only_when_perfect",
     "conditions": {
       "ageMin": 8,
-      "ageMax": 14
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 50
+        }
+      ]
     },
     "frequency": "uncommon",
     "once": true,
@@ -2677,7 +2684,14 @@
     "id": "family_harsh_scolding",
     "conditions": {
       "ageMin": 8,
-      "ageMax": 14
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": "<",
+          "value": 50
+        }
+      ]
     },
     "frequency": "uncommon",
     "once": true,
@@ -2731,6 +2745,13 @@
     "conditions": {
       "ageMin": 8,
       "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWarmth",
+          "op": ">=",
+          "value": 60
+        }
+      ],
       "eventsNone": [
         "family_freedom_to_experiment"
       ]
@@ -2756,7 +2777,14 @@
     "id": "family_art_supplies",
     "conditions": {
       "ageMin": 8,
-      "ageMax": 14
+      "ageMax": 14,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 31
+        }
+      ]
     },
     "frequency": "uncommon",
     "once": true,

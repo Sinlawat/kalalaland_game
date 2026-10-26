@@ -1037,16 +1037,22 @@ describe('real events over many lives (Monte Carlo)', () => {
      * so far rebuild them exactly. Event conditions are checked before any
      * event of the month is applied, hence "before the month".
      */
-    function traitsBeforeEachMonth(end: (typeof ends)[number]): TraitValues[] {
-      const running: TraitValues = { ...createNewLife(end.seed).traits };
-      let monthStart: TraitValues = { ...running };
+    /** Traits and family values: the values event conditions can test that only events change. */
+    type Values = TraitValues & { familyWealth: number; familyWarmth: number };
+
+    function traitsBeforeEachMonth(end: (typeof ends)[number]): Values[] {
+      const birth = createNewLife(end.seed);
+      const running: Values = { ...birth.traits, familyWealth: birth.environment.familyWealth, familyWarmth: birth.environment.familyWarmth };
+      let monthStart: Values = { ...running };
       let month = -1;
       return end.eventHistory.map((record) => {
         if (record.ageInMonths !== month) {
           month = record.ageInMonths;
           monthStart = { ...running };
         }
-        for (const [trait, change] of Object.entries(record.traitChanges ?? {})) running[trait as keyof TraitValues] += change;
+        for (const [key, change] of [...Object.entries(record.traitChanges ?? {}), ...Object.entries(record.environmentChanges ?? {})]) {
+          if (key in running) running[key as keyof Values] += change;
+        }
         return monthStart;
       });
     }
@@ -1059,20 +1065,34 @@ describe('real events over many lives (Monte Carlo)', () => {
       }
     });
 
-    it('every event that needs a trait level (e.g. discipline ≥ 70) only happened at that level', () => {
+    it('every event that needs a trait or family level (discipline ≥ 70, warmth ≥ 60...) only happened at that level', () => {
+      const CHECKED = [...TRAITS, 'familyWealth', 'familyWarmth'];
       let checked = 0;
       for (const end of ends) {
         const before = traitsBeforeEachMonth(end);
         end.eventHistory.forEach((record, i) => {
           for (const s of findEvent(record.id)!.conditions.stats ?? []) {
-            if (!(TRAITS as readonly string[]).includes(s.stat)) continue;
-            const value = before[i]![s.stat as keyof TraitValues];
+            if (!CHECKED.includes(s.stat)) continue;
+            const value = before[i]![s.stat as keyof Values];
             expect(s.op === '>=' ? value >= s.value : value < s.value).toBe(true);
             checked += 1;
           }
         });
       }
       expect(checked).toBeGreaterThan(500);
+    });
+
+    it('a story that states a family fact also requires it (a value that only makes it likelier is not enough)', () => {
+      // Reported by the player: "over-protective, worried adults" in a family with warmth 15.
+      const needs: Record<string, { stat: string; op: '>=' | '<' }> = {
+        family_overprotective: { stat: 'familyWarmth', op: '>=' },
+        family_praise_only_when_perfect: { stat: 'familyWarmth', op: '<' },
+        family_harsh_scolding: { stat: 'familyWarmth', op: '<' },
+        family_art_supplies: { stat: 'familyWealth', op: '>=' },
+      };
+      for (const [id, need] of Object.entries(needs)) {
+        expect(findEvent(id)!.conditions.stats?.some((s) => s.stat === need.stat && s.op === need.op), id).toBe(true);
+      }
     });
 
     it('opposite parenting styles never happen in the same life (overprotected vs free to experiment)', () => {
