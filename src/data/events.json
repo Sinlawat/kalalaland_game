@@ -50,7 +50,7 @@
         "had_chickenpox"
       ]
     },
-    "frequency": "uncommon",
+    "frequency": "common",
     "once": true,
     "effects": {
       "stats": {
@@ -79,7 +79,7 @@
         "school_local"
       ]
     },
-    "frequency": "uncommon",
+    "frequency": "common",
     "once": true,
     "effects": {
       "stats": {
@@ -172,6 +172,12 @@
     "frequency": "common",
     "once": false,
     "cooldownMonths": 12,
+    "chanceBy": [
+      {
+        "stat": "familyWealth",
+        "toward": "low"
+      }
+    ],
     "effects": {
       "stats": {
         "physicalHealth": -5,
@@ -198,6 +204,12 @@
     "frequency": "common",
     "once": false,
     "cooldownMonths": 24,
+    "chanceBy": [
+      {
+        "stat": "resilience",
+        "toward": "low"
+      }
+    ],
     "effects": {
       "habits": {
         "sleep": "short"
@@ -213,7 +225,7 @@
         "myopia"
       ]
     },
-    "frequency": "uncommon",
+    "frequency": "normal",
     "once": true,
     "lifetimeChance": 0.3,
     "effects": {
@@ -355,7 +367,7 @@
         "spoke_first_word"
       ]
     },
-    "frequency": "common",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -383,7 +395,7 @@
         "spoke_first_word"
       ]
     },
-    "frequency": "common",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -400,7 +412,7 @@
       "ageMin": 2,
       "ageMax": 2
     },
-    "frequency": "common",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -421,7 +433,7 @@
         }
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -435,7 +447,7 @@
       "ageMin": 2,
       "ageMax": 4
     },
-    "frequency": "common",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -452,7 +464,7 @@
       "ageMin": 2,
       "ageMax": 3
     },
-    "frequency": "common",
+    "frequency": "window",
     "once": true,
     "effects": {
       "traits": {
@@ -476,7 +488,7 @@
         "started_drawing"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -504,7 +516,7 @@
         "started_drawing"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -521,7 +533,7 @@
       "ageMin": 4,
       "ageMax": 6
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -627,7 +639,7 @@
       "ageMin": 4,
       "ageMax": 6
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -645,7 +657,7 @@
         "lives_with_grandparents"
       ]
     },
-    "frequency": "normal",
+    "frequency": "uncommon",
     "once": true,
     "effects": {
       "habits": {
@@ -674,7 +686,7 @@
         "months": 12
       }
     },
-    "frequency": "normal",
+    "frequency": "uncommon",
     "once": true,
     "effects": {
       "habits": {
@@ -843,6 +855,12 @@
     },
     "frequency": "rare",
     "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWarmth",
+        "toward": "low"
+      }
+    ],
     "effects": {
       "habits": {
         "sleep": "short"
@@ -1241,7 +1259,7 @@
         {
           "stat": "academic",
           "op": ">=",
-          "value": 9.2
+          "value": 8.8
         }
       ]
     },
@@ -1274,7 +1292,7 @@
         {
           "stat": "academic",
           "op": "<",
-          "value": 9.2
+          "value": 8.8
         }
       ]
     },
@@ -1417,7 +1435,7 @@
     "id": "school_supplies_new",
     "conditions": {
       "ageMin": 6,
-      "ageMax": 6,
+      "ageMax": 7,
       "stats": [
         {
           "stat": "familyWealth",
@@ -1437,7 +1455,7 @@
         "school_supplies_hand_me_down"
       ]
     },
-    "frequency": "common",
+    "frequency": "guaranteed",
     "once": true,
     "effects": {
       "stats": {
@@ -1449,7 +1467,7 @@
     "id": "school_supplies_sized_up",
     "conditions": {
       "ageMin": 6,
-      "ageMax": 6,
+      "ageMax": 7,
       "stats": [
         {
           "stat": "familyWealth",
@@ -1474,7 +1492,7 @@
         "school_supplies_hand_me_down"
       ]
     },
-    "frequency": "common",
+    "frequency": "guaranteed",
     "once": true,
     "effects": {}
   },
@@ -1482,7 +1500,7 @@
     "id": "school_supplies_hand_me_down",
     "conditions": {
       "ageMin": 6,
-      "ageMax": 6,
+      "ageMax": 7,
       "stats": [
         {
           "stat": "familyWealth",
@@ -1502,7 +1520,7 @@
         "school_supplies_sized_up"
       ]
     },
-    "frequency": "common",
+    "frequency": "guaranteed",
     "once": true,
     "effects": {
       "stats": {
@@ -1523,7 +1541,7 @@
         "school_local"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "choices": [
       {
@@ -1586,7 +1604,7 @@
         "school_rules_struggle"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1620,7 +1638,7 @@
         "school_rules_praised"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1653,7 +1671,7 @@
         "school_commute_car"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "habits": {
@@ -1694,7 +1712,7 @@
         "school_commute_car"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1732,7 +1750,7 @@
         "school_commute_van"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {}
   },
@@ -1748,7 +1766,7 @@
         {
           "stat": "academic",
           "op": ">=",
-          "value": 11
+          "value": 10.8
         }
       ],
       "flagsAny": [
@@ -1783,12 +1801,12 @@
         {
           "stat": "academic",
           "op": ">=",
-          "value": 8.5
+          "value": 8.4
         },
         {
           "stat": "academic",
           "op": "<",
-          "value": 11
+          "value": 10.8
         }
       ],
       "flagsAny": [
@@ -1819,7 +1837,7 @@
         {
           "stat": "academic",
           "op": "<",
-          "value": 8.5
+          "value": 8.4
         }
       ],
       "flagsAny": [
@@ -1865,7 +1883,7 @@
         "fav_subject_pe"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1899,7 +1917,7 @@
         "fav_subject_pe"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1933,7 +1951,7 @@
         "fav_subject_pe"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -1967,7 +1985,7 @@
         "fav_subject_pe"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -2003,7 +2021,7 @@
         "interest_stories"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "effects": {
       "stats": {
@@ -2029,6 +2047,12 @@
     },
     "frequency": "uncommon",
     "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "low"
+      }
+    ],
     "choices": [
       {
         "id": "tell_teacher",
@@ -2116,7 +2140,7 @@
         "school_local"
       ]
     },
-    "frequency": "normal",
+    "frequency": "window",
     "once": true,
     "choices": [
       {

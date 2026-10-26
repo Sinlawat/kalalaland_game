@@ -9,9 +9,10 @@ import {
   hasHappened,
   isEligible,
   lockReasons,
-  monthlyPoolChance,
-  poolEventsPerYear,
-  pickWeighted,
+  chanceFactor,
+  monthlyChance,
+  windowChance,
+  yearlyChance,
   lifetimeRoll,
   parseEvents,
   rollEvents,
@@ -40,6 +41,11 @@ function makeEvent(overrides: Partial<EventDef> = {}): EventDef {
 describe('parseEvents (data validation)', () => {
   it('accepts the real events.json', () => {
     expect(EVENTS.length).toBeGreaterThan(0);
+  });
+
+  it('accepts a ONCE event that pushes its own chanceBy value the same way (it cannot happen again)', () => {
+    const divorce = { ...makeEvent({ once: true, chanceBy: [{ stat: 'familyWarmth', toward: 'low' }] }), effects: { environment: { familyWarmth: -10 } } };
+    expect(() => parseEvents([divorce])).not.toThrow();
   });
 
   it('every real event has a Thai title and text, and every choice a label and a result', () => {
@@ -85,6 +91,13 @@ describe('parseEvents (data validation)', () => {
     ['bad frequency', { frequency: 'sometimes' }, 'frequency must be one of'],
     ['empty flagsAny (could never be met)', { conditions: { ageMin: 0, ageMax: 1, flagsAny: [] } }, 'flagsAny must name at least one flag'],
     ['flagsAny on a flag nobody sets', { conditions: { ageMin: 0, ageMax: 1, flagsAny: ['never_set'] } }, 'no event or system ever sets it'],
+    ['a repeatable window event', { frequency: 'window', once: false }, 'window event must be once'],
+    ['a window event limited to months', { frequency: 'window', once: true, conditions: { ageMin: 0, ageMax: 1, months: [5] } }, 'cannot be limited to months'],
+    ['chanceBy on a guaranteed event', { frequency: 'guaranteed', once: true, chanceBy: [{ stat: 'riskTaking', toward: 'low' }] }, 'chanceBy only works with a chance frequency'],
+    ['chanceBy on an unknown value', { chanceBy: [{ stat: 'luck', toward: 'high' }] }, 'invalid chanceBy'],
+    ['chanceBy with a bad direction', { chanceBy: [{ stat: 'riskTaking', toward: 'up' }] }, 'invalid chanceBy'],
+    ['a repeatable event that feeds its own chance', { once: false, chanceBy: [{ stat: 'riskTaking', toward: 'high' }], effects: { traits: { riskTaking: 2 } } }, 'it would feed itself'],
+    ['a choice that feeds its own chance', { once: false, effects: undefined, chanceBy: [{ stat: 'mentalHealth', toward: 'low' }], choices: [{ id: 'a', effects: { stats: { mentalHealth: -3 } } }, { id: 'b', effects: {} }] }, 'it would feed itself'],
     ['empty eventsNone', { conditions: { ageMin: 0, ageMax: 1, eventsNone: [] } }, 'eventsNone must be a non-empty list'],
     ['eventsNone naming a missing event', { conditions: { ageMin: 0, ageMax: 1, eventsNone: ['ghost'] } }, 'eventsNone names event "ghost"'],
     ['empty residence condition', { conditions: { ageMin: 0, ageMax: 1, residence: {} } }, 'must list regions, homes, or both'],
@@ -276,55 +289,113 @@ describe('applyEvent', () => {
   });
 });
 
-describe('the event pool (D53)', () => {
-  const poolEvent = (id: string, frequency: EventDef['frequency'], ageMax = 99): EventDef =>
-    makeEvent({ id, frequency, once: false, conditions: { ageMin: 0, ageMax } });
+describe('how often events happen (D67)', () => {
+  const chanceEvent = (id: string, frequency: EventDef['frequency'], extra: Partial<EventDef> = {}): EventDef =>
+    makeEvent({ id, frequency, once: true, conditions: { ageMin: 0, ageMax: 99 }, ...extra });
+  const at30 = () => makeState({ ageInMonths: 30 * 12, eventHistory: [] });
 
-  it('has 4 events a year for children and working age, 3 from 60, 2 from 75', () => {
-    expect([0, 22, 59, 60, 74, 75, 100].map(poolEventsPerYear)).toEqual([4, 4, 4, 3, 3, 2, 2]);
-    expect(monthlyPoolChance(30)).toBeCloseTo(4 / 12, 12);
+  /** Share of characters who got the event within `months` months (each run: a fresh character). */
+  function shareWithin(event: EventDef, months: number, runs: number, start = 30 * 12): number {
+    const rng = createRng(42);
+    const events = [event]; // one list: rollEvents caches its age index per list
+    let got = 0;
+    for (let run = 0; run < runs; run++) {
+      const state = makeState({ ageInMonths: start, eventHistory: [] });
+      for (let m = 0; m < months; m++, state.ageInMonths++) {
+        if (rollEvents(state, rng, events).length > 0) {
+          got += 1;
+          break;
+        }
+      }
+    }
+    return got / runs;
+  }
+
+  it.each([
+    ['common', 0.5],
+    ['normal', 0.2],
+    ['uncommon', 0.05],
+    ['rare', 0.01],
+  ] as const)('%s = %d per year: twelve monthly chances add up to exactly that', (frequency, yearly) => {
+    const event = chanceEvent('e', frequency);
+    expect(yearlyChance(event, at30())).toBe(yearly);
+    expect(1 - (1 - monthlyChance(event, at30())) ** 12).toBeCloseTo(yearly, 12);
   });
 
-  it('at most ONE pool event a month, about 4 a year, however many events are written', () => {
-    for (const size of [1, 50, 2000]) {
-      const events = Array.from({ length: size }, (_, i) => poolEvent(`e${i}`, 'normal'));
-      const state = makeState({ ageInMonths: 30 * 12 });
-      const rng = createRng(size);
-      let total = 0;
-      for (let month = 0; month < 1200; month++) {
-        const got = rollEvents(state, rng, events);
-        expect(got.length).toBeLessThanOrEqual(1);
-        total += got.length;
+  it('in a real run, about 20% of characters get a "normal" event within a year', () => {
+    const share = shareWithin(chanceEvent('e', 'normal'), 12, 4000);
+    expect(share).toBeGreaterThan(0.17);
+    expect(share).toBeLessThan(0.23);
+  });
+
+  it('an event limited to some months gets its whole yearly chance in those months', () => {
+    const april = chanceEvent('trip', 'normal', { conditions: { ageMin: 0, ageMax: 99, months: [4] } });
+    expect(monthlyChance(april, at30())).toBeCloseTo(0.2, 12);
+  });
+
+  it('events roll on their own: writing more events does not change how often one happens', () => {
+    const alone = shareWithin(chanceEvent('e', 'uncommon'), 120, 1500);
+    // 30 other rare events: the monthly limit can push one out now and then, but barely.
+    const others = Array.from({ length: 30 }, (_, i) => chanceEvent(`other${i}`, 'rare'));
+    const events = [chanceEvent('e', 'uncommon'), ...others];
+    const rng = createRng(42);
+    let got = 0;
+    for (let run = 0; run < 1500; run++) {
+      const state = at30();
+      for (let m = 0; m < 120 && got <= run; m++, state.ageInMonths++) {
+        const ids = rollEvents(state, rng, events).map((e) => e.id);
+        if (ids.includes('e')) got += 1;
+        for (const id of ids) state.eventHistory.push({ id, ageInMonths: state.ageInMonths });
       }
-      expect(total / 100).toBeGreaterThan(3.5); // 1200 months = 100 years
-      expect(total / 100).toBeLessThan(4.5);
+    }
+    expect(Math.abs(got / 1500 - alone)).toBeLessThan(0.05);
+    expect(alone).toBeGreaterThan(0.35); // 1 − 0.95^10 ≈ 0.40 over ten years
+    expect(alone).toBeLessThan(0.45);
+  });
+
+  it('at most one chance event a month; guaranteed and window events come on top', () => {
+    const always = chanceEvent('always', 'guaranteed', { conditions: { ageMin: 30, ageMax: 30 } });
+    const lastMonth = chanceEvent('w', 'window', { conditions: { ageMin: 0, ageMax: 30 } });
+    const sure = Array.from({ length: 5 }, (_, i) => chanceEvent(`c${i}`, 'common', { chanceBy: [{ stat: 'familyWealth', toward: 'high' }] }));
+    const state = makeState({ ageInMonths: 31 * 12 - 1, environment: { familyWealth: 100 } }); // last month of age 30
+    const rng = createRng(5);
+    for (let i = 0; i < 50; i++) {
+      const ids = rollEvents(state, rng, [always, lastMonth, ...sure]).map((e) => e.id);
+      expect(ids.slice(0, 2)).toEqual(['always', 'w']);
+      expect(ids.length).toBeLessThanOrEqual(3);
     }
   });
 
-  it('picks by weight: common (14) about 14 times as often as rare (1)', () => {
-    const pool = [poolEvent('r', 'rare'), poolEvent('c', 'common')];
-    const rng = createRng(3);
-    const counts = { r: 0, c: 0 };
-    for (let i = 0; i < 15000; i++) counts[pickWeighted(pool, rng).id as 'r' | 'c'] += 1;
-    expect(counts.c / counts.r).toBeGreaterThan(12);
-    expect(counts.c / counts.r).toBeLessThan(16.5);
+  it('a window event happens exactly once in its age range, in any month with about equal odds', () => {
+    const event = chanceEvent('first_word', 'window', { conditions: { ageMin: 1, ageMax: 2 } }); // 24 months
+    const rng = createRng(7);
+    const events = [event];
+    let firstYear = 0;
+    for (let run = 0; run < 3000; run++) {
+      const state = makeState({ ageInMonths: 12, eventHistory: [] });
+      let times = 0;
+      for (; state.ageInMonths < 36; state.ageInMonths++) {
+        if (rollEvents(state, rng, events).length > 0) {
+          if (state.ageInMonths < 24) firstYear += 1;
+          times += 1;
+          state.eventHistory.push({ id: event.id, ageInMonths: state.ageInMonths });
+        }
+      }
+      expect(times).toBe(1);
+    }
+    expect(firstYear / 3000).toBeGreaterThan(0.45);
+    expect(firstYear / 3000).toBeLessThan(0.55);
   });
 
-  it('guaranteed events are outside the pool: they always happen, alongside a pool event', () => {
-    const always = makeEvent({ id: 'always', frequency: 'guaranteed', once: true, conditions: { ageMin: 30, ageMax: 30 } });
-    const events = [always, poolEvent('p', 'common')];
-    const state = makeState({ ageInMonths: 30 * 12 });
-    const rng = createRng(1);
-    const months = Array.from({ length: 60 }, () => rollEvents(state, rng, events).map((e) => e.id));
-    expect(months.every((ids) => ids.includes('always'))).toBe(true);
-    expect(months.some((ids) => ids.includes('p'))).toBe(true);
+  it('a window event still happens when its condition is only met late (certain in the last month)', () => {
+    expect(windowChance(chanceEvent('w', 'window', { conditions: { ageMin: 6, ageMax: 7 } }), { ageInMonths: 8 * 12 - 1 })).toBe(1);
+    expect(windowChance(chanceEvent('w', 'window', { conditions: { ageMin: 6, ageMax: 7 } }), { ageInMonths: 6 * 12 })).toBeCloseTo(1 / 24);
   });
 
-  it('nothing happens when no pool event fits the age', () => {
-    const later = poolEvent('later', 'common');
-    later.conditions = { ageMin: 50, ageMax: 60 };
+  it('nothing happens when no event fits the age', () => {
+    const later = chanceEvent('later', 'common', { conditions: { ageMin: 50, ageMax: 60 } });
     const rng = createRng(1);
-    for (let month = 0; month < 100; month++) expect(rollEvents(makeState({ ageInMonths: 30 * 12 }), rng, [later])).toEqual([]);
+    for (let month = 0; month < 100; month++) expect(rollEvents(at30(), rng, [later])).toEqual([]);
   });
 
   it('stays fast with 10,000 events (age index)', () => {
@@ -340,6 +411,41 @@ describe('the event pool (D53)', () => {
       for (const event of rollEvents(state, rng, events)) state.eventHistory.push({ id: event.id, ageInMonths: month });
     }
     expect(performance.now() - started).toBeLessThan(3000); // was ~25 s before the index
+  });
+});
+
+describe('values that make an event more or less likely (D68)', () => {
+  const bullied = makeEvent({ id: 'bullied', frequency: 'uncommon', once: true, chanceBy: [{ stat: 'riskTaking', toward: 'low' }] });
+
+  it.each([
+    [50, 1],
+    [0, 3],
+    [100, 1 / 3],
+    [25, Math.sqrt(3)],
+  ])('risk-taking %d → chance ×%d for an event likelier with LOW risk-taking', (riskTaking, factor) => {
+    expect(chanceFactor(bullied, makeState({ traits: { riskTaking } }))).toBeCloseTo(factor, 12);
+  });
+
+  it('"high" works the other way round, and several values multiply', () => {
+    const contest = makeEvent({
+      frequency: 'normal',
+      chanceBy: [
+        { stat: 'discipline', toward: 'high' },
+        { stat: 'familyWealth', toward: 'high' },
+      ],
+    });
+    expect(chanceFactor(contest, makeState({ traits: { discipline: 100 }, environment: { familyWealth: 50 } }))).toBeCloseTo(3);
+    expect(chanceFactor(contest, makeState({ traits: { discipline: 100 }, environment: { familyWealth: 100 } }))).toBeCloseTo(9);
+  });
+
+  it('multiplies the yearly chance, never above 95%', () => {
+    expect(yearlyChance(bullied, makeState({ traits: { riskTaking: 0 } }))).toBeCloseTo(0.15);
+    const common = makeEvent({ frequency: 'common', chanceBy: [{ stat: 'riskTaking', toward: 'low' }] });
+    expect(yearlyChance(common, makeState({ traits: { riskTaking: 0 } }))).toBe(0.95);
+  });
+
+  it('events without chanceBy are not affected by any value', () => {
+    expect(chanceFactor(makeEvent(), makeState({ traits: { riskTaking: 0 } }))).toBe(1);
   });
 });
 
@@ -619,7 +725,7 @@ describe('real events over many lives (Monte Carlo)', () => {
     expect(preschool).toBeGreaterThan(0);
   });
 
-  it('children without extra vaccines nearly all get chickenpox by 13 (few childhood events compete in the pool yet)', () => {
+  it('children without extra vaccines nearly all get chickenpox by 13 (common: 50% a year from age 3)', () => {
     const basic = ends.filter((end) => !end.flags.includes('extra_vaccines') && end.ageInMonths >= 13 * 12);
     const share = basic.filter((end) => hadChickenpox(end) > 0).length / basic.length;
     expect(share).toBeGreaterThan(0.9);
@@ -747,7 +853,9 @@ describe('real events over many lives (Monte Carlo)', () => {
         if (record.id.startsWith('growth_')) expect(age).toBeLessThanOrEqual(6);
       }
     }
-    expect(withInterest).toBeGreaterThan(ends.length / 2);
+    // Four interests, each 5% a year over ages 3–6: about half of all children find one (D67).
+    expect(withInterest / ends.length).toBeGreaterThan(0.4);
+    expect(withInterest / ends.length).toBeLessThan(0.7);
   });
 
   it('growth: the family\'s warmth decides which version of first word and drawing a child gets, never both', () => {
@@ -881,6 +989,41 @@ describe('real events over many lives (Monte Carlo)', () => {
         if (favourites[0]?.id === 'school_favorite_pe') expect(interest).toBeUndefined();
       }
     });
+  });
+
+  it('milestones everyone goes through happen to every child, once, inside their age range (D67 window)', () => {
+    const MILESTONES: [string[], number, number][] = [
+      [['growth_first_word', 'growth_first_word_unnoticed'], 1, 1],
+      [['growth_first_sentence'], 2, 2],
+      [['growth_self_care'], 2, 4],
+      [['growth_toilet_training'], 2, 3],
+      [['growth_numbers_letters'], 4, 6],
+      [['growth_memory_problem_solving'], 4, 6],
+      [['school_first_club'], 7, 9],
+    ];
+    for (const end of ends.filter((e) => e.ageInMonths >= 10 * 12)) {
+      for (const [versions, from, to] of MILESTONES) {
+        const got = end.eventHistory.filter((r) => versions.includes(r.id));
+        expect(got).toHaveLength(1);
+        const age = Math.floor(got[0]!.ageInMonths / 12);
+        expect(age).toBeGreaterThanOrEqual(from);
+        expect(age).toBeLessThanOrEqual(to);
+      }
+    }
+  });
+
+  it('a rare event stays rare: a seriously ill relative in about 1 in 12 lives, not nearly all (D67)', () => {
+    const grown = ends.filter((end) => end.ageInMonths >= 18 * 12);
+    const share = grown.filter((end) => ids(end).includes('family_relative_seriously_ill')).length / grown.length;
+    expect(share).toBeLessThan(0.15); // 1% a year over ages 10–17 ≈ 8%; it was 99% with the shared pool
+  });
+
+  it('timid children are bullied more often than bold ones (D68: chanceBy risk-taking low)', () => {
+    const rate = (keep: (riskTaking: number) => boolean) => {
+      const group = ends.filter((end) => end.ageInMonths >= 10 * 12 && keep(createNewLife(end.seed).traits.riskTaking));
+      return group.filter((end) => ids(end).includes('school_bullied')).length / group.length;
+    };
+    expect(rate((r) => r < 40)).toBeGreaterThan(rate((r) => r >= 60) * 1.5);
   });
 
   it('malnutrition hits only poor families, at most once per 12 months', () => {

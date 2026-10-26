@@ -7,12 +7,14 @@
  *   choice's `effects` are applied. Choices whose conditions are not met are
  *   still shown, disabled, with the reason.
  *
- * Which events happen (D53, the event pool):
- * - 'guaranteed' events happen in the first month their conditions are met;
- * - every other eligible event sits in a POOL. Each month the game decides
- *   whether something happens (a few times a year, by age), and if so picks
- *   ONE event from the pool, weighted by its frequency word. Writing more
- *   events adds variety, not frequency.
+ * Which events happen (D67, D68):
+ * - 'guaranteed': in the first month its conditions are met;
+ * - 'window': once, in a random month of its age range (everyone goes
+ *   through it, at their own time: first word, first club);
+ * - the other frequency words are a CHANCE PER YEAR while the conditions are
+ *   met. Each event rolls on its own, so adding events never makes the
+ *   others rarer or more common. Values named in `chanceBy` (a trait, family
+ *   wealth...) make an event more or less likely (D68).
  *
  * This module:
  * 1. validates the data when it loads (a typo must fail loudly, not
@@ -44,9 +46,11 @@ import {
 
 // ── Data types ──────────────────────────────────────────────────────────────
 
-export const FREQUENCIES = ['guaranteed', 'rare', 'uncommon', 'normal', 'common'] as const;
+export const FREQUENCIES = ['guaranteed', 'window', 'rare', 'uncommon', 'normal', 'common'] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
-export type PoolFrequency = Exclude<Frequency, 'guaranteed'>;
+/** D67: the frequencies that are a chance per year (the others are certain). */
+export const CHANCE_FREQUENCIES = ['rare', 'uncommon', 'normal', 'common'] as const;
+export type ChanceFrequency = (typeof CHANCE_FREQUENCIES)[number];
 
 /** Values a condition may test. */
 export const CONDITION_STATS = [
@@ -165,8 +169,20 @@ export interface EventDef {
    * hereditary condition). Decided once per life, see `lifetimeRoll`.
    */
   lifetimeChance?: number;
+  /**
+   * D68: values that make this event more (or less) likely, e.g. being
+   * bullied is more likely the LOWER the risk-taking:
+   * [{ "stat": "riskTaking", "toward": "low" }]. Only for chance frequencies.
+   */
+  chanceBy?: ChanceBy[];
   effects?: EventEffects;
   choices?: EventChoice[];
+}
+
+export interface ChanceBy {
+  stat: ConditionStat;
+  /** 'high' = the higher the value, the likelier the event; 'low' = the lower. */
+  toward: 'high' | 'low';
 }
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -323,6 +339,49 @@ function checkResidenceCondition(residence: unknown, at: string, problems: strin
   }
 }
 
+/** Every effect amount an event can have on one value, from its effects or any of its choices. */
+function effectAmounts(item: Record<string, unknown>, stat: string): number[] {
+  const all = [item.effects, ...(Array.isArray(item.choices) ? item.choices.map((c: unknown) => (isRecord(c) ? c.effects : undefined)) : [])];
+  const amounts: number[] = [];
+  for (const effects of all) {
+    if (!isRecord(effects)) continue;
+    for (const field of ['stats', 'traits', 'environment'] as const) {
+      const changes = effects[field];
+      if (isRecord(changes) && typeof changes[stat] === 'number') amounts.push(changes[stat]);
+    }
+  }
+  return amounts;
+}
+
+/**
+ * D68: chanceBy is a list of { stat, toward }, only on chance frequencies.
+ * A REPEATABLE event must not push its own chanceBy value further the same
+ * way (e.g. "likelier with high risk-taking" and "+risk-taking"): each time
+ * it happened it would become likelier still, until the value hits 0 or 100.
+ */
+function checkChanceBy(item: Record<string, unknown>, at: string, problems: string[]): void {
+  const list = item.chanceBy;
+  if (!Array.isArray(list) || list.length === 0) {
+    problems.push(`${at}: chanceBy must be a non-empty list of { "stat", "toward": "high" | "low" }`);
+    return;
+  }
+  if (!(CHANCE_FREQUENCIES as readonly unknown[]).includes(item.frequency)) {
+    problems.push(`${at}: chanceBy only works with a chance frequency (${CHANCE_FREQUENCIES.join(', ')}), not "${String(item.frequency)}"`);
+  }
+  for (const by of list) {
+    if (!isRecord(by) || !CONDITION_STATS.includes(by.stat as ConditionStat) || (by.toward !== 'high' && by.toward !== 'low')) {
+      problems.push(`${at}: invalid chanceBy ${JSON.stringify(by)}`);
+      continue;
+    }
+    for (const key of unknownKeys(by, ['stat', 'toward'])) problems.push(`${at}: chanceBy: unknown field "${key}"`);
+    if (item.once === true) continue;
+    const sameWay = effectAmounts(item, by.stat as string).some((amount) => (by.toward === 'high' ? amount > 0 : amount < 0));
+    if (sameWay) {
+      problems.push(`${at}: repeatable event made likelier by ${by.toward} ${String(by.stat)} must not push ${String(by.stat)} further ${by.toward === 'high' ? 'up' : 'down'} (it would feed itself)`);
+    }
+  }
+}
+
 function checkChoices(choices: unknown, at: string, check: Checker): void {
   const { problems } = check;
   if (!Array.isArray(choices) || choices.length < 2) {
@@ -377,7 +436,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     const id = typeof item.id === 'string' ? item.id : '';
     const at = id ? `event "${id}"` : where;
 
-    for (const key of unknownKeys(item, ['id', 'conditions', 'frequency', 'once', 'cooldownMonths', 'lifetimeChance', 'effects', 'choices'])) {
+    for (const key of unknownKeys(item, ['id', 'conditions', 'frequency', 'once', 'cooldownMonths', 'lifetimeChance', 'chanceBy', 'effects', 'choices'])) {
       problems.push(`${at}: unknown field "${key}"`);
     }
     if (!ID_PATTERN.test(id)) problems.push(`${at}: id must be lowercase letters, digits and _`);
@@ -391,6 +450,13 @@ export function parseEvents(raw: unknown): EventDef[] {
     if (item.frequency === 'guaranteed' && item.once !== true) {
       problems.push(`${at}: a guaranteed event must be once (otherwise it happens every month)`);
     }
+    if (item.frequency === 'window') {
+      if (item.once !== true) problems.push(`${at}: a window event must be once (it happens exactly once in its age range)`);
+      if (isRecord(item.conditions) && item.conditions.months !== undefined) {
+        problems.push(`${at}: a window event cannot be limited to months (it picks its own month in the age range)`);
+      }
+    }
+    if (item.chanceBy !== undefined) checkChanceBy(item, at, problems);
     if (item.cooldownMonths !== undefined) {
       if (!isPositiveInteger(item.cooldownMonths)) problems.push(`${at}: cooldownMonths must be a whole number above 0`);
       if (item.once === true) problems.push(`${at}: cooldownMonths only makes sense for a repeatable event (once: false)`);
@@ -620,7 +686,7 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
   return reasons;
 }
 
-// ── Selection: guaranteed events + the pool (D53) ───────────────────────────
+// ── Selection: guaranteed, window and chance events (D67, D68) ──────────────
 
 /** Ages above this share one bucket in the age index. */
 const MAX_INDEXED_AGE = 120;
@@ -646,44 +712,70 @@ function ageIndex(events: readonly EventDef[]): EventDef[][] {
   return index;
 }
 
-/** D53: average number of pool events per year at this age. */
-export function poolEventsPerYear(age: number): number {
-  const band = BALANCE.events.poolEventsPerYear.find((b) => age >= b.fromAge);
-  return band ? band.perYear : 0;
-}
-
-/** Chance that ONE pool event happens in a month. */
-export function monthlyPoolChance(age: number): number {
-  return Math.min(1, poolEventsPerYear(age) / 12);
-}
-
-/** Picks one event, each with probability weight / total weight. */
-export function pickWeighted(pool: readonly EventDef[], rng: Rng): EventDef {
-  const weights = pool.map((event) => BALANCE.events.poolWeights[event.frequency as PoolFrequency]);
-  let roll = rng.next() * weights.reduce((sum, w) => sum + w, 0);
-  for (let i = 0; i < pool.length; i++) {
-    roll -= weights[i]!;
-    if (roll < 0) return pool[i]!;
+/** D68: how much the event's chanceBy values multiply its chance (1 = unchanged). */
+export function chanceFactor(event: EventDef, state: GameState): number {
+  const max = BALANCE.events.chanceByMaxFactor;
+  let factor = 1;
+  for (const by of event.chanceBy ?? []) {
+    const value = readConditionStat(state, by.stat);
+    const direction = by.toward === 'high' ? 1 : -1;
+    factor *= max ** ((direction * (value - 50)) / 50);
   }
-  return pool.at(-1)!; // floating-point safety: roll landed exactly on the total
+  return factor;
+}
+
+/** D67 + D68: the chance per year of a chance-frequency event for this character now. */
+export function yearlyChance(event: EventDef, state: GameState): number {
+  const base = BALANCE.events.chancePerYear[event.frequency as ChanceFrequency];
+  return Math.min(BALANCE.events.maxYearlyChance, base * chanceFactor(event, state));
 }
 
 /**
- * Which events happen this month: every eligible guaranteed event, plus at
- * most one event from the pool. Eligibility is checked for all events
- * BEFORE any is applied, so one event cannot unlock another in the same month.
- * The RNG is used only when the pool is not empty: one draw for "does
- * something happen", one more to pick.
+ * D67: the chance in ONE eligible month, so that a whole year of eligible
+ * months adds up to the yearly chance: 1 − (1 − yearly)^(1 / months).
+ * An event limited to some calendar months spreads its yearly chance over
+ * those months only (a trip in April: the whole yearly chance in April).
+ */
+export function monthlyChance(event: EventDef, state: GameState): number {
+  const monthsPerYear = event.conditions.months?.length ?? 12;
+  return 1 - (1 - yearlyChance(event, state)) ** (1 / monthsPerYear);
+}
+
+/**
+ * D67: a window event happens exactly once in its age range, in a random
+ * month: each eligible month its chance is 1 / (months left in the range),
+ * so every month is equally likely and the last month is certain.
+ */
+export function windowChance(event: EventDef, state: Pick<GameState, 'ageInMonths'>): number {
+  const monthsLeft = (event.conditions.ageMax + 1) * 12 - state.ageInMonths;
+  return 1 / Math.max(1, monthsLeft);
+}
+
+/**
+ * Which events happen this month: every eligible guaranteed event, the window
+ * events whose month it is, and at most `maxChanceEventsPerMonth` chance
+ * events (when more roll a hit, a random one of them; the others simply did
+ * not happen this month). Eligibility is checked for all events BEFORE any is
+ * applied, so one event cannot unlock another in the same month.
+ * RNG draws, in file order: one per eligible window and chance event, then
+ * one per chance hit above the monthly limit (to drop a random one).
  */
 export function rollEvents(state: GameState, rng: Rng, events: readonly EventDef[] = EVENTS): EventDef[] {
   const age = Math.floor(state.ageInMonths / 12);
   const happened = happenedIndex(state);
   const eligible = ageIndex(events)[Math.min(age, MAX_INDEXED_AGE)]!.filter((event) => isEligible(event, state, happened));
 
-  const result = eligible.filter((event) => event.frequency === 'guaranteed');
-  const pool = eligible.filter((event) => event.frequency !== 'guaranteed');
-  if (pool.length > 0 && rng.chance(monthlyPoolChance(age))) result.push(pickWeighted(pool, rng));
-  return result;
+  const result: EventDef[] = [];
+  const hits: EventDef[] = [];
+  for (const event of eligible) {
+    if (event.frequency === 'guaranteed') result.push(event);
+    else if (event.frequency === 'window') {
+      if (rng.chance(windowChance(event, state))) result.push(event);
+    } else if (rng.chance(monthlyChance(event, state))) hits.push(event);
+  }
+  const max = BALANCE.events.maxChanceEventsPerMonth;
+  while (hits.length > max) hits.splice(Math.floor(rng.next() * hits.length), 1);
+  return [...result, ...hits];
 }
 
 // ── Effects ─────────────────────────────────────────────────────────────────

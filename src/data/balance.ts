@@ -161,26 +161,30 @@ export const BALANCE = {
 
   events: {
     /**
-     * The event pool (D53). Each month the game first decides WHETHER
-     * something happens (on average `perYear` times a year for the age band),
-     * then picks ONE eligible event, weighted by its frequency word.
-     * Writing more events therefore adds variety, not frequency.
-     * 'guaranteed' events are outside the pool: they happen in the first
-     * month their conditions are met (so they must be "once").
-     * Bands are read from the top: the first with `fromAge` <= age applies.
+     * D67: how often an event happens, by its frequency word: the chance PER
+     * YEAR while its conditions are met. Each event rolls on its own, so
+     * writing more events never changes how often the others happen (this
+     * replaces D53's shared pool). An event limited to some calendar months
+     * gets the same yearly chance, spread over those months.
+     * Not here: 'guaranteed' (the first month its conditions are met) and
+     * 'window' (once, in a random month of its age range).
      */
-    poolEventsPerYear: [
-      { fromAge: 75, perYear: 2 },
-      { fromAge: 60, perYear: 3 },
-      { fromAge: 0, perYear: 4 },
-    ],
-    /** Relative weights when picking from the pool: 'common' is picked 14× as often as 'rare'. */
-    poolWeights: {
-      rare: 1,
-      uncommon: 3,
-      normal: 7,
-      common: 14,
+    chancePerYear: {
+      common: 0.5,
+      normal: 0.2,
+      uncommon: 0.05,
+      rare: 0.01,
     },
+    /** D67: at most this many chance events start in one month (guaranteed and window events don't count). */
+    maxChanceEventsPerMonth: 1,
+    /**
+     * D68: a value can make an event more or less likely ("chanceBy").
+     * At 50 the chance is unchanged; at 100 in the named direction it is
+     * multiplied by this, at 0 divided by it (×3^((value − 50) / 50)).
+     */
+    chanceByMaxFactor: 3,
+    /** D68: however strong the factors, a yearly chance never goes above this. */
+    maxYearlyChance: 0.95,
     /**
      * D41: traits set early in life; from this age an event's effect on a
      * trait is multiplied by `traitFactorLater` (habits are hard to change
