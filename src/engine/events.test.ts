@@ -928,7 +928,9 @@ describe('real events over many lives (Monte Carlo)', () => {
 
     it('every school in the balance table has an event that puts the child there (Grade 1, or Grade 7 for the selective school)', () => {
       for (const id of SCHOOL_IDS) {
-        const start = EVENTS.find((e) => e.id === (id === 'top_public' ? 'school_m1_start_top_public' : `school_start_${id}`));
+        // D74: the vocational college starts with its first day.
+        const startId = id === 'top_public' ? 'school_m1_start_top_public' : id === 'vocational' ? 'edu_vocational_first_day' : `school_start_${id}`;
+        const start = EVENTS.find((e) => e.id === startId);
         expect(start?.effects?.setFlags).toContain(`school_${id}`);
       }
     });
@@ -1015,14 +1017,19 @@ describe('real events over many lives (Monte Carlo)', () => {
       expect(moved).toBeGreaterThan(0);
     });
 
-    it('school fees become a burden only for fee-paying schools, and the child moves to a public school', () => {
+    it('school fees become a burden only for fee-paying schools, after a parent lost their job, and the child moves to a public school', () => {
       for (const end of ends) {
         const at = end.eventHistory.findIndex((r) => r.id === 'school_fees_burden');
         if (at < 0) continue;
         const start = end.eventHistory.find((r) => r.id.startsWith('school_start_'))!;
         expect(['school_start_private', 'school_start_international']).toContain(start.id);
-        expect(wealthBefore(end)[at]).toBeLessThan(50);
-        const later = end.eventHistory.slice(at).some((r) => r.id.startsWith('family_live_with_grandparents'));
+        // D74 fix: the burden comes from a job loss (wealth alone never crossed the line that chose the school).
+        const before = end.eventHistory.slice(0, at).map((r) => r.id);
+        expect(before.lastIndexOf('family_parent_lost_job')).toBeGreaterThan(before.lastIndexOf('family_parent_new_job'));
+        const after = end.eventHistory.slice(at).map((r) => r.id);
+        // Grade 10 at a college or a first job change the school again.
+        if (after.some((id) => id === 'edu_vocational_first_day' || id === 'work_teen_first_job')) continue;
+        const later = after.some((id) => id.startsWith('family_live_with_grandparents'));
         expect(schoolFlags(end.flags)).toEqual([later ? 'school_local' : 'school_public']);
       }
     });
@@ -1151,8 +1158,8 @@ describe('real events over many lives (Monte Carlo)', () => {
         if (start === undefined) continue;
         moved.add(start.id);
         const later = end.eventHistory.filter((r) => r.ageInMonths > start.ageInMonths);
-        // The grandparents and school fees can still move the child afterwards: check only lives where nothing did.
-        if (later.some((r) => r.id.startsWith('family_live_with_grandparents') || r.id === 'school_fees_burden')) continue;
+        // The grandparents and school fees (a burden or a scholarship) can still change the school afterwards: check only lives where nothing did.
+        if (later.some((r) => r.id.startsWith('family_live_with_grandparents') || r.id === 'school_fees_burden' || r.id === 'school_fees_scholarship')) continue;
         expect(schoolOf(end)).toEqual([expected[start.id]]);
       }
       expect(moved).toContain('school_m1_start_top_public');
@@ -1279,7 +1286,13 @@ describe('real events over many lives (Monte Carlo)', () => {
     it('when fees get heavy, a strong student keeps the school on a scholarship; the others move to a public school', () => {
       const fees = findEvent('school_fees_burden')!;
       const scholarship = findEvent('school_fees_scholarship')!;
-      const atFees = (academic: number) => makeState({ ageInMonths: 14 * 12, skills: { academic }, environment: { familyWealth: 30 }, flags: ['school_private'] });
+      const atFees = (academic: number) =>
+        makeState({
+          ageInMonths: 14 * 12,
+          skills: { academic },
+          flags: ['school_private', 'parent_lost_job'],
+          education: { history: [{ program: 'lower_secondary', from: 14 * 12 - 20 }] },
+        });
       expect(isEligible(scholarship, atFees(28))).toBe(true);
       expect(isEligible(fees, atFees(28))).toBe(false);
       expect(isEligible(scholarship, atFees(27.9))).toBe(false);
@@ -1287,8 +1300,8 @@ describe('real events over many lives (Monte Carlo)', () => {
       for (const end of all) {
         const both = ['school_fees_burden', 'school_fees_scholarship'].filter((id) => recordsOf(end, id).length > 0);
         expect(both.length).toBeLessThanOrEqual(1);
-        // A child who died before starting Grade 1 never had a school.
-        const inSchool = end.eventHistory.some((r) => r.id.startsWith('school_start_'));
+        // A child who died before starting Grade 1 never had a school; D74: one who went to work left it.
+        const inSchool = end.eventHistory.some((r) => r.id.startsWith('school_start_')) && !end.flags.includes('working');
         expect(end.flags.filter((flag) => SCHOOL_FLAGS.includes(flag))).toHaveLength(inSchool ? 1 : 0);
       }
     });
@@ -1660,13 +1673,7 @@ describe('real events over many lives (Monte Carlo)', () => {
 
     /** Events that cannot happen yet, and why. An entry that starts happening must be removed. */
     const KNOWN_UNREACHABLE: Record<string, string> = {
-      health_myopia_overwork: 'needs the "working" flag, set by the careers system (not built yet)',
-      // Family wealth only moves with a parent losing a job (-10) and finding a new one (+5),
-      // so it never crosses the line that picked the school at age 6.
-      school_fees_burden: 'private school starts at wealth 60, the burden needs < 50',
-      school_fees_scholarship: 'same condition as school_fees_burden',
-      school_m1_start_private: 'choosing private at ม.1 needs wealth 60, but children under 60 went to a public school at 6',
-      school_m1_start_international: 'choosing international at ม.1 needs wealth 80, but children under 80 went to a private or public school at 6',
+      health_myopia_overwork: 'needs heavy overtime, which only the careers system will set (not built yet)',
     };
 
     it('every event happens in at least one of 1000 lives, except the known ones', () => {

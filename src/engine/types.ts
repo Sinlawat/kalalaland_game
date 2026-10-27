@@ -107,8 +107,10 @@ export type HomeId = (typeof HOME_IDS)[number];
  * like any other flag; the engine reads it for the school's learning speed.
  * D70: 'top_public' (a selective public school) is only reached by passing
  * the entrance exam for Grade 7 (ม.1).
+ * D74: 'vocational' is the vocational college (ปวช.); it counts as a school
+ * so the school-age friend events still happen there.
  */
-export const SCHOOL_IDS = ['international', 'private', 'top_public', 'scholarship', 'public', 'local'] as const;
+export const SCHOOL_IDS = ['international', 'private', 'top_public', 'scholarship', 'public', 'local', 'vocational'] as const;
 export type SchoolId = (typeof SCHOOL_IDS)[number];
 /** The flag of every school. A child is in one school at a time (the event validator enforces it). */
 export const SCHOOL_FLAGS: readonly string[] = SCHOOL_IDS.map((id) => `school_${id}`);
@@ -216,7 +218,7 @@ export const RELATIONS = ['friend', 'best_friend'] as const;
 export type Relation = (typeof RELATIONS)[number];
 
 /** Why a relationship ended. Phase 2 adds broke_up, divorced, died. */
-export const END_REASONS = ['moved_away', 'changed_school', 'drifted_apart', 'fell_out', 'stepped_away', 'graduated'] as const;
+export const END_REASONS = ['moved_away', 'changed_school', 'drifted_apart', 'fell_out', 'stepped_away', 'graduated', 'left_school'] as const;
 export type EndReason = (typeof END_REASONS)[number];
 
 /** From `from` (inclusive) until `to`, both in months of the character's age. `to` absent = still going. */
@@ -259,6 +261,43 @@ export interface PersonRef {
 }
 
 // ── Whole game state ────────────────────────────────────────────────────────
+// ── Education (D74) ─────────────────────────────────────────────────────────
+/** Programs in src/data/programs.json (ids from the design sheet's Education tab). */
+export const PROGRAM_IDS = [
+  'primary',
+  'lower_secondary',
+  'upper_secondary_science',
+  'upper_secondary_arts_math',
+  'upper_secondary_arts_lang',
+  'vocational_electrical',
+  'vocational_mechanical',
+  'vocational_computer',
+  'vocational_business',
+  'non_formal',
+] as const;
+export type ProgramId = (typeof PROGRAM_IDS)[number];
+
+/** How a program ended: finished it, moved to another program, or left before the end. */
+export const ENROLLMENT_RESULTS = ['graduated', 'switched', 'left'] as const;
+export type EnrollmentResult = (typeof ENROLLMENT_RESULTS)[number];
+
+/** One program the character studied: from `from` until `to` (months of age); `to` absent = studying now. */
+export interface Enrollment {
+  program: ProgramId;
+  from: number;
+  /** Months carried over from the program of the same level it replaced (a switch of plan). */
+  credit?: number;
+  to?: number;
+  result?: EnrollmentResult;
+}
+
+export interface Education {
+  /** In order; at most the last one is still going on. */
+  history: Enrollment[];
+  /** Chosen and waiting: starts the month the current program ends (e.g. the Grade 10 plan chosen in Grade 9). */
+  next?: ProgramId;
+}
+
 export interface GameState {
   /** The seed the life started from (shown to the player, used to replay). */
   seed: number;
@@ -315,6 +354,9 @@ export interface GameState {
 
   /** D72: everyone the character has had as a friend, including friendships that ended (save version 11). */
   people: Person[];
+
+  /** D74: what the character studied and studies now (save version 12). */
+  education: Education;
 
   death: Death | null;
 }

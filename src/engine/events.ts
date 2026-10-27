@@ -26,6 +26,7 @@
 
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
+import { applyEducationEffect, meetsEducationConditions, type EducationConditions, type EducationEffect } from './education';
 import { setHabitFromEvent } from './lifestyle';
 import {
   applyFriendsEffects,
@@ -44,6 +45,7 @@ import {
   END_REASONS,
   HABIT_LEVELS,
   HOME_IDS,
+  PROGRAM_IDS,
   REGION_IDS,
   RELATIONS,
   SCHOOL_FLAGS,
@@ -147,6 +149,8 @@ export interface EventConditions extends CharacterConditions {
   residence?: { regions?: RegionId[]; homes?: HomeId[] };
   /** D72: the character's friends; tags are about the person the event is about. */
   people?: PeopleConditions;
+  /** D74: what the character studies or has finished. */
+  education?: EducationConditions;
 }
 
 /** A lifestyle change: a level (lasting), or a level for some months (D56). */
@@ -165,6 +169,8 @@ export interface EventEffects {
   person?: PersonEffect;
   /** D72: what happens to a group of friends, e.g. everyone after Grade 12. */
   friends?: FriendsEffect[];
+  /** D74: start, choose or leave a program. */
+  education?: EducationEffect;
 }
 
 export interface EventChoice {
@@ -291,7 +297,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -346,6 +352,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   }
   if (e.person !== undefined) checkPersonEffect(e.person, at, check);
   if (e.friends !== undefined) checkFriendsEffects(e.friends, at, check);
+  if (e.education !== undefined) checkEducationEffect(e.education, at, problems);
   // D70: a child is in one school at a time, so putting them in a school must
   // take them out of every other one (even at Grade 1, when there is none yet:
   // one rule for every event is easier to trust than a list of exceptions).
@@ -403,6 +410,45 @@ function checkFriendsEffects(list: unknown, at: string, check: Checker): void {
       if (!isTag(entry.tag)) problems.push(`${at}: friends: tag must be a tag name (lowercase letters, digits and _)`);
       else check.tagsSet.add(entry.tag);
     }
+  }
+}
+
+const isProgramId = (value: unknown): boolean => (PROGRAM_IDS as readonly unknown[]).includes(value);
+const isProgramList = (value: unknown): boolean => Array.isArray(value) && value.length > 0 && value.every(isProgramId);
+
+/** D74: { enroll?, next?, leave? }. */
+function checkEducationEffect(effect: unknown, at: string, problems: string[]): void {
+  if (!isRecord(effect) || Object.keys(effect).length === 0) {
+    problems.push(`${at}: effects.education must have at least one of enroll, next, leave`);
+    return;
+  }
+  for (const key of unknownKeys(effect, ['enroll', 'next', 'leave'])) problems.push(`${at}: effects.education: unknown field "${key}"`);
+  for (const key of ['enroll', 'next'] as const) {
+    if (effect[key] !== undefined && !isProgramId(effect[key])) problems.push(`${at}: effects.education.${key} must be one of ${PROGRAM_IDS.join(', ')}`);
+  }
+  if (effect.leave !== undefined && effect.leave !== true) problems.push(`${at}: effects.education.leave must be true`);
+}
+
+/** D74: { enrolled?, current?, monthsIn?, completed?, notCompleted? }. */
+function checkEducationCondition(c: unknown, at: string, problems: string[]): void {
+  if (!isRecord(c) || Object.keys(c).length === 0) {
+    problems.push(`${at}: conditions.education must have at least one of enrolled, current, monthsIn, completed, notCompleted`);
+    return;
+  }
+  for (const key of unknownKeys(c, ['enrolled', 'current', 'monthsIn', 'completed', 'notCompleted'])) problems.push(`${at}: conditions.education: unknown field "${key}"`);
+  if (c.enrolled !== undefined && typeof c.enrolled !== 'boolean') problems.push(`${at}: conditions.education.enrolled must be true or false`);
+  for (const key of ['current', 'completed', 'notCompleted'] as const) {
+    if (c[key] !== undefined && !isProgramList(c[key])) problems.push(`${at}: conditions.education.${key} must be a non-empty list of program ids`);
+  }
+  if (c.monthsIn !== undefined) {
+    const range = c.monthsIn;
+    const whole = (v: unknown) => v === undefined || (Number.isInteger(v) && (v as number) >= 0);
+    if (!isRecord(range) || (range.min === undefined && range.max === undefined) || !whole(range.min) || !whole(range.max)) {
+      problems.push(`${at}: conditions.education.monthsIn must be { "min"?, "max"? } in whole months from 0`);
+    } else if (range.min !== undefined && range.max !== undefined && (range.min as number) > (range.max as number)) {
+      problems.push(`${at}: conditions.education.monthsIn: min is above max`);
+    }
+    if (c.enrolled === false) problems.push(`${at}: conditions.education.monthsIn needs a program, so it cannot go with enrolled: false`);
   }
 }
 
@@ -594,8 +640,10 @@ export function parseEvents(raw: unknown): EventDef[] {
       problems.push(`${at}: frequency must be one of ${FREQUENCIES.join(', ')}`);
     }
     if (typeof item.once !== 'boolean') problems.push(`${at}: once must be true or false`);
-    if (item.frequency === 'guaranteed' && item.once !== true) {
-      problems.push(`${at}: a guaranteed event must be once (otherwise it happens every month)`);
+    // A repeatable guaranteed event needs a cooldown, or it would happen every month
+    // (e.g. the end of a 3-month try at a new habit, which can be tried again later).
+    if (item.frequency === 'guaranteed' && item.once !== true && item.cooldownMonths === undefined) {
+      problems.push(`${at}: a guaranteed event must be once, or repeatable with cooldownMonths (otherwise it happens every month)`);
     }
     if (item.frequency === 'window') {
       if (item.once !== true) problems.push(`${at}: a window event must be once (it happens exactly once in its age range)`);
@@ -621,7 +669,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     } else {
       for (const key of unknownKeys(c, [
         'ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin', 'eventsNone',
-        'residence', 'people',
+        'residence', 'people', 'education',
       ])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
@@ -658,6 +706,7 @@ export function parseEvents(raw: unknown): EventDef[] {
       }
       if (c.residence !== undefined) checkResidenceCondition(c.residence, at, problems);
       if (c.people !== undefined) checkPeopleCondition(c.people, item.about, at, check);
+      if (c.education !== undefined) checkEducationCondition(c.education, at, problems);
     }
 
     const hasEffects = item.effects !== undefined;
@@ -814,6 +863,7 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
   const about = event.about === 'best_friend' ? bestFriend(state) : undefined;
   if (event.about === 'best_friend' && about === undefined) return false;
   if (c.people && !meetsPeopleConditions(state, c.people, about)) return false;
+  if (c.education && !meetsEducationConditions(state, c.education)) return false;
   return meetsCharacterConditions(state, c);
 }
 
@@ -1035,6 +1085,7 @@ function applyEffects(
   // kept at Grade 12 must not be ended by "everyone else goes their own way").
   if (effects.friends) applyFriendsEffects(state, effects.friends, ageInMonths);
   if (person !== undefined) record.person = applyPersonEffect(state, person, effects.person ?? {}, ageInMonths);
+  if (effects.education) applyEducationEffect(state, effects.education, ageInMonths);
   state.eventHistory.push(record);
 }
 

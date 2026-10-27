@@ -146,6 +146,8 @@ export const BALANCE = {
       scholarship: { academic: 1.15 },
       public: {},
       local: { academic: 0.9 },
+      // D74: vocational college (ปวช.): hands-on work every day.
+      vocational: { practical: 1.3 },
     } satisfies Record<SchoolId, Partial<Skills>>,
   },
 

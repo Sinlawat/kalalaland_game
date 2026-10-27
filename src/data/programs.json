@@ -1,0 +1,12 @@
+[
+  { "id": "primary", "level": "primary", "months": 72, "then": "lower_secondary" },
+  { "id": "lower_secondary", "level": "lower_secondary", "months": 36 },
+  { "id": "upper_secondary_science", "level": "upper_secondary", "months": 36 },
+  { "id": "upper_secondary_arts_math", "level": "upper_secondary", "months": 36 },
+  { "id": "upper_secondary_arts_lang", "level": "upper_secondary", "months": 36 },
+  { "id": "vocational_electrical", "level": "vocational", "months": 36 },
+  { "id": "vocational_mechanical", "level": "vocational", "months": 36 },
+  { "id": "vocational_computer", "level": "vocational", "months": 36 },
+  { "id": "vocational_business", "level": "vocational", "months": 36 },
+  { "id": "non_formal", "level": "non_formal", "months": 24 }
+]

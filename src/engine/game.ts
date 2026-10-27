@@ -11,6 +11,7 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
+import { advanceEducation } from './education';
 import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, lockReasons, personFor, rollEvents, type EventDef } from './events';
 import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
 import { rollDeath } from './mortality';
@@ -71,6 +72,9 @@ function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EV
 
   // 1. Age +1 month
   state.ageInMonths += 1;
+  //    D74: a program that has run its full length ends, and the next one
+  //    starts this month (before the events, which may test it).
+  advanceEducation(state);
 
   // 2. Passive effects: Environment / Habits / Traits → Condition, plus wear.
   //    Both are calculated from the SAME start-of-month state before either

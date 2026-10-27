@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { RELATIONS, SEXES, type GameState } from '../engine/types';
+import { ENROLLMENT_RESULTS, PROGRAM_IDS, RELATIONS, SEXES, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 11;
+export const CURRENT_SAVE_VERSION = 12;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -51,6 +51,7 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   // Saves before 10 are "outdated" (D71: a nickname and sex instead of a name).
   // New steps go here: key N upgrades a version-N state to version N+1.
   10: addPeople,
+  11: addEducation,
 };
 
 /**
@@ -59,6 +60,33 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
  */
 function addPeople(state: unknown): unknown {
   return isRecord(state) ? { ...state, people: [] } : state;
+}
+
+const SCHOOL_START_EVENTS = ['school_start_international', 'school_start_private', 'school_start_public', 'school_start_scholarship', 'school_start_local'];
+
+/**
+ * 11 → 12 (D74): education. Rebuilt from the school-start event: Grade 1
+ * then, Grades 7–9 after six years, and — since these lives never chose a
+ * plan for Grade 10 — the arts-math plan after nine (the plan that does not
+ * need the science entrance exam). Before school: no education yet.
+ */
+function addEducation(state: unknown): unknown {
+  if (!isRecord(state)) return state;
+  const history: Enrollment[] = [];
+  const records = Array.isArray(state.eventHistory) ? state.eventHistory : [];
+  const start = records.find((r): r is { id: string; ageInMonths: number } => isRecord(r) && SCHOOL_START_EVENTS.includes(r.id as string) && typeof r.ageInMonths === 'number');
+  const age = typeof state.ageInMonths === 'number' ? state.ageInMonths : 0;
+  if (start !== undefined) {
+    const steps: [Enrollment['program'], number][] = [['primary', 72], ['lower_secondary', 36], ['upper_secondary_arts_math', 36]];
+    let from = start.ageInMonths;
+    for (const [program, months] of steps) {
+      if (from > age) break;
+      const ends = from + months;
+      history.push(ends <= age ? { program, from, to: ends, result: 'graduated' } : { program, from });
+      from = ends;
+    }
+  }
+  return { ...state, education: { history } };
 }
 
 function migrate(state: unknown, fromVersion: number): unknown {
@@ -80,6 +108,20 @@ function hasNumbers(value: unknown, keys: readonly string[]): boolean {
 }
 
 /** D72: the fields the friends card and the life summary read. */
+function isValidEducation(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.history)) return false;
+  if (value.next !== undefined && !(PROGRAM_IDS as readonly unknown[]).includes(value.next)) return false;
+  return value.history.every(
+    (e) =>
+      isRecord(e) &&
+      (PROGRAM_IDS as readonly unknown[]).includes(e.program) &&
+      typeof e.from === 'number' &&
+      (e.credit === undefined || typeof e.credit === 'number') &&
+      (e.to === undefined || typeof e.to === 'number') &&
+      (e.result === undefined || (ENROLLMENT_RESULTS as readonly unknown[]).includes(e.result)),
+  );
+}
+
 function isValidPerson(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -127,6 +169,7 @@ export function isValidGameState(value: unknown): value is GameState {
     Array.isArray(value.history) &&
     Array.isArray(value.people) &&
     value.people.every(isValidPerson) &&
+    isValidEducation(value.education) &&
     (value.death === null || isRecord(value.death))
   );
 }

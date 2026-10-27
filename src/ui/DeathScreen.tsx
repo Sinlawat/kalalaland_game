@@ -1,6 +1,7 @@
 import { SKILL_KEYS, type GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatStat } from './format';
+import { educationRows } from './education';
 import { FriendsSummary } from './FriendsSummary';
 
 interface Props {
@@ -69,6 +70,25 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
             {t('stat.looks')} <strong>{formatStat(peak((s) => s.looks))}</strong>
           </li>
         </ul>
+      </section>
+
+      {/* D74: what the character studied, in order. */}
+      <section className="card">
+        <h2>{t('education.title')}</h2>
+        {game.education.history.length === 0 ? (
+          <p className="muted">{t('education.none')}</p>
+        ) : (
+          <ul className="education-list">
+            {educationRows(game, game.death.ageInMonths).map((row, index) => (
+              <li key={index}>
+                <span>{row.program}</span>
+                <span className="muted small">
+                  {t('education.row', { from: row.fromAge, to: row.toAge })} · {t(`education.result.${row.result ?? 'ongoing'}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <FriendsSummary game={game} endAge={game.death.ageInMonths} />

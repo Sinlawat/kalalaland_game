@@ -81,6 +81,7 @@ export function createNewLife(seed: number): GameState {
     yearHabits: [],
     history: [],
     people: [],
+    education: { history: [] },
     death: null,
   };
 

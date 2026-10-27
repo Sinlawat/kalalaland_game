@@ -3,6 +3,7 @@ import { shouldRevealTraits } from '../actions/traits';
 import { t } from '../i18n/i18n';
 import { CharacterPanel } from './CharacterPanel';
 import { ChoiceDialog } from './ChoiceDialog';
+import { educationLine } from './education';
 import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
 import { LifeTimeline } from './LifeTimeline';
@@ -43,6 +44,8 @@ export function App() {
     );
   }
 
+  const educationNow = educationLine(game);
+
   return (
     <main className="screen screen--wide">
       <header className="topbar card">
@@ -51,6 +54,8 @@ export function App() {
           <p className="muted">
             {t(`sex.${game.sex}`)} · {formatAge(game.ageInMonths)} · {residenceLabel(game.residence)}
           </p>
+          {/* D74: what the character studies now and where (none before Grade 1). */}
+          {educationNow !== undefined && <p className="topbar__education">{educationNow}</p>}
           <div className="topbar__actions">
             <button type="button" className="button button--small" onClick={() => setResidenceOpen(true)}>
               {t('residence.open')}

@@ -90,6 +90,41 @@ describe('save / load', () => {
     expect(loadGame(storage)).toEqual({ status: 'ok', state: { ...life, people: [] } });
   });
 
+  it('upgrades a version 11 save: education rebuilt from the school start (D74)', () => {
+    let life = createNewLife(21);
+    while (life.ageInMonths < 16 * 12) life = advanceUntilStop(life, { chooser: (_s, e) => e.choices![0]!.id }).state;
+    const { education: _education, ...v11 } = life;
+    const start = life.eventHistory.find((r) => r.id.startsWith('school_start_'))!.ageInMonths;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 11, savedAt: '2026-10-27T00:00:00.000Z', state: v11 }));
+    const loaded = loadGame(storage);
+    expect(loaded.status).toBe('ok');
+    // Lives from before D74 never chose a Grade 10 plan: they continue in the arts-math plan.
+    expect(loaded.status === 'ok' && loaded.state.education).toEqual({
+      history: [
+        { program: 'primary', from: start, to: start + 72, result: 'graduated' },
+        { program: 'lower_secondary', from: start + 72, to: start + 108, result: 'graduated' },
+        { program: 'upper_secondary_arts_math', from: start + 108 },
+      ],
+    });
+  });
+
+  it('upgrades a version 11 save from before school: no education yet (D74)', () => {
+    const { education: _education, ...v11 } = createNewLife(21);
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 11, savedAt: '2026-10-27T00:00:00.000Z', state: v11 }));
+    const loaded = loadGame(storage);
+    expect(loaded.status === 'ok' && loaded.state.education).toEqual({ history: [] });
+  });
+
+  it.each([
+    ['no history', { next: 'primary' }],
+    ['an unknown program', { history: [{ program: 'university', from: 80 }] }],
+    ['an unknown result', { history: [{ program: 'primary', from: 80, to: 90, result: 'expelled' }] }],
+    ['an unknown next program', { history: [], next: 'university' }],
+  ])('rejects a save with education with %s (D74)', (_label, education) => {
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: { ...createNewLife(3), education } }));
+    expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
+  });
+
   it.each([
     ['no periods', { periods: [] }],
     ['an unknown relation', { periods: [{ relation: 'partner', from: 80 }] }],
