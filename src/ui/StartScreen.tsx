@@ -47,10 +47,7 @@ export function StartScreen({ resumable, loadError, onStart, onResume }: Props) 
       {resumable !== null && (
         <section className="card">
           <p>
-            <strong>
-              {resumable.name.first} {resumable.name.last}
-            </strong>{' '}
-            · {formatAge(resumable.ageInMonths)}
+            <strong>{resumable.nickname}</strong> · {t(`sex.${resumable.sex}`)} · {formatAge(resumable.ageInMonths)}
           </p>
           <button type="button" className="button button--primary" onClick={onResume}>
             {t('start.continue')}

@@ -31,7 +31,7 @@ export function TraitRevealDialog({ game, onClose }: Props) {
   return (
     <dialog ref={dialogRef} className="dialog" aria-labelledby="trait-reveal-title" onClose={onClose}>
       <h2 id="trait-reveal-title">{t('traitReveal.title')}</h2>
-      <p className="muted">{t('traitReveal.intro', { name: game.name.first })}</p>
+      <p className="muted">{t('traitReveal.intro', { name: game.nickname })}</p>
       <ul className="trait-list">
         {TRAIT_KEYS.map((key) => {
           const value = game.traits[key];

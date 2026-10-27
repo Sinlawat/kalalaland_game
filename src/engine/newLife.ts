@@ -7,7 +7,7 @@ import { BALANCE } from '../data/balance';
 import names from '../data/names.json';
 import { createRng, normalizeSeed, type Rng } from './rng';
 import { snapshotOf } from './snapshot';
-import { REGION_IDS, type GameState } from './types';
+import { REGION_IDS, SEXES, type GameState } from './types';
 
 /**
  * Average of two uniform draws → a triangular distribution: values near
@@ -32,14 +32,19 @@ export function createNewLife(seed: number): GameState {
 
   // The ORDER of random draws below is part of the save format in a sense:
   // reordering lines changes which life a given seed produces.
-  const name = { first: rng.pick(names.first), last: rng.pick(names.last) };
+  // D71: sex, then a nickname from that sex's list. Still two draws, as the
+  // old first and last name were, so every value drawn after them (and so
+  // every life a seed gives) stays what it was.
+  const sex = rng.pick(SEXES);
+  const nickname = rng.pick(names[sex]);
   const birthMonth = rng.int(1, 12);
   const birthRegionId = rng.pick(REGION_IDS);
 
   const state: GameState = {
     seed: normalizedSeed,
     rngState: 0, // filled in at the end, after all draws
-    name,
+    sex,
+    nickname,
     ageInMonths: 0,
     birthMonth,
     birthRegionId,

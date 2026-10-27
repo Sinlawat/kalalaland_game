@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import names from '../data/names.json';
 import { createNewLife } from './newLife';
-import { REGION_IDS } from './types';
+import { createRng, normalizeSeed } from './rng';
+import { REGION_IDS, SEXES } from './types';
 
 describe('createNewLife', () => {
   it('creates the same person from the same seed', () => {
@@ -37,7 +39,6 @@ describe('createNewLife', () => {
       expect(life.birthMonth).toBeGreaterThanOrEqual(1);
       expect(life.birthMonth).toBeLessThanOrEqual(12);
       expect(REGION_IDS).toContain(life.birthRegionId);
-      expect(life.name.first.length).toBeGreaterThan(0);
     }
   });
 
@@ -76,5 +77,42 @@ describe('createNewLife', () => {
   it('produces every region over enough seeds', () => {
     const regions = new Set(Array.from({ length: 200 }, (_, seed) => createNewLife(seed).birthRegionId));
     expect(regions).toEqual(new Set(REGION_IDS));
+  });
+
+  describe('D71: sex and nickname', () => {
+    it('draws both sexes about equally', () => {
+      let male = 0;
+      const lives = 2000;
+      for (let seed = 0; seed < lives; seed++) if (createNewLife(seed).sex === 'male') male++;
+      // 50% ± 4 points: wide enough never to flake, narrow enough to catch a bias.
+      expect(male / lives).toBeGreaterThan(0.46);
+      expect(male / lives).toBeLessThan(0.54);
+    });
+
+    it('takes the nickname from the list for the sex', () => {
+      for (let seed = 0; seed < 300; seed++) {
+        const life = createNewLife(seed);
+        expect(SEXES).toContain(life.sex);
+        expect(names[life.sex]).toContain(life.nickname);
+      }
+    });
+
+    it('uses every nickname of both lists over enough seeds', () => {
+      const seen = new Set<string>();
+      for (let seed = 0; seed < 5000; seed++) {
+        const life = createNewLife(seed);
+        seen.add(`${life.sex}:${life.nickname}`);
+      }
+      expect(seen.size).toBe(names.male.length + names.female.length);
+    });
+
+    it('uses exactly two random draws, so every later value a seed gives is unchanged', () => {
+      for (const seed of [0, 1, 42, 123456, 4294967295]) {
+        const rng = createRng(normalizeSeed(seed));
+        rng.next();
+        rng.next();
+        expect(createNewLife(seed).birthMonth).toBe(rng.int(1, 12));
+      }
+    });
   });
 });

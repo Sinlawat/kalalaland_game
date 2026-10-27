@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { advanceOneMonth, advanceUntilStop } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import type { Habits } from '../engine/types';
 import { CURRENT_SAVE_VERSION, deleteSave, loadGame, SAVE_KEY, saveGame, type SaveStorage } from './save';
 
 /** In-memory stand-in for localStorage. */
@@ -57,35 +56,30 @@ describe('save / load', () => {
   it.each([
     ['not JSON', '{oops'],
     ['JSON without a version', '{"state":{}}'],
-    ['a valid envelope with a broken state', '{"saveVersion":8,"state":{"seed":"abc"}}'],
+    ['a valid envelope with a broken state', `{"saveVersion":${CURRENT_SAVE_VERSION},"state":{"seed":"abc"}}`],
     ['a JSON array', '[1,2,3]'],
   ])('reports corrupt for %s', (_label, raw) => {
     storage.setItem(SAVE_KEY, raw);
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
   });
 
-  // D65 (save version 8): knowledge became four skills. Older lives cannot be
-  // converted, so the game says so and the player starts a new life.
-  it.each([1, 2, 3, 4, 5, 6, 7])('reports outdated for a save from version %i', (version) => {
+  // D65 (version 8) split knowledge into skills; D71 (version 10) replaced the
+  // name with a sex and a nickname. Older lives cannot be converted, so the
+  // game says so and the player starts a new life.
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])('reports outdated for a save from version %i', (version) => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: version, savedAt: '2026-10-22T00:00:00.000Z', state: createNewLife(1) }));
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'outdated' });
   });
 
-  it('upgrades a version 8 save: every recorded set of habits gets smoking and drinking at "none" (D69)', () => {
-    let life = createNewLife(21);
-    for (let i = 0; i < 8; i++) life = advanceUntilStop(life).state; // past Grade 1: habits recorded per month
-    const strip = (habits: Habits) => {
-      const { smoking: _s, drinking: _d, ...old } = habits;
-      return old;
-    };
-    const v8 = {
-      ...life,
-      habits: strip(life.habits),
-      yearHabits: life.yearHabits.map(strip),
-      history: life.history.map((year) => (year.habits ? { ...year, habits: year.habits.map(strip) } : year)),
-    };
-    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 8, savedAt: '2026-10-26T00:00:00.000Z', state: v8 }));
-    expect(loadGame(storage)).toEqual({ status: 'ok', state: life });
+  it.each([
+    ['no sex', { sex: undefined }],
+    ['an unknown sex', { sex: 'other' }],
+    ['no nickname', { nickname: undefined }],
+    ['an empty nickname', { nickname: '' }],
+  ])('rejects a save with %s (D71)', (_label, broken) => {
+    const life = { ...createNewLife(3), ...broken };
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: life }));
+    expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
   });
 
   it('rejects a save whose habits miss a habit', () => {

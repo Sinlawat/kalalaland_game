@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, SKILL_KEYS, TRAIT_KEYS, type HabitKey } from '../engine/types';
+import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, SEXES, SKILL_KEYS, TRAIT_KEYS, type HabitKey } from '../engine/types';
 import { hasMessage, t } from './i18n';
 
 describe('t', () => {
@@ -26,6 +26,7 @@ describe('th.json completeness', () => {
   it('has every region, death cause, stat, trait description and habit option', () => {
     const keys = [
       ...REGION_IDS.map((id) => `region.${id}`),
+      ...SEXES.map((sex) => `sex.${sex}`),
       ...DEATH_CAUSES.map((cause) => `death.cause.${cause}`),
       ...[...TRAIT_KEYS, ...SKILL_KEYS, 'familyWealth', 'familyWarmth', 'workStress',
         'financialStress', 'physicalHealth', 'mentalHealth', 'looks', 'fame'].map((s) => `stat.${s}`),

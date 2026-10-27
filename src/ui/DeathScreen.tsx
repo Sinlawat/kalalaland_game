@@ -48,7 +48,7 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
   return (
     <main className="screen">
       <section className="card death">
-        <h1>{t('death.title', { name: `${game.name.first} ${game.name.last}`, age })}</h1>
+        <h1>{t('death.title', { name: game.nickname, age })}</h1>
         <p>{t('death.cause', { cause: t(`death.cause.${game.death.cause}`) })}</p>
         <p className="muted small">{t('status.seed', { seed: game.seed })}</p>
       </section>

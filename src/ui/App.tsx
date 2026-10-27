@@ -46,11 +46,9 @@ export function App() {
     <main className="screen screen--wide">
       <header className="topbar card">
         <div>
-          <h1 className="topbar__name">
-            {game.name.first} {game.name.last}
-          </h1>
+          <h1 className="topbar__name">{game.nickname}</h1>
           <p className="muted">
-            {formatAge(game.ageInMonths)} · {residenceLabel(game.residence)}
+            {t(`sex.${game.sex}`)} · {formatAge(game.ageInMonths)} · {residenceLabel(game.residence)}
           </p>
           <div className="topbar__actions">
             <button type="button" className="button button--small" onClick={() => setResidenceOpen(true)}>

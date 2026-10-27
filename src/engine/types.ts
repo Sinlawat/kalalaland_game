@@ -194,6 +194,11 @@ export interface Death {
   ageInMonths: number;
 }
 
+// ── Sex (D71) ───────────────────────────────────────────────────────────────
+/** Drawn at birth, 50:50. Picks which nickname list the name comes from. */
+export const SEXES = ['male', 'female'] as const;
+export type Sex = (typeof SEXES)[number];
+
 // ── Whole game state ────────────────────────────────────────────────────────
 export interface GameState {
   /** The seed the life started from (shown to the player, used to replay). */
@@ -201,7 +206,10 @@ export interface GameState {
   /** Current RNG state; advanced every time the engine draws a random number. */
   rngState: number;
 
-  name: { first: string; last: string };
+  /** D71: drawn at birth (save version 10). */
+  sex: Sex;
+  /** D71: a Thai nickname only, from the list for the sex; no first or last name. */
+  nickname: string;
   ageInMonths: number;
   /** Calendar month of birth, 1–12. Used later for seasonal events. */
   birthMonth: number;

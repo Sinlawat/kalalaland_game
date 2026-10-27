@@ -18,6 +18,9 @@
   "status.age": "อายุ {years} ปี {months} เดือน",
   "status.seed": "seed {seed}",
 
+  "sex.male": "ชาย",
+  "sex.female": "หญิง",
+
   "region.city": "กลางเมือง",
   "region.suburb": "ชานเมือง",
   "region.rural": "ชนบท",

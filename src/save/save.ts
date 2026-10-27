@@ -11,12 +11,16 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import type { GameState } from '../engine/types';
+import { SEXES, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 9;
-/** Saves older than this cannot be upgraded (D65); the player starts a new life. */
-export const OLDEST_LOADABLE_SAVE_VERSION = 8;
+export const CURRENT_SAVE_VERSION = 10;
+/**
+ * Saves older than this cannot be upgraded; the player starts a new life.
+ * D71 (version 10): the first and last name became a sex and a nickname.
+ * A nickname cannot be made from an old name, so older lives are outdated.
+ */
+export const OLDEST_LOADABLE_SAVE_VERSION = 10;
 
 /** The subset of the browser Storage API we use. */
 export type SaveStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -44,30 +48,9 @@ export type SaveResult = { status: 'ok' } | { status: 'error'; reason: 'unwritab
  * - Each step is tested with a real save of the older version.
  */
 const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
-  // Saves before 8 are "outdated": D65 split knowledge into four skills, a
-  // change older lives cannot be converted to.
+  // Saves before 10 are "outdated" (D71: a nickname and sex instead of a name).
   // New steps go here: key N upgrades a version-N state to version N+1.
-  8: addAddictionHabits,
 };
-
-/**
- * 8 → 9 (D69): smoking and drinking became habits. Nobody was addicted
- * before, so every recorded set of habits gets both at 'none': the current
- * habits, the running year's months and every closed year's months.
- */
-function addAddictionHabits(state: unknown): unknown {
-  if (!isRecord(state)) return state;
-  const withNone = (habits: unknown): unknown => (isRecord(habits) ? { smoking: 'none', drinking: 'none', ...habits } : habits);
-  const everyMonth = (list: unknown): unknown => (Array.isArray(list) ? list.map(withNone) : list);
-  return {
-    ...state,
-    habits: withNone(state.habits),
-    yearHabits: everyMonth(state.yearHabits),
-    history: Array.isArray(state.history)
-      ? state.history.map((year: unknown) => (isRecord(year) && year.habits !== undefined ? { ...year, habits: everyMonth(year.habits) } : year))
-      : state.history,
-  };
-}
 
 function migrate(state: unknown, fromVersion: number): unknown {
   let current = state;
@@ -100,7 +83,9 @@ export function isValidGameState(value: unknown): value is GameState {
     isRecord(value.residence) &&
     typeof value.residence.regionId === 'string' &&
     typeof value.residence.homeId === 'string' &&
-    isRecord(value.name) &&
+    typeof value.nickname === 'string' &&
+    value.nickname.length > 0 &&
+    (SEXES as readonly unknown[]).includes(value.sex) &&
     hasNumbers(value.traits, ['discipline', 'resilience', 'riskTaking', 'imagination']) &&
     hasNumbers(value.environment, ['familyWealth', 'familyWarmth', 'workStress', 'financialStress']) &&
     isRecord(value.habits) &&
