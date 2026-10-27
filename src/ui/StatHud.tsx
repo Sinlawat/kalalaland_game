@@ -61,12 +61,14 @@ function HudRow({ item, flash }: { item: HudItem; flash: StatFlashes[keyof StatF
         </span>
       ) : (
         // A new key per flash restarts the CSS animation when the same stat changes twice in a row.
-        <span key={flash?.token ?? 'still'} className={`hud__value${tone ? ` hud__value--${tone}` : ''}`}>
+        // Keys are prefixed: the number and the "+2" beside it are siblings, and two siblings with
+        // the same key make React keep old numbers on screen instead of replacing them.
+        <span key={`value-${flash?.token ?? 'still'}`} className={`hud__value${tone ? ` hud__value--${tone}` : ''}`}>
           {item.value}
         </span>
       )}
       {flash && tone && (
-        <span key={flash.token} className={`hud__delta hud__delta--${tone}`} aria-hidden="true">
+        <span key={`delta-${flash.token}`} className={`hud__delta hud__delta--${tone}`} aria-hidden="true">
           {formatHudDelta(flash.amount)}
         </span>
       )}
