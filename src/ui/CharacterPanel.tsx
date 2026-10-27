@@ -50,15 +50,17 @@ export function CharacterPanel({ game }: { game: GameState }) {
             </button>
           )}
         </div>
-        {CONDITION_KEYS.map((key) => (
-          <StatBar
-            key={key}
-            label={t(`stat.${key}`)}
-            value={game.condition[key]}
-            change={lastYearChange(game, key)}
-            flash={flashes[key]}
-          />
-        ))}
+        <div className="stat-list">
+          {CONDITION_KEYS.map((key) => (
+            <StatBar
+              key={key}
+              label={t(`stat.${key}`)}
+              value={game.condition[key]}
+              change={lastYearChange(game, key)}
+              flash={flashes[key]}
+            />
+          ))}
+        </div>
         {/* The ▲/▼ lags behind events by up to a year; say what it measures. */}
         {lastYear !== undefined && (
           <p className="muted small stat-hint">{t('stat.changeHint', { from: lastYear.age - 1, to: lastYear.age })}</p>
@@ -70,25 +72,29 @@ export function CharacterPanel({ game }: { game: GameState }) {
           (someone great at one thing would look average). */}
       <section className="card">
         <h2>{t('layer.skills')}</h2>
-        {SKILL_KEYS.map((key) => (
-          <StatBar
-            key={key}
-            label={t(`stat.${key}`)}
-            value={game.skills[key]}
-            change={lastYearChange(game, key)}
-            flash={flashes[key]}
-          />
-        ))}
+        <div className="stat-list">
+          {SKILL_KEYS.map((key) => (
+            <StatBar
+              key={key}
+              label={t(`stat.${key}`)}
+              value={game.skills[key]}
+              change={lastYearChange(game, key)}
+              flash={flashes[key]}
+            />
+          ))}
+        </div>
       </section>
 
       <section className="card">
         <h2>{t('layer.outcome')}</h2>
-        <StatBar
-          label={t('stat.looks')}
-          value={game.outcome.looks}
-          change={lastYearChange(game, 'looks')}
-          flash={flashes.looks}
-        />
+        <div className="stat-list">
+          <StatBar
+            label={t('stat.looks')}
+            value={game.outcome.looks}
+            change={lastYearChange(game, 'looks')}
+            flash={flashes.looks}
+          />
+        </div>
       </section>
 
       {/* Traits and environment have no yearly log, so no ▲/▼; events still flash them.
@@ -96,9 +102,11 @@ export function CharacterPanel({ game }: { game: GameState }) {
       <section className="card">
         <h2>{t('layer.traits')}</h2>
         {knowsOwnTraits(game) ? (
-          TRAIT_KEYS.map((key) => (
-            <StatBar key={key} label={t(`stat.${key}`)} value={game.traits[key]} flash={flashes[key]} />
-          ))
+          <div className="stat-list">
+            {TRAIT_KEYS.map((key) => (
+              <StatBar key={key} label={t(`stat.${key}`)} value={game.traits[key]} flash={flashes[key]} />
+            ))}
+          </div>
         ) : (
           <>
             <p>{t('traits.locked', { age: BALANCE.earlyChildhood.ownLifestyleFromAge })}</p>
@@ -109,9 +117,11 @@ export function CharacterPanel({ game }: { game: GameState }) {
 
       <section className="card">
         <h2>{t('layer.environment')}</h2>
-        {ENVIRONMENT_KEYS.map((key) => (
-          <StatBar key={key} label={t(`stat.${key}`)} value={game.environment[key]} flash={flashes[key]} />
-        ))}
+        <div className="stat-list">
+          {ENVIRONMENT_KEYS.map((key) => (
+            <StatBar key={key} label={t(`stat.${key}`)} value={game.environment[key]} flash={flashes[key]} />
+          ))}
+        </div>
       </section>
     </div>
   );

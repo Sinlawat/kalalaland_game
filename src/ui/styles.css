@@ -81,9 +81,11 @@ p { margin: 0 0 8px; }
 
 /* Play screen. grid-template-areas lets the visual position change per
    screen size while the HTML order (= reading order) stays the same.
-   Phone:   scene → summary → stats → habits (one column)
-   Tablet:  scene on top, stats | habits, summary below
-   Desktop: stats (left) | scene + summary (center) | habits (right) */
+   D75: the scene runs the full width under the playback bar, with the stats
+   at a glance over its corners; the detailed stat cards follow the friends
+   card in the right column.
+   Phone:          scene → summary → habits (one column)
+   Tablet/desktop: scene on top, summary | habits below */
 .play {
   display: grid;
   gap: var(--gap);
@@ -91,39 +93,34 @@ p { margin: 0 0 8px; }
   grid-template-areas:
     'scene'
     'summary'
-    'stats'
     'habits';
   align-items: start;
 }
 .play__scene { grid-area: scene; }
 .play__summary { grid-area: summary; }
-.play__stats { grid-area: stats; }
 .play__habits { grid-area: habits; }
 
 @media (min-width: 760px) {
   .play {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    /* The right column is wide enough for the longest stat name on one line. */
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
     grid-template-areas:
       'scene   scene'
-      'stats   habits'
-      'summary summary';
+      'summary habits';
   }
 }
 
-@media (min-width: 1100px) {
-  .play {
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.35fr) minmax(0, 0.8fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'stats scene   habits'
-      'stats summary habits';
-  }
+/* ── Scene frame (future pixel art) + stats at a glance (D75) ─────────── */
+/* Phone: the picture, then the two stat boxes side by side below it. */
+.scene {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
-
-/* ── Scene placeholder (future pixel art) ─────────────────────────────── */
-.scene { padding: 8px; }
 .scene__canvas {
-  aspect-ratio: 16 / 9;
+  grid-column: 1 / -1;
+  aspect-ratio: 3 / 1;
   border: 2px dashed var(--border);
   border-radius: 8px;
   display: grid;
@@ -132,6 +129,88 @@ p { margin: 0 0 8px; }
   padding: 16px;
   /* Ready for pixel art: keep pixels sharp when the image is scaled up. */
   image-rendering: pixelated;
+}
+.hud {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+/* Wider screens: the boxes sit over the picture's top corners. */
+@media (min-width: 760px) {
+  .scene { position: relative; display: block; }
+  /* Tall enough for the left box (three groups, seven values). A fixed
+     height, not the 3:1 ratio: with a minimum height the ratio would make
+     the frame wider than the screen on a tablet. */
+  .scene__canvas { aspect-ratio: auto; height: clamp(330px, 30vw, 420px); }
+  .hud {
+    position: absolute;
+    top: 20px;
+    background: color-mix(in srgb, var(--surface) 93%, transparent);
+  }
+  .hud--left { left: 20px; }
+  .hud--right { right: 20px; }
+}
+.hud__group { display: grid; gap: 2px; }
+.hud__title { margin: 0; font-size: 0.72rem; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.hud__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.hud__item { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+.hud__emoji { width: 1.5em; text-align: center; font-size: 1.05rem; line-height: 1; }
+.hud__value {
+  min-width: 2.2ch;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hud__value--locked { font-weight: 400; font-size: 0.85rem; }
+/* An event just changed the value (same timing as .stat__flash). */
+.hud__value--up { animation: hud-flash-up 2.5s ease-out forwards; }
+.hud__value--down { animation: hud-flash-down 2.5s ease-out forwards; }
+.hud__delta {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  animation: hud-pop 2.5s ease-out forwards;
+}
+.hud__delta--up { color: var(--up); }
+.hud__delta--down { color: var(--down); }
+@keyframes hud-flash-up {
+  0%, 70% { background: color-mix(in srgb, var(--up) 22%, transparent); color: var(--up); }
+  100% { background: transparent; color: var(--text); }
+}
+@keyframes hud-flash-down {
+  0%, 70% { background: color-mix(in srgb, var(--down) 22%, transparent); color: var(--down); }
+  100% { background: transparent; color: var(--text); }
+}
+@keyframes hud-pop {
+  0% { opacity: 0; transform: translateY(6px); }
+  12% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+/* Reduced motion: the colour and the "+2" appear and go (a timer removes them), nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .hud__delta { animation: none; }
+  .hud__value--up { animation: none; background: color-mix(in srgb, var(--up) 22%, transparent); color: var(--up); }
+  .hud__value--down { animation: none; background: color-mix(in srgb, var(--down) 22%, transparent); color: var(--down); }
+}
+
+/* Text only screen readers read (the stat names in the boxes above). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .panels { display: grid; gap: var(--gap); }
@@ -188,11 +267,26 @@ p { margin: 0 0 8px; }
 /* ── Stat bars ────────────────────────────────────────────────────────── */
 .stat {
   display: grid;
-  /* label | bar | value | change (fixed width so bars line up even when empty) */
-  grid-template-columns: 10em minmax(60px, 1fr) 2.5ch 7ch;
+  /* label | bar | value | change. D75: the label never wraps; the bar takes
+     what is left (at least 36px). */
+  grid-template-columns: max-content minmax(36px, 1fr) 2.5ch 7ch;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 0;
+}
+.stat__label { white-space: nowrap; }
+/* The stats of one card share their columns, so the bars line up even
+   though the label column is only as wide as the card's longest name. */
+@supports (grid-template-columns: subgrid) {
+  .stat-list { display: grid; grid-template-columns: max-content minmax(36px, 1fr) 2.5ch 7ch; column-gap: 8px; }
+  .stat-list > .stat { grid-column: 1 / -1; grid-template-columns: subgrid; }
+}
+/* A phone is too narrow for the longest names on one line next to a bar:
+   there the name may wrap and the bar keeps a fixed width. */
+@media (max-width: 419px) {
+  .stat, .stat-list { grid-template-columns: minmax(0, 1fr) 56px 2.5ch 7ch; }
+  .stat-list > .stat { grid-template-columns: subgrid; }
+  .stat__label { white-space: normal; }
 }
 /* The track clips its children, so the fill needs no rounded corners of its own. */
 .stat__track { position: relative; height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; }

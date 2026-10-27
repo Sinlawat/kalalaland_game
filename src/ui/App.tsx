@@ -73,20 +73,18 @@ export function App() {
           order here is the reading order for screen readers and phones. */}
       <div className="play">
         <div className="play__scene">
-          <SceneFrame />
+          <SceneFrame game={game} />
         </div>
 
         <div className="play__summary">
           <LifeTimeline game={game} />
         </div>
 
-        <div className="play__stats">
-          <CharacterPanel game={game} />
-        </div>
-
+        {/* D75: the stats at a glance are over the scene; the detailed cards follow the friends card. */}
         <div className="play__habits">
           <LifestylePanel game={game} />
           <FriendsCard game={game} />
+          <CharacterPanel game={game} />
         </div>
       </div>
 
