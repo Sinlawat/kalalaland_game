@@ -25,6 +25,7 @@ import { advanceUntilStop, firstAvailableChoice, simulateWholeLife, type Chooser
 import { createNewLife } from './newLife';
 import { createRng } from './rng';
 import { makeState } from './testUtils';
+import { currentFriends } from './people';
 import { SCHOOL_FLAGS, SCHOOL_IDS, type GameState } from './types';
 
 /** A valid event to start from; each test changes only what it checks. */
@@ -1304,6 +1305,119 @@ describe('real events over many lives (Monte Carlo)', () => {
     });
   });
 
+  describe('friends (D72)', () => {
+    const relationAt = (person: GameState['people'][number], age: number) =>
+      person.periods.find((period) => period.from <= age && (period.to === undefined || age < period.to))?.relation;
+    const schoolStartAt = (end: GameState) => end.eventHistory.find((r) => r.id.startsWith('school_start_'))?.ageInMonths;
+    const GRADUATION = ['social_graduation', 'social_graduation_best_friend'];
+    /** Never picks a choice that makes or keeps a friend, when another choice is open. */
+    const loner: Chooser = (state, event) => {
+      const open = event.choices!.filter((c) => lockReasons(c, state).length === 0);
+      const keeps = (c: (typeof open)[number]) =>
+        c.effects.person?.befriend !== undefined || ['apologize', 'meet_yearly', 'make_effort', 'keep_in_touch', 'join_in', 'talk_adult', 'listen'].includes(c.id);
+      return (open.find((c) => !keeps(c)) ?? open[0]!).id;
+    };
+    const loners = Array.from({ length: 300 }, (_, seed) => {
+      let state = createNewLife(seed);
+      while (state.death === null && state.ageInMonths < 19 * 12) state = advanceUntilStop(state, { chooser: loner }).state;
+      return state;
+    });
+    const all = [...ends, ...loners];
+
+    it('the rules hold in every life: one best friend at a time, periods back to back, an ending always has a reason', () => {
+      for (const end of all) {
+        const ages = new Set<number>(end.people.flatMap((p) => p.periods.flatMap((period) => [period.from, ...(period.to !== undefined ? [period.to] : [])])));
+        for (const age of ages) expect(end.people.filter((p) => relationAt(p, age) === 'best_friend').length).toBeLessThanOrEqual(1);
+        for (const person of end.people) {
+          expect(person.periods.length).toBeGreaterThan(0);
+          person.periods.forEach((period, index) => {
+            if (period.to !== undefined) expect(period.to).toBeGreaterThanOrEqual(period.from);
+            if (index > 0) expect(period.from).toBe(person.periods[index - 1]!.to);
+            if (index < person.periods.length - 1) expect(period.to).toBeDefined();
+          });
+          expect(person.endReason !== undefined).toBe(person.periods.at(-1)!.to !== undefined);
+        }
+      }
+    });
+
+    it('names are never shared in one life, nor with the character; every person was met in a recorded event', () => {
+      for (const end of all) {
+        const names = end.people.map((p) => p.nickname);
+        expect(new Set(names).size).toBe(names.length);
+        expect(names).not.toContain(end.nickname);
+        expect(new Set(end.people.map((p) => p.id)).size).toBe(end.people.length);
+        for (const person of end.people) {
+          const met = end.eventHistory.find((r) => r.person?.id === person.id);
+          expect(met?.id).toBe(person.metVia);
+          expect(met?.ageInMonths).toBe(person.periods[0]!.from);
+        }
+      }
+    });
+
+    it('an event about the best friend is always about whoever was the best friend then', () => {
+      let checked = 0;
+      for (const end of all) {
+        for (const record of end.eventHistory) {
+          if (findEvent(record.id)?.about !== 'best_friend') continue;
+          const person = end.people.find((p) => p.id === record.person?.id);
+          expect(person, record.id).toBeDefined();
+          // At the start of that month: the event itself may have ended or changed the friendship.
+          expect(relationAt(person!, record.ageInMonths - 1) ?? relationAt(person!, record.ageInMonths), record.id).toBe('best_friend');
+          checked += 1;
+        }
+      }
+      expect(checked).toBeGreaterThan(500);
+    });
+
+    it('in March of ม.6 everyone parts ways; only a best friend the player chose to keep is still there', () => {
+      let checked = 0;
+      for (const end of all) {
+        const start = schoolStartAt(end);
+        if (start === undefined || end.ageInMonths <= start + 142) continue;
+        const parting = end.eventHistory.filter((r) => GRADUATION.includes(r.id));
+        expect(parting).toHaveLength(1);
+        expect(parting[0]!.ageInMonths).toBe(start + 142);
+        expect(calendarMonth({ birthMonth: end.birthMonth, ageInMonths: start + 142 })).toBe(3);
+        const stillThere = end.people.filter((p) => p.periods.at(-1)!.to === undefined || p.periods.at(-1)!.to! > start + 142);
+        if (parting[0]!.choiceId === 'meet_yearly') {
+          expect(stillThere.map((p) => p.id)).toEqual([parting[0]!.person!.id]);
+        } else {
+          expect(stillThere).toEqual([]);
+        }
+        checked += 1;
+      }
+      expect(checked).toBeGreaterThan(600);
+    });
+
+    it.each([
+      'school_m1_start_top_public',
+      'school_m1_start_private',
+      'school_m1_start_international',
+      'family_live_with_grandparents',
+      'family_live_with_grandparents_after_job_loss',
+      'school_fees_burden',
+    ])('changing school (%s) ends the old classmates and leaves the best friend "growing apart"', (eventId) => {
+      const friend = (id: number, relation: 'friend' | 'best_friend') => ({
+        id, nickname: `n${id}`, sex: 'male' as const, ageGapMonths: 0, metVia: 'x', tags: [], periods: [{ relation, from: 80 }],
+      });
+      const state = makeState({ ageInMonths: 12 * 12, flags: ['school_private', 'plan_m1_exam'], people: [friend(1, 'best_friend'), friend(2, 'friend')] });
+      applyEvent(state, findEvent(eventId)!);
+      expect(state.people[0]!.endReason).toBeUndefined();
+      expect(state.people[0]!.tags).toEqual(['growing_apart']);
+      expect(state.people[1]!.endReason).toBe('changed_school');
+    });
+
+    it('the player\'s choices matter: making and keeping friends gives more friends than turning them down', () => {
+      const grown = (lives: GameState[]) => lives.filter((end) => end.ageInMonths >= 19 * 12);
+      const mean = (lives: GameState[]) => lives.reduce((sum, end) => sum + end.people.length, 0) / lives.length;
+      const kept = (lives: GameState[]) => lives.filter((end) => currentFriends(end).length > 0).length / lives.length;
+      // `ends` ran whole lives (first open choice, which makes and keeps friends): count friends met before 19, the loners' window.
+      const friendlyAt19 = grown(ends).map((end) => ({ ...end, people: end.people.filter((p) => p.periods[0]!.from < 19 * 12) }));
+      expect(mean(friendlyAt19)).toBeGreaterThan(mean(grown(loners)) * 1.3);
+      expect(kept(grown(loners))).toBeLessThan(0.1);
+    });
+  });
+
   it('milestones everyone goes through happen to every child, once, inside their age range (D67 window)', () => {
     const MILESTONES: [string[], number, number][] = [
       [['growth_first_word', 'growth_first_word_unnoticed'], 1, 1],
@@ -1331,9 +1445,17 @@ describe('real events over many lives (Monte Carlo)', () => {
     expect(share).toBeLessThan(0.15); // 1% a year over ages 10–17 ≈ 8%; it was 99% with the shared pool
   });
 
+  // Its own, larger sample up to age 10 (cheap): with ~120 children per group, the 500 whole lives
+  // above were too few for a ratio test, and adding unrelated events (D72) flipped it by chance.
+  const childhoods = Array.from({ length: 2000 }, (_, seed) => {
+    let state = createNewLife(seed + 20000);
+    while (state.death === null && state.ageInMonths < 10 * 12) state = advanceUntilStop(state).state;
+    return state;
+  });
+
   it('timid children are bullied more often than bold ones (D68: chanceBy risk-taking low)', () => {
     const rate = (keep: (riskTaking: number) => boolean) => {
-      const group = ends.filter((end) => end.ageInMonths >= 10 * 12 && keep(createNewLife(end.seed).traits.riskTaking));
+      const group = childhoods.filter((end) => end.ageInMonths >= 10 * 12 && keep(createNewLife(end.seed).traits.riskTaking));
       return group.filter((end) => ids(end).includes('school_bullied')).length / group.length;
     };
     expect(rate((r) => r < 40)).toBeGreaterThan(rate((r) => r >= 60) * 1.5);

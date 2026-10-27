@@ -1058,6 +1058,16 @@
         "school_public",
         "school_scholarship",
         "school_top_public"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -1122,6 +1132,16 @@
         "school_public",
         "school_scholarship",
         "school_top_public"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -1570,6 +1590,7 @@
   },
   {
     "id": "school_new_friends",
+    "about": "new_person",
     "conditions": {
       "ageMin": 6,
       "ageMax": 7,
@@ -1599,6 +1620,9 @@
         "effects": {
           "stats": {
             "communication": 2
+          },
+          "person": {
+            "befriend": "friend"
           }
         }
       },
@@ -1608,6 +1632,9 @@
           "stats": {
             "communication": 1,
             "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "best_friend"
           }
         }
       },
@@ -2187,6 +2214,16 @@
         "school_top_public",
         "school_scholarship",
         "school_local"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -3878,6 +3915,16 @@
         "school_scholarship",
         "school_public",
         "school_local"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -3916,6 +3963,16 @@
         "school_scholarship",
         "school_public",
         "school_local"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -3954,6 +4011,16 @@
         "school_scholarship",
         "school_public",
         "school_local"
+      ],
+      "friends": [
+        {
+          "who": "friends",
+          "end": "changed_school"
+        },
+        {
+          "who": "best_friend",
+          "tag": "growing_apart"
+        }
       ]
     }
   },
@@ -4976,6 +5043,1089 @@
           "stats": {
             "mentalHealth": 1
           }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_new_best_friend",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "bestFriend": false
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "best",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2
+          },
+          "person": {
+            "befriend": "best_friend"
+          }
+        }
+      },
+      {
+        "id": "casual",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_group_accepted",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 73
+      },
+      "stats": [
+        {
+          "stat": "communication",
+          "op": ">=",
+          "value": 13.8
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_group_rejected",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 1
+      },
+      "person": {
+        "befriend": "friend"
+      }
+    }
+  },
+  {
+    "id": "social_group_rejected",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 73
+      },
+      "stats": [
+        {
+          "stat": "communication",
+          "op": "<",
+          "value": 13.8
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_group_accepted",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "try_other",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "riskTaking",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "alone",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "traits": {
+            "resilience": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_fell_out",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 36,
+    "choices": [
+      {
+        "id": "apologize",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "wait",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      },
+      {
+        "id": "break",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "person": {
+            "end": "fell_out"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_cyberbullied",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "tell_adult",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      },
+      {
+        "id": "ignore",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 55
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "traits": {
+            "resilience": 1
+          }
+        }
+      },
+      {
+        "id": "keep_quiet",
+        "effects": {
+          "stats": {
+            "mentalHealth": -4
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 2
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_defend_classmate",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "school_bullied",
+        "social_defend_classmate_was_bullied",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "step_in",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "riskTaking",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "tell_teacher",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "walk_past",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_defend_classmate_was_bullied",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "monthsSince": {
+        "events": [
+          "school_bullied"
+        ],
+        "min": 12
+      },
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_defend_classmate",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "step_in",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "riskTaking",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "tell_teacher",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "walk_past",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_friend_confides",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 10,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "listen",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 45
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 2,
+            "mentalHealth": -1
+          }
+        }
+      },
+      {
+        "id": "suggest_adult",
+        "effects": {
+          "stats": {
+            "communication": 1
+          }
+        }
+      },
+      {
+        "id": "change_subject",
+        "effects": {
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_copy_exam",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "friendsMin": 1
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "tutor",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 16
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "communication": 1
+          }
+        }
+      },
+      {
+        "id": "refuse",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "traits": {
+            "discipline": 1
+          }
+        }
+      },
+      {
+        "id": "let_copy",
+        "effects": {
+          "stats": {
+            "academic": -1
+          },
+          "traits": {
+            "discipline": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_rumor",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "confront",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 16
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 1
+          }
+        }
+      },
+      {
+        "id": "ignore",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 55
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      },
+      {
+        "id": "keep_inside",
+        "effects": {
+          "stats": {
+            "mentalHealth": -3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_best_friend_moves",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 8,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "tagsNone": [
+          "growing_apart"
+        ]
+      }
+    },
+    "frequency": "uncommon",
+    "once": false,
+    "cooldownMonths": 24,
+    "choices": [
+      {
+        "id": "keep_in_touch",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      },
+      {
+        "id": "let_go",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "person": {
+            "end": "moved_away"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_different_wealth_rich",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 10,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 40
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "flagsNone": [
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_different_wealth_poor",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "just_friends",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "motivated",
+        "effects": {
+          "traits": {
+            "discipline": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "compare",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_different_wealth_poor",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 10,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 60
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_different_wealth_rich",
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "invite",
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend"
+          }
+        }
+      },
+      {
+        "id": "awkward",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "social_drifting_apart",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 9,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "tagsAll": [
+          "growing_apart"
+        ]
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "make_effort",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 15
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "untag": "growing_apart"
+          }
+        }
+      },
+      {
+        "id": "let_it_be",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "person": {
+            "end": "drifted_apart"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_best_friend_new_group",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "tagsNone": [
+          "growing_apart"
+        ]
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "join_in",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 16
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "let_go",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_privacy",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "speak_up",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "riskTaking",
+              "op": ">=",
+              "value": 45
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "let_it_go",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_controlling_friend",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "talk_adult",
+        "effects": {
+          "stats": {
+            "communication": 1,
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "step_back",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "end": "stepped_away"
+          }
+        }
+      },
+      {
+        "id": "go_along",
+        "effects": {
+          "stats": {
+            "mentalHealth": -3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_graduation",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 18,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 142
+      },
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "bestFriend": false
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "friends": [
+        {
+          "who": "everyone",
+          "end": "graduated"
+        }
+      ]
+    }
+  },
+  {
+    "id": "social_graduation_best_friend",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 18,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 142
+      },
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "eventsNone": [
+        "social_graduation"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "meet_yearly",
+        "effects": {
+          "friends": [
+            {
+              "who": "friends",
+              "end": "graduated"
+            }
+          ]
+        }
+      },
+      {
+        "id": "separate",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "friends": [
+            {
+              "who": "everyone",
+              "end": "graduated"
+            }
+          ]
         }
       }
     ]
