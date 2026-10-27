@@ -2160,6 +2160,11 @@
           "stat": "familyWealth",
           "op": "<",
           "value": 50
+        },
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 28
         }
       ],
       "flagsAny": [
@@ -2210,7 +2215,10 @@
           },
           "stats": {
             "physicalHealth": 1
-          }
+          },
+          "setFlags": [
+            "club_sports"
+          ]
         }
       },
       {
@@ -2218,7 +2226,10 @@
         "effects": {
           "stats": {
             "creative": 2
-          }
+          },
+          "setFlags": [
+            "club_arts"
+          ]
         }
       },
       {
@@ -2226,7 +2237,10 @@
         "effects": {
           "stats": {
             "academic": 2
-          }
+          },
+          "setFlags": [
+            "club_science"
+          ]
         }
       },
       {
@@ -2234,7 +2248,10 @@
         "effects": {
           "stats": {
             "practical": 2
-          }
+          },
+          "setFlags": [
+            "club_scouts"
+          ]
         }
       }
     ]
@@ -3939,5 +3956,1028 @@
         "school_local"
       ]
     }
+  },
+  {
+    "id": "school_m1_term_top",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 77
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 23.6
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "flagsNone": [
+        "school_top_public"
+      ],
+      "eventsNone": [
+        "school_m1_term_mid",
+        "school_m1_term_behind",
+        "school_m1_term_still_top",
+        "school_m1_term_big_pond"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      }
+    }
+  },
+  {
+    "id": "school_m1_term_mid",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 77
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 19.6
+        },
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 23.6
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "flagsNone": [
+        "school_top_public"
+      ],
+      "eventsNone": [
+        "school_m1_term_top",
+        "school_m1_term_behind",
+        "school_m1_term_still_top",
+        "school_m1_term_big_pond"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {}
+  },
+  {
+    "id": "school_m1_term_behind",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 77
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 19.6
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "flagsNone": [
+        "school_top_public"
+      ],
+      "eventsNone": [
+        "school_m1_term_top",
+        "school_m1_term_mid",
+        "school_m1_term_still_top",
+        "school_m1_term_big_pond"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "new_way",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "mentalHealth": -1
+          }
+        }
+      },
+      {
+        "id": "same_way",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_m1_term_still_top",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 77
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 26.4
+        }
+      ],
+      "flagsAll": [
+        "school_top_public"
+      ],
+      "eventsNone": [
+        "school_m1_term_top",
+        "school_m1_term_mid",
+        "school_m1_term_behind",
+        "school_m1_term_big_pond"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      }
+    }
+  },
+  {
+    "id": "school_m1_term_big_pond",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 13,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 77
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 26.4
+        }
+      ],
+      "flagsAll": [
+        "school_top_public"
+      ],
+      "eventsNone": [
+        "school_m1_term_top",
+        "school_m1_term_mid",
+        "school_m1_term_behind",
+        "school_m1_term_still_top"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "work_harder",
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "mentalHealth": -1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 2
+            }
+          }
+        }
+      },
+      {
+        "id": "accept",
+        "effects": {
+          "traits": {
+            "resilience": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_grades_drop_sleep",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "habits": {
+        "sleep": "short"
+      },
+      "notWithin": {
+        "events": [
+          "school_grades_drop_stress"
+        ],
+        "months": 12
+      }
+    },
+    "frequency": "uncommon",
+    "once": false,
+    "cooldownMonths": 24,
+    "choices": [
+      {
+        "id": "sleep_early",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "habits": {
+            "sleep": "enough"
+          }
+        }
+      },
+      {
+        "id": "same_as_before",
+        "effects": {
+          "stats": {
+            "academic": -2,
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_grades_drop_stress",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "mentalHealth",
+          "op": "<",
+          "value": 40
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "notWithin": {
+        "events": [
+          "school_grades_drop_sleep"
+        ],
+        "months": 12
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "choices": [
+      {
+        "id": "tell_teacher",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2
+          }
+        }
+      },
+      {
+        "id": "keep_quiet",
+        "effects": {
+          "stats": {
+            "academic": -2,
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_grades_surprise_high",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "flagsAny": [
+        "tutoring",
+        "self_study"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "academic": 1,
+        "mentalHealth": 2
+      },
+      "traits": {
+        "riskTaking": 1
+      }
+    }
+  },
+  {
+    "id": "school_strong_science",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 32
+        }
+      ],
+      "flagsAll": [
+        "fav_subject_science"
+      ]
+    },
+    "frequency": "window",
+    "once": true,
+    "effects": {
+      "stats": {
+        "academic": 1,
+        "mentalHealth": 1
+      },
+      "setFlags": [
+        "strong_science"
+      ]
+    }
+  },
+  {
+    "id": "school_strong_crafts",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "practical",
+          "op": ">=",
+          "value": 17
+        }
+      ],
+      "flagsAll": [
+        "fav_subject_crafts"
+      ]
+    },
+    "frequency": "window",
+    "once": true,
+    "effects": {
+      "stats": {
+        "practical": 1,
+        "mentalHealth": 1
+      },
+      "setFlags": [
+        "strong_crafts"
+      ]
+    }
+  },
+  {
+    "id": "school_strong_music",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "creative",
+          "op": ">=",
+          "value": 16.5
+        }
+      ],
+      "flagsAll": [
+        "fav_subject_music"
+      ]
+    },
+    "frequency": "window",
+    "once": true,
+    "effects": {
+      "stats": {
+        "creative": 1,
+        "mentalHealth": 1
+      },
+      "setFlags": [
+        "strong_music"
+      ]
+    }
+  },
+  {
+    "id": "school_strong_language",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "communication",
+          "op": ">=",
+          "value": 19.5
+        }
+      ],
+      "flagsAll": [
+        "fav_subject_language"
+      ]
+    },
+    "frequency": "window",
+    "once": true,
+    "effects": {
+      "stats": {
+        "communication": 1,
+        "mentalHealth": 1
+      },
+      "setFlags": [
+        "strong_language"
+      ]
+    }
+  },
+  {
+    "id": "school_strong_pe",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "physicalHealth",
+          "op": ">=",
+          "value": 94
+        }
+      ],
+      "flagsAll": [
+        "fav_subject_pe"
+      ]
+    },
+    "frequency": "window",
+    "once": true,
+    "effects": {
+      "stats": {
+        "physicalHealth": 1,
+        "mentalHealth": 1
+      },
+      "setFlags": [
+        "strong_pe"
+      ]
+    }
+  },
+  {
+    "id": "school_math_struggle",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 14,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 22
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "choices": [
+      {
+        "id": "ask_friend",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "riskTaking",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "academic": 1
+          }
+        }
+      },
+      {
+        "id": "tutoring",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 31
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "academic": 2
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 3
+            }
+          },
+          "setFlags": [
+            "tutoring"
+          ]
+        }
+      },
+      {
+        "id": "give_up",
+        "effects": {
+          "stats": {
+            "academic": -1,
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_olympiad_selected",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 16,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "flagsAll": [
+        "strong_science"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "join",
+        "effects": {
+          "stats": {
+            "academic": 2,
+            "mentalHealth": -1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 3
+            }
+          },
+          "setFlags": [
+            "olympiad_team"
+          ]
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "school_tutoring_offer",
+    "conditions": {
+      "ageMin": 13,
+      "ageMax": 16,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 31
+        }
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ],
+      "flagsNone": [
+        "tutoring"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "familyWealth",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "every_evening",
+        "effects": {
+          "stats": {
+            "academic": 2,
+            "mentalHealth": -1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          },
+          "setFlags": [
+            "tutoring"
+          ]
+        }
+      },
+      {
+        "id": "weekends",
+        "effects": {
+          "stats": {
+            "academic": 1
+          },
+          "setFlags": [
+            "tutoring"
+          ]
+        }
+      },
+      {
+        "id": "no_thanks",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "school_self_study",
+    "conditions": {
+      "ageMin": 12,
+      "ageMax": 17,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 72
+      },
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "discipline",
+        "toward": "high"
+      },
+      {
+        "stat": "imagination",
+        "toward": "high"
+      }
+    ],
+    "effects": {
+      "stats": {
+        "academic": 1,
+        "creative": 1
+      },
+      "setFlags": [
+        "self_study"
+      ]
+    }
+  },
+  {
+    "id": "school_fees_scholarship",
+    "conditions": {
+      "ageMin": 7,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 50
+        },
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 28
+        }
+      ],
+      "flagsAny": [
+        "school_private",
+        "school_international"
+      ]
+    },
+    "frequency": "common",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 2
+      },
+      "setFlags": [
+        "school_scholarship"
+      ],
+      "removeFlags": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_public",
+        "school_local"
+      ]
+    }
+  },
+  {
+    "id": "school_m3_club_or_study_sports",
+    "conditions": {
+      "ageMin": 14,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 104
+      },
+      "flagsAll": [
+        "club_sports"
+      ],
+      "flagsAny": [
+        "school_international",
+        "school_private",
+        "school_top_public",
+        "school_scholarship",
+        "school_public",
+        "school_local"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "quit_club",
+        "effects": {
+          "stats": {
+            "academic": 1
+          },
+          "habits": {
+            "exercise": "light"
+          },
+          "removeFlags": [
+            "club_sports"
+          ]
+        }
+      },
+      {
+        "id": "stay_in_club",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_m3_club_or_study",
+    "conditions": {
+      "ageMin": 14,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 104
+      },
+      "flagsAny": [
+        "club_arts",
+        "club_science",
+        "club_scouts"
+      ],
+      "flagsNone": [
+        "club_sports"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "quit_club",
+        "effects": {
+          "stats": {
+            "academic": 1
+          },
+          "removeFlags": [
+            "club_arts",
+            "club_science",
+            "club_scouts"
+          ]
+        }
+      },
+      {
+        "id": "stay_in_club",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      }
+    ]
   }
 ]

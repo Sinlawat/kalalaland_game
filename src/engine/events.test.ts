@@ -1146,6 +1146,137 @@ describe('real events over many lives (Monte Carlo)', () => {
     });
   });
 
+  describe('studying in secondary school (ม.1–ม.6)', () => {
+    const TERM_IDS = ['school_m1_term_top', 'school_m1_term_mid', 'school_m1_term_behind', 'school_m1_term_still_top', 'school_m1_term_big_pond'];
+    const SUBJECTS = ['science', 'crafts', 'music', 'language', 'pe'];
+    const CLUBS = ['sports', 'arts', 'science', 'scouts'];
+    const schoolStartAt = (end: GameState) => end.eventHistory.find((r) => r.id.startsWith('school_start_'))!.ageInMonths;
+    const monthOf = (end: GameState, ageInMonths: number) => calendarMonth({ birthMonth: end.birthMonth, ageInMonths });
+    const recordsOf = (end: GameState, id: string) => end.eventHistory.filter((r) => r.id === id);
+
+    /** Lives to 18 where every choice is picked by the seed, so all branches (clubs, tutoring...) show up. */
+    const varied = Array.from({ length: 400 }, (_, seed) => {
+      const chooser: Chooser = (state, event) => {
+        const available = event.choices!.filter((c) => lockReasons(c, state).length === 0);
+        return available[(seed + state.ageInMonths) % available.length]!.id;
+      };
+      let state = createNewLife(seed + 5000);
+      while (state.death === null && state.ageInMonths < 18 * 12) state = advanceUntilStop(state, { chooser }).state;
+      return state;
+    });
+    const all = [...ends, ...varied];
+
+    it('first term of ม.1: exactly one result for each academic level, in each kind of school (boundaries)', () => {
+      const term = TERM_IDS.map((id) => findEvent(id)!);
+      for (const school of ['school_public', 'school_top_public']) {
+        for (const academic of [0, 19.5, 19.6, 23.5, 23.6, 26.3, 26.4, 60]) {
+          const state = makeState({
+            ageInMonths: 13 * 12,
+            skills: { academic },
+            flags: [school],
+            eventHistory: [{ id: 'school_start_public', ageInMonths: 13 * 12 - 77 }],
+          });
+          const eligible = term.filter((event) => isEligible(event, state)).map((event) => event.id);
+          expect(eligible, `${school} academic ${academic}`).toHaveLength(1);
+          // The selective school has its own two versions ("still on top" or "a big pond").
+          expect(eligible[0]!.includes('still_top') || eligible[0]!.includes('big_pond')).toBe(school === 'school_top_public');
+        }
+      }
+    });
+
+    it('every child gets one first-term result, in October of ม.1 (77 months after starting Grade 1)', () => {
+      let checked = 0;
+      for (const end of all.filter((e) => e.eventHistory.some((r) => r.id.startsWith('school_start_')))) {
+        const due = schoolStartAt(end) + 77;
+        if (end.ageInMonths <= due) continue;
+        const results = end.eventHistory.filter((r) => TERM_IDS.includes(r.id));
+        expect(results).toHaveLength(1);
+        expect(results[0]!.ageInMonths).toBe(due);
+        expect(monthOf(end, due)).toBe(10);
+        checked += 1;
+      }
+      expect(checked).toBeGreaterThan(800);
+    });
+
+    it('the grades drop only with a cause, and the two causes never come within a year of each other', () => {
+      let drops = 0;
+      for (const end of all) {
+        const sleep = recordsOf(end, 'school_grades_drop_sleep').map((r) => r.ageInMonths);
+        const stress = recordsOf(end, 'school_grades_drop_stress').map((r) => r.ageInMonths);
+        drops += sleep.length + stress.length;
+        for (const a of sleep) for (const b of stress) expect(Math.abs(a - b)).toBeGreaterThanOrEqual(12);
+      }
+      expect(drops).toBeGreaterThan(0);
+    });
+
+    it('a subject becomes a strength only for a child who liked it at primary school, between 13 and 15', () => {
+      let strong = 0;
+      for (const end of all) {
+        for (const subject of SUBJECTS) {
+          const record = recordsOf(end, `school_strong_${subject}`);
+          if (record.length === 0) continue;
+          strong += 1;
+          expect(record).toHaveLength(1);
+          expect(end.flags).toContain(`fav_subject_${subject}`);
+          expect(end.flags).toContain(`strong_${subject}`);
+          const age = Math.floor(record[0]!.ageInMonths / 12);
+          expect(age).toBeGreaterThanOrEqual(13);
+          expect(age).toBeLessThanOrEqual(15);
+        }
+      }
+      const fans = all.filter((end) => end.ageInMonths >= 16 * 12 && SUBJECTS.some((s) => end.flags.includes(`fav_subject_${s}`)));
+      expect(strong / fans.length).toBeGreaterThan(0.2);
+    });
+
+    it('the olympiad asks only children strong in science; a better-than-expected score only follows extra study', () => {
+      for (const end of all) {
+        if (recordsOf(end, 'school_olympiad_selected').length > 0) expect(end.flags).toContain('strong_science');
+        const surprise = recordsOf(end, 'school_grades_surprise_high')[0];
+        if (surprise === undefined) continue;
+        const studiedBefore = end.eventHistory.some(
+          (r) =>
+            r.ageInMonths < surprise.ageInMonths &&
+            (r.id === 'school_self_study' || ((r.id === 'school_tutoring_offer' || r.id === 'school_math_struggle') && r.choiceId !== undefined && ['every_evening', 'weekends', 'tutoring'].includes(r.choiceId))),
+        );
+        expect(studiedBefore).toBe(true);
+      }
+    });
+
+    it('when fees get heavy, a strong student keeps the school on a scholarship; the others move to a public school', () => {
+      const fees = findEvent('school_fees_burden')!;
+      const scholarship = findEvent('school_fees_scholarship')!;
+      const atFees = (academic: number) => makeState({ ageInMonths: 14 * 12, skills: { academic }, environment: { familyWealth: 30 }, flags: ['school_private'] });
+      expect(isEligible(scholarship, atFees(28))).toBe(true);
+      expect(isEligible(fees, atFees(28))).toBe(false);
+      expect(isEligible(scholarship, atFees(27.9))).toBe(false);
+      expect(isEligible(fees, atFees(27.9))).toBe(true);
+      for (const end of all) {
+        const both = ['school_fees_burden', 'school_fees_scholarship'].filter((id) => recordsOf(end, id).length > 0);
+        expect(both.length).toBeLessThanOrEqual(1);
+        // A child who died before starting Grade 1 never had a school.
+        const inSchool = end.eventHistory.some((r) => r.id.startsWith('school_start_'));
+        expect(end.flags.filter((flag) => SCHOOL_FLAGS.includes(flag))).toHaveLength(inSchool ? 1 : 0);
+      }
+    });
+
+    it('the first club leaves a club flag, and in January of ม.3 the child chooses between that club and studying', () => {
+      const asked = new Set<string>();
+      for (const end of all) {
+        const club = recordsOf(end, 'school_first_club')[0];
+        if (club === undefined) continue;
+        const ask = end.eventHistory.find((r) => r.id.startsWith('school_m3_club_or_study'));
+        if (ask === undefined) continue;
+        asked.add(club.choiceId!);
+        expect(ask.ageInMonths).toBe(schoolStartAt(end) + 104);
+        expect(monthOf(end, ask.ageInMonths)).toBe(1);
+        expect(ask.id === 'school_m3_club_or_study_sports').toBe(club.choiceId === 'sports');
+        const clubFlag = `club_${club.choiceId}`;
+        expect(end.flags.includes(clubFlag)).toBe(ask.choiceId === 'stay_in_club');
+      }
+      expect([...asked].sort()).toEqual([...CLUBS].sort());
+    });
+  });
+
   it('milestones everyone goes through happen to every child, once, inside their age range (D67 window)', () => {
     const MILESTONES: [string[], number, number][] = [
       [['growth_first_word', 'growth_first_word_unnoticed'], 1, 1],
