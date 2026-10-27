@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hasMessage, t } from '../i18n/i18n';
 import { BALANCE } from '../data/balance';
+import messages from '../i18n/th.json';
 import {
   applyChoice,
   applyEvent,
@@ -67,7 +68,12 @@ describe('parseEvents (data validation)', () => {
   it('D72: only events about someone name them ({name}); titles never do (the month bar and lists show titles alone)', () => {
     const texts = (e: EventDef) => [
       `event.${e.id}.text`,
-      ...(e.choices ?? []).flatMap((c) => [`event.${e.id}.choice.${c.id}`, `event.${e.id}.result.${c.id}`, `event.${e.id}.choice.${c.id}.locked`]),
+      ...(e.choices ?? []).flatMap((c) => [
+        `event.${e.id}.choice.${c.id}`,
+        `event.${e.id}.result.${c.id}`,
+        `event.${e.id}.choice.${c.id}.locked`,
+        ...(c.conditions?.stats ?? []).map((s) => `event.${e.id}.choice.${c.id}.locked.${s.stat}`),
+      ]),
     ];
     const problems = EVENTS.flatMap((e) => [
       ...(t(`event.${e.id}.title`).includes('{name}') ? [`${e.id}: title`] : []),
@@ -1638,5 +1644,95 @@ describe('real events over many lives (Monte Carlo)', () => {
       expect(wealth).toBeCloseTo(end.environment.familyWealth, 5);
       months.slice(1).forEach((month, i) => expect(month - months[i]!).toBeGreaterThanOrEqual(12));
     }
+  });
+  // Every event in the content must be able to happen in some life, or it is dead content
+  // (school_grades_drop_stress once needed mental health < 40, which no life reached).
+  // Two kinds of player cover the choice-dependent paths: the first available choice
+  // (the lives above) and a random available choice.
+  describe('every event can happen', () => {
+    const rng = createRng(777);
+    const randomChoice: Chooser = (state, event) => {
+      const open = event.choices!.filter((c) => lockReasons(c, state).length === 0);
+      return open[rng.int(0, open.length - 1)]!.id;
+    };
+    const randomEnds = Array.from({ length: 500 }, (_, i) => simulateWholeLife(createNewLife(100_000 + i), { chooser: randomChoice }));
+    const happened = new Set([...ends, ...randomEnds].flatMap((end) => end.eventHistory.map((record) => record.id)));
+
+    /** Events that cannot happen yet, and why. An entry that starts happening must be removed. */
+    const KNOWN_UNREACHABLE: Record<string, string> = {
+      health_myopia_overwork: 'needs the "working" flag, set by the careers system (not built yet)',
+      // Family wealth only moves with a parent losing a job (-10) and finding a new one (+5),
+      // so it never crosses the line that picked the school at age 6.
+      school_fees_burden: 'private school starts at wealth 60, the burden needs < 50',
+      school_fees_scholarship: 'same condition as school_fees_burden',
+      school_m1_start_private: 'choosing private at ม.1 needs wealth 60, but children under 60 went to a public school at 6',
+      school_m1_start_international: 'choosing international at ม.1 needs wealth 80, but children under 80 went to a private or public school at 6',
+    };
+
+    it('every event happens in at least one of 1000 lives, except the known ones', () => {
+      const never = EVENTS.map((e) => e.id).filter((id) => !happened.has(id) && !(id in KNOWN_UNREACHABLE));
+      expect(never).toEqual([]);
+    });
+
+    it('the known list stays true: none of them happens, and each is a real event', () => {
+      for (const id of Object.keys(KNOWN_UNREACHABLE)) {
+        expect(findEvent(id), id).toBeDefined();
+        expect(happened.has(id), id).toBe(false);
+      }
+    });
+  });
+});
+
+describe('D73: mental health and friends', () => {
+  /** Choices where the character has to take the first step with someone. */
+  const FIRST_STEP: [string, string][] = [
+    ['social_fell_out', 'apologize'],
+    ['social_drifting_apart', 'make_effort'],
+    ['social_best_friend_new_group', 'join_in'],
+    ['social_friend_confides', 'listen'],
+    ['social_rumor', 'confront'],
+    ['social_defend_classmate', 'step_in'],
+    ['social_defend_classmate_was_bullied', 'step_in'],
+  ];
+  /** Asking someone else for help: never out of reach because of how the character feels. */
+  const ASK_FOR_HELP = ['tell_teacher', 'tell_adult', 'suggest_adult', 'talk_adult', 'talk_to_adult', 'ask_for_help'];
+  const choice = (eventId: string, choiceId: string) => findEvent(eventId)!.choices!.find((c) => c.id === choiceId)!;
+  const mentalHealthMin = (eventId: string, choiceId: string) =>
+    choice(eventId, choiceId).conditions?.stats?.find((s) => s.stat === 'mentalHealth' && s.op === '>=')?.value;
+
+  it.each(FIRST_STEP)('%s / %s needs mental health 55 and says why in its own words', (eventId, choiceId) => {
+    expect(mentalHealthMin(eventId, choiceId)).toBe(55);
+    expect(hasMessage(`event.${eventId}.choice.${choiceId}.locked.mentalHealth`)).toBe(true);
+    // A whole-choice text would hide the other condition's reason (see ui/choiceLock).
+    expect(hasMessage(`event.${eventId}.choice.${choiceId}.locked`)).toBe(false);
+  });
+
+  it('locks only on mental health below 55: at 55 the choice is open', () => {
+    const [eventId, choiceId] = FIRST_STEP[0]!;
+    const able = { traits: { resilience: 100, riskTaking: 100 }, skills: { communication: 100 } };
+    expect(lockReasons(choice(eventId, choiceId), makeState({ ...able, condition: { mentalHealth: 55 } }))).toEqual([]);
+    expect(lockReasons(choice(eventId, choiceId), makeState({ ...able, condition: { mentalHealth: 54.9 } }))).toEqual([
+      { kind: 'stat', stat: 'mentalHealth', op: '>=', value: 55, current: 54.9 },
+    ]);
+  });
+
+  it('asking someone for help is never locked by mental health', () => {
+    const locked = EVENTS.flatMap((e) =>
+      (e.choices ?? [])
+        .filter((c) => ASK_FOR_HELP.includes(c.id) && c.conditions?.stats?.some((s) => s.stat === 'mentalHealth'))
+        .map((c) => `${e.id}/${c.id}`),
+    );
+    expect(locked).toEqual([]);
+  });
+
+  it('every per-condition lock text belongs to a real choice with a condition on that stat', () => {
+    const keys = Object.keys(messages).filter((key) => /^event\..+\.choice\..+\.locked\.[a-zA-Z]+$/.test(key));
+    const orphans = keys.filter((key) => {
+      const [, eventId, choiceId, stat] = /^event\.(.+)\.choice\.(.+)\.locked\.([a-zA-Z]+)$/.exec(key)!;
+      const c = findEvent(eventId!)?.choices?.find((x) => x.id === choiceId);
+      return !c?.conditions?.stats?.some((s) => s.stat === stat);
+    });
+    expect(keys.length).toBeGreaterThan(0);
+    expect(orphans).toEqual([]);
   });
 });

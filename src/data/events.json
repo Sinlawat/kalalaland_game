@@ -4376,7 +4376,7 @@
         {
           "stat": "mentalHealth",
           "op": "<",
-          "value": 40
+          "value": 55
         }
       ],
       "flagsAny": [
@@ -5247,6 +5247,11 @@
               "stat": "resilience",
               "op": ">=",
               "value": 50
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5383,6 +5388,11 @@
               "stat": "riskTaking",
               "op": ">=",
               "value": 50
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5454,6 +5464,11 @@
               "stat": "riskTaking",
               "op": ">=",
               "value": 50
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5510,6 +5525,11 @@
               "stat": "resilience",
               "op": ">=",
               "value": 45
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5633,6 +5653,11 @@
               "stat": "communication",
               "op": ">=",
               "value": 16
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5864,6 +5889,11 @@
               "stat": "communication",
               "op": ">=",
               "value": 15
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },
@@ -5916,6 +5946,11 @@
               "stat": "communication",
               "op": ">=",
               "value": 16
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
             }
           ]
         },

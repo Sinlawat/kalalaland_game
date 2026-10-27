@@ -1,44 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { findEvent, lockReasons, type EventChoice, type LockReason } from '../engine/events';
-import { knowsOwnTraits } from '../engine/passive';
-import { TRAIT_KEYS, type GameState } from '../engine/types';
-import { hasMessage, t } from '../i18n/i18n';
-import { formatStat } from './format';
+import { findEvent, lockReasons } from '../engine/events';
+import type { GameState } from '../engine/types';
+import { t } from '../i18n/i18n';
+import { lockedText } from './choiceLock';
 
 interface Props {
   game: GameState;
   onChoose(choiceId: string): void;
-}
-
-
-/** Text the game writes itself for one unmet condition. */
-function automaticReason(game: GameState, reason: LockReason): string {
-  switch (reason.kind) {
-    case 'flag':
-      return t('choice.locked.generic');
-    case 'habit':
-      return t('choice.locked.habit', { habit: t(`habit.${reason.habit}`), level: t(`habit.${reason.habit}.${reason.level}`) });
-    case 'stat':
-      // Before Grade 1 the child does not know their traits (D35): don't spell them out.
-      if ((TRAIT_KEYS as readonly string[]).includes(reason.stat) && !knowsOwnTraits(game)) return t('choice.locked.generic');
-      return t(reason.op === '>=' ? 'choice.locked.atLeast' : 'choice.locked.below', {
-        stat: t(`stat.${reason.stat}`),
-        value: reason.value,
-        current: formatStat(reason.current),
-      });
-  }
-}
-
-/**
- * Text for a locked choice (D39: shown disabled, with the reason).
- * The writer's own words win when the content has them (required for flag
- * conditions, optional otherwise, e.g. house rules: "your parents don't
- * allow games after 10 pm"). Otherwise the game explains each condition.
- */
-function lockedText(game: GameState, eventId: string, choice: EventChoice, reasons: LockReason[], params: Record<string, string>): string {
-  const key = `event.${eventId}.choice.${choice.id}.locked`;
-  if (hasMessage(key)) return t(key, params);
-  return reasons.map((reason) => automaticReason(game, reason)).join(' · ');
 }
 
 /**
