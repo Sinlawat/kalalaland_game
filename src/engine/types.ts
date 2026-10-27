@@ -173,6 +173,8 @@ export interface EventRecord {
   habitMonths?: Partial<Record<HabitKey, number>>;
   /** Where the character lived before and after, when the event moved them. */
   residenceChange?: { from: Residence; to: Residence };
+  /** D72: who the event was about (save version 11). */
+  person?: PersonRef;
 }
 
 /**
@@ -183,6 +185,12 @@ export interface EventRecord {
 export interface PendingChoice {
   eventId: string;
   ageInMonths: number;
+  /**
+   * D72: who the event is about, chosen when it happened (the choice popup
+   * already shows the name). A person met in this event is not in `people`
+   * yet: they are kept only if the choice befriends them.
+   */
+  person?: Person;
 }
 
 // ── Death ───────────────────────────────────────────────────────────────────
@@ -198,6 +206,57 @@ export interface Death {
 /** Drawn at birth, 50:50. Picks which nickname list the name comes from. */
 export const SEXES = ['male', 'female'] as const;
 export type Sex = (typeof SEXES)[number];
+
+// ── People (D72, phase 1: friends) ──────────────────────────────────────────
+/**
+ * What someone is to the character during one period. Phase 1 has friends
+ * only; phase 2 adds partner and spouse to this list (18+).
+ */
+export const RELATIONS = ['friend', 'best_friend'] as const;
+export type Relation = (typeof RELATIONS)[number];
+
+/** Why a relationship ended. Phase 2 adds broke_up, divorced, died. */
+export const END_REASONS = ['moved_away', 'changed_school', 'drifted_apart', 'fell_out', 'stepped_away', 'graduated'] as const;
+export type EndReason = (typeof END_REASONS)[number];
+
+/** From `from` (inclusive) until `to`, both in months of the character's age. `to` absent = still going. */
+export interface RelationPeriod {
+  relation: Relation;
+  from: number;
+  to?: number;
+}
+
+/**
+ * Someone in the character's life (save version 11). Only facts are stored
+ * (when they met, what they were to each other and when, why it ended); the
+ * friends card and the life summary compute everything else from these.
+ * Nobody is ever removed: a friendship that ended still counts as one the
+ * character had.
+ */
+export interface Person {
+  /** 1, 2, 3… unique within one life, never reused. */
+  id: number;
+  /** From the nickname lists; never the same as another person's or the character's. */
+  nickname: string;
+  sex: Sex;
+  /** Their age minus the character's, in months (classmates: −11 to +11). */
+  ageGapMonths: number;
+  /** The event they met in, e.g. 'social_new_best_friend'. */
+  metVia: string;
+  /** Like flags, but about this person, e.g. 'far_away' (no longer in the same place). */
+  tags: string[];
+  /** In order, back to back, never overlapping. The last one has `to` once the relationship ended. */
+  periods: RelationPeriod[];
+  /** Set when the relationship ended. */
+  endReason?: EndReason;
+}
+
+/** Who an event is about, as stored on records and waiting choices: the name stays even if the person was not kept. */
+export interface PersonRef {
+  nickname: string;
+  /** The person's id in `people`; absent for someone the character did not befriend. */
+  id?: number;
+}
 
 // ── Whole game state ────────────────────────────────────────────────────────
 export interface GameState {
@@ -253,6 +312,9 @@ export interface GameState {
   yearHabits: Habits[];
   /** One entry per completed year of life. */
   history: YearSummary[];
+
+  /** D72: everyone the character has had as a friend, including friendships that ended (save version 11). */
+  people: Person[];
 
   death: Death | null;
 }

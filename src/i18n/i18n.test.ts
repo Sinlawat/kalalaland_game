@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+// The file as text: parsed JSON has already dropped duplicate keys.
+import raw from './th.json?raw';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import { DEATH_CAUSES, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, SEXES, SKILL_KEYS, TRAIT_KEYS, type HabitKey } from '../engine/types';
+import { DEATH_CAUSES, END_REASONS, HABIT_LEVELS as HABIT_OPTIONS, REGION_IDS, RELATIONS, SEXES, SKILL_KEYS, TRAIT_KEYS, type HabitKey } from '../engine/types';
 import { hasMessage, t } from './i18n';
 
 describe('t', () => {
@@ -27,6 +29,9 @@ describe('th.json completeness', () => {
     const keys = [
       ...REGION_IDS.map((id) => `region.${id}`),
       ...SEXES.map((sex) => `sex.${sex}`),
+      // D72: the friends card and the life summary.
+      ...RELATIONS.map((relation) => `relation.${relation}`),
+      ...END_REASONS.map((reason) => `endReason.${reason}`),
       ...DEATH_CAUSES.map((cause) => `death.cause.${cause}`),
       ...[...TRAIT_KEYS, ...SKILL_KEYS, 'familyWealth', 'familyWarmth', 'workStress',
         'financialStress', 'physicalHealth', 'mentalHealth', 'looks', 'fame'].map((s) => `stat.${s}`),
@@ -71,5 +76,12 @@ describe('th.json completeness', () => {
     const labelKey = (source: string) => (source.startsWith('event.') ? `${source}.title` : `source.${source}`);
     const missing = [...sources].filter((source) => !hasMessage(labelKey(source)));
     expect(missing).toEqual([]);
+  });
+});
+
+describe('th.json file', () => {
+  it('has no key twice (JSON keeps the last one silently, hiding the first text)', () => {
+    const keys = [...raw.matchAll(/^\s*"([^"]+)":/gm)].map((match) => match[1]!);
+    expect(keys.filter((key, index) => keys.indexOf(key) !== index)).toEqual([]);
   });
 });

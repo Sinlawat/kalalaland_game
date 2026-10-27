@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { SEXES, type GameState } from '../engine/types';
+import { RELATIONS, SEXES, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 10;
+export const CURRENT_SAVE_VERSION = 11;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -50,7 +50,16 @@ export type SaveResult = { status: 'ok' } | { status: 'error'; reason: 'unwritab
 const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   // Saves before 10 are "outdated" (D71: a nickname and sex instead of a name).
   // New steps go here: key N upgrades a version-N state to version N+1.
+  10: addPeople,
 };
+
+/**
+ * 10 → 11 (D72): people. Lives before had no named friends, so the list
+ * starts empty; records and waiting choices simply have no person.
+ */
+function addPeople(state: unknown): unknown {
+  return isRecord(state) ? { ...state, people: [] } : state;
+}
 
 function migrate(state: unknown, fromVersion: number): unknown {
   let current = state;
@@ -68,6 +77,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasNumbers(value: unknown, keys: readonly string[]): boolean {
   return isRecord(value) && keys.every((key) => typeof value[key] === 'number' && Number.isFinite(value[key]));
+}
+
+/** D72: the fields the friends card and the life summary read. */
+function isValidPerson(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasNumbers(value, ['id', 'ageGapMonths']) &&
+    typeof value.nickname === 'string' &&
+    (SEXES as readonly unknown[]).includes(value.sex) &&
+    typeof value.metVia === 'string' &&
+    Array.isArray(value.tags) &&
+    Array.isArray(value.periods) &&
+    value.periods.length > 0 &&
+    value.periods.every((period: unknown) => isRecord(period) && (RELATIONS as readonly unknown[]).includes(period.relation) && typeof period.from === 'number')
+  );
 }
 
 /**
@@ -101,6 +125,8 @@ export function isValidGameState(value: unknown): value is GameState {
     isRecord(value.yearLog) &&
     Array.isArray(value.yearHabits) &&
     Array.isArray(value.history) &&
+    Array.isArray(value.people) &&
+    value.people.every(isValidPerson) &&
     (value.death === null || isRecord(value.death))
   );
 }

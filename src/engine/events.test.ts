@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasMessage } from '../i18n/i18n';
+import { hasMessage, t } from '../i18n/i18n';
 import { BALANCE } from '../data/balance';
 import {
   applyChoice,
@@ -63,6 +63,18 @@ describe('parseEvents (data validation)', () => {
     expect(keys.filter((k) => !hasMessage(k))).toEqual([]);
   });
 
+  it('D72: only events about someone name them ({name}); titles never do (the month bar and lists show titles alone)', () => {
+    const texts = (e: EventDef) => [
+      `event.${e.id}.text`,
+      ...(e.choices ?? []).flatMap((c) => [`event.${e.id}.choice.${c.id}`, `event.${e.id}.result.${c.id}`, `event.${e.id}.choice.${c.id}.locked`]),
+    ];
+    const problems = EVENTS.flatMap((e) => [
+      ...(t(`event.${e.id}.title`).includes('{name}') ? [`${e.id}: title`] : []),
+      ...(e.about === undefined ? texts(e).filter((key) => hasMessage(key) && t(key).includes('{name}')) : []),
+    ]);
+    expect(problems).toEqual([]);
+  });
+
   it('reports every problem at once', () => {
     const raw = [
       { ...makeEvent({ id: 'Bad-Id' }) },
@@ -105,6 +117,21 @@ describe('parseEvents (data validation)', () => {
     ['unknown region in a condition', { conditions: { ageMin: 0, ageMax: 1, residence: { regions: ['moon'] } } }, 'unknown region "moon"'],
     ['empty home list', { conditions: { ageMin: 0, ageMax: 1, residence: { homes: [] } } }, 'residence.homes must be a non-empty list'],
     ['typo in a residence condition', { conditions: { ageMin: 0, ageMax: 1, residence: { region: ['rural'] } } }, 'unknown field "region"'],
+    // D72: people
+    ['a person effect on an event about nobody', { effects: { person: { tag: 'far_away' } } }, 'effects.person needs "about"'],
+    ['an unknown about', { about: 'teacher' }, 'about must be one of'],
+    ['befriending the best friend again', { about: 'best_friend', effects: { person: { befriend: 'friend' } } }, 'use "become", not "befriend"'],
+    ['someone new never befriended', { about: 'new_person', effects: {} }, 'must befriend them'],
+    ['tagging someone new without befriending them', { about: 'new_person', effects: { person: { tag: 'far_away' } } }, 'would do nothing: add "befriend"'],
+    ['an unknown relation', { about: 'new_person', effects: { person: { befriend: 'partner' } } }, 'person.befriend must be one of'],
+    ['an empty person effect', { about: 'best_friend', effects: { person: {} } }, 'at least one of befriend'],
+    ['a group effect that does nothing', { effects: { friends: [{ who: 'everyone' }] } }, 'needs "who"'],
+    ['a group effect for an unknown group', { effects: { friends: [{ who: 'classmates', end: 'graduated' }] } }, 'needs "who"'],
+    ['a group ending for an unknown reason', { effects: { friends: [{ who: 'friends', end: 'vanished' }] } }, 'friends: end must be one of'],
+    ['a tag condition on an event not about the best friend', { conditions: { ageMin: 0, ageMax: 1, people: { tagsAll: ['far_away'] } }, effects: { friends: [{ who: 'everyone', tag: 'far_away' }] } }, 'needs "about": "best_friend"'],
+    ['a tag nobody sets', { about: 'best_friend', conditions: { ageMin: 0, ageMax: 1, people: { tagsNone: ['ghost'] } } }, 'tests person tag "ghost"'],
+    ['an event about the best friend that requires none', { about: 'best_friend', conditions: { ageMin: 0, ageMax: 1, people: { bestFriend: false } } }, 'cannot require having no best friend'],
+    ['friendsMin of 0', { conditions: { ageMin: 0, ageMax: 1, people: { friendsMin: 0 } } }, 'friendsMin must be a whole number above 0'],
     ['putting a child in a school without leaving every other one (D70)', { effects: { setFlags: ['school_top_public'], removeFlags: ['school_public'] } }, 'sets "school_top_public" but does not remove school_international, school_private, school_scholarship, school_local'],
   ])('rejects %s', (_label, change, expected) => {
     expect(() => parseEvents([{ ...makeEvent(), ...change }])).toThrow(expected);

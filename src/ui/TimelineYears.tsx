@@ -10,9 +10,11 @@ function ageLabel(age: number): string {
 
 /** Events with choices show what happened after the choice; others their own text. */
 function entryText(entry: TimelineEntry): string {
+  // D72: {name} is the person the event was about.
+  const params = entry.personName !== undefined ? { name: entry.personName } : {};
   return entry.choiceId === undefined
-    ? t(`event.${entry.id}.text`)
-    : t(`event.${entry.id}.result.${entry.choiceId}`);
+    ? t(`event.${entry.id}.text`, params)
+    : t(`event.${entry.id}.result.${entry.choiceId}`, params);
 }
 
 /**

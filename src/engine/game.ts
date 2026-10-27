@@ -11,7 +11,7 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
-import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, lockReasons, rollEvents, type EventDef } from './events';
+import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, lockReasons, personFor, rollEvents, type EventDef } from './events';
 import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
@@ -84,9 +84,15 @@ function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EV
 
   // 4. Events. Without choices: applied now. With choices (D39): queued in
   //    the order they were rolled, and the month pauses here.
+  //    D72: who each event is about is settled as it happens (someone new
+  //    draws from the RNG here), so the choice popup can show their name.
   for (const event of rollEvents(state, rng, events)) {
-    if (hasChoices(event)) state.pendingChoices.push({ eventId: event.id, ageInMonths: state.ageInMonths });
-    else applyEvent(state, event);
+    const person = personFor(event, state, rng);
+    // The best friend can be gone by now (an earlier event this month ended it): then the event has nobody to be about.
+    if (event.about !== undefined && person === undefined) continue;
+    if (hasChoices(event)) {
+      state.pendingChoices.push({ eventId: event.id, ageInMonths: state.ageInMonths, ...(person !== undefined ? { person } : {}) });
+    } else applyEvent(state, event, person);
   }
   state.rngState = rng.state;
   if (state.pendingChoices.length > 0) return 'choice';
@@ -151,7 +157,7 @@ function resolveChoiceInPlace(state: GameState, choiceId: string, events: readon
   if (!pending) throw new Error('No event is waiting for a choice');
   const event = findEvent(pending.eventId, events);
   if (!event) throw new Error(`Unknown event "${pending.eventId}"`);
-  applyChoice(state, event, choiceId, pending.ageInMonths);
+  applyChoice(state, event, choiceId, pending.ageInMonths, pending.person);
   state.pendingChoices.shift();
   return state.pendingChoices.length > 0 ? 'choice' : finishMonthInPlace(state);
 }

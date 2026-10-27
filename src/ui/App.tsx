@@ -6,6 +6,7 @@ import { ChoiceDialog } from './ChoiceDialog';
 import { DeathScreen } from './DeathScreen';
 import { formatAge } from './format';
 import { LifeTimeline } from './LifeTimeline';
+import { FriendsCard } from './FriendsCard';
 import { LifestylePanel } from './LifestylePanel';
 import { PlaybackBar } from './PlaybackBar';
 import { residenceLabel } from './residence';
@@ -85,6 +86,7 @@ export function App() {
 
         <div className="play__habits">
           <LifestylePanel game={game} />
+          <FriendsCard game={game} />
         </div>
       </div>
 

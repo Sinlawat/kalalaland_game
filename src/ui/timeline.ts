@@ -45,6 +45,8 @@ export interface TimelineEntry {
   habitMonths?: Partial<Record<HabitKey, number>>;
   /** Where the event moved the character (the latest occurrence wins). */
   residenceChange?: EventRecord['residenceChange'];
+  /** D72: the name of the person the event was about. */
+  personName?: string;
   /** Month of life of the LATEST occurrence in this year of age (entries are sorted by it, newest first). */
   ageInMonths: number;
   /** Calendar month (1–12) of that occurrence, shown beside the title so the order is visible. */
@@ -130,7 +132,8 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
     years.set(age, entries);
 
     const effects = chipsOfRecord(state, record);
-    const baseKey = record.choiceId === undefined ? record.id : `${record.id}:${record.choiceId}`;
+    // D72: the same event about two different people is two stories, never one entry with a count.
+    const baseKey = [record.id, record.choiceId, record.person?.nickname].filter((part) => part !== undefined).join(':');
     const previous = lastInYear.get(age);
     const existing = previous?.key.split('@')[0] === baseKey ? previous : undefined;
     // A separate, later occurrence needs its own unique key (React list keys).
@@ -157,6 +160,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         ...(record.habitChanges ? { habitChanges: { ...record.habitChanges } } : {}),
         ...(record.habitMonths ? { habitMonths: { ...record.habitMonths } } : {}),
         ...(record.residenceChange ? { residenceChange: record.residenceChange } : {}),
+        ...(record.person ? { personName: record.person.nickname } : {}),
         ageInMonths: record.ageInMonths,
         calendarMonth: calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths }),
         count: 1,

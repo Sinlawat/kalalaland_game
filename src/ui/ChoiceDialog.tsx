@@ -35,9 +35,9 @@ function automaticReason(game: GameState, reason: LockReason): string {
  * conditions, optional otherwise, e.g. house rules: "your parents don't
  * allow games after 10 pm"). Otherwise the game explains each condition.
  */
-function lockedText(game: GameState, eventId: string, choice: EventChoice, reasons: LockReason[]): string {
+function lockedText(game: GameState, eventId: string, choice: EventChoice, reasons: LockReason[], params: Record<string, string>): string {
   const key = `event.${eventId}.choice.${choice.id}.locked`;
-  if (hasMessage(key)) return t(key);
+  if (hasMessage(key)) return t(key, params);
   return reasons.map((reason) => automaticReason(game, reason)).join(' · ');
 }
 
@@ -62,6 +62,8 @@ export function ChoiceDialog({ game, onChoose }: Props) {
 
   if (!pending || !event?.choices) return null;
   const waitingAfterThis = game.pendingChoices.length - 1;
+  // D72: the person the event is about, for {name} in its texts.
+  const params: Record<string, string> = pending.person ? { name: pending.person.nickname } : {};
 
   return (
     <dialog
@@ -79,7 +81,7 @@ export function ChoiceDialog({ game, onChoose }: Props) {
       }}
     >
       <h2 id="choice-title">{t(`event.${event.id}.title`)}</h2>
-      <p id="choice-text">{t(`event.${event.id}.text`)}</p>
+      <p id="choice-text">{t(`event.${event.id}.text`, params)}</p>
 
       <ul className="choice-list" aria-label={t('choice.label')}>
         {event.choices.map((choice) => {
@@ -95,11 +97,11 @@ export function ChoiceDialog({ game, onChoose }: Props) {
                 aria-describedby={locked ? reasonId : undefined}
                 onClick={() => onChoose(choice.id)}
               >
-                {t(`event.${event.id}.choice.${choice.id}`)}
+                {t(`event.${event.id}.choice.${choice.id}`, params)}
               </button>
               {locked && (
                 <p id={reasonId} className="choice-list__reason">
-                  🔒 {lockedText(game, event.id, choice, reasons)}
+                  🔒 {lockedText(game, event.id, choice, reasons, params)}
                 </p>
               )}
             </li>

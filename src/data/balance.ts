@@ -218,4 +218,12 @@ export const BALANCE = {
     oldAgeFromAge: 60,
     illnessBelowHealth: 40,
   },
+
+  /** D72: people the character meets. */
+  people: {
+    /** Share of new friends who are the same sex as the character (D72: 70%). */
+    sameSexShare: 0.7,
+    /** Classmates are up to this many months older or younger than the character. */
+    classmateAgeGapMonths: 11,
+  },
 } as const;

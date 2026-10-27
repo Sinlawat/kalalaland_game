@@ -1,6 +1,7 @@
 import { SKILL_KEYS, type GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatStat } from './format';
+import { FriendsSummary } from './FriendsSummary';
 
 interface Props {
   game: GameState;
@@ -69,6 +70,8 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
           </li>
         </ul>
       </section>
+
+      <FriendsSummary game={game} endAge={game.death.ageInMonths} />
 
       {/* The final-year summary was removed on purpose: the last year is usually
           only a few months, so its numbers mean little. A proper life summary

@@ -27,12 +27,25 @@
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
 import { setHabitFromEvent } from './lifestyle';
+import {
+  applyFriendsEffects,
+  applyPersonEffect,
+  bestFriend,
+  FRIEND_GROUPS,
+  meetSomeone,
+  meetsPeopleConditions,
+  type FriendsEffect,
+  type PeopleConditions,
+  type PersonEffect,
+} from './people';
 import { createRng, type Rng } from './rng';
 import { applyContributions, clampStat, type Contribution } from './stats';
 import {
+  END_REASONS,
   HABIT_LEVELS,
   HOME_IDS,
   REGION_IDS,
+  RELATIONS,
   SCHOOL_FLAGS,
   type EnvironmentKey,
   type EventRecord,
@@ -40,6 +53,7 @@ import {
   type HabitKey,
   type Habits,
   type HomeId,
+  type Person,
   type RegionId,
   type StatTarget,
   type TraitKey,
@@ -131,6 +145,8 @@ export interface EventConditions extends CharacterConditions {
    * its values, e.g. { regions: ['city', 'suburb'] } = "not in the countryside".
    */
   residence?: { regions?: RegionId[]; homes?: HomeId[] };
+  /** D72: the character's friends; tags are about the person the event is about. */
+  people?: PeopleConditions;
 }
 
 /** A lifestyle change: a level (lasting), or a level for some months (D56). */
@@ -145,6 +161,10 @@ export interface EventEffects {
   residence?: { region?: RegionId; home?: HomeId };
   setFlags?: string[];
   removeFlags?: string[];
+  /** D72: what happens to the person the event is about (needs `about`). */
+  person?: PersonEffect;
+  /** D72: what happens to a group of friends, e.g. everyone after Grade 12. */
+  friends?: FriendsEffect[];
 }
 
 export interface EventChoice {
@@ -158,8 +178,17 @@ export interface EventChoice {
  * Exactly one of `effects` (applied at once) or `choices` (the player
  * picks one) is present; parseEvents enforces it.
  */
+/**
+ * D72: who an event is about. 'best_friend': the current best friend (no
+ * best friend = the event cannot happen). 'new_person': someone met in the
+ * event, kept only if it befriends them. Texts name them with {name}.
+ */
+export const ABOUT = ['best_friend', 'new_person'] as const;
+export type About = (typeof ABOUT)[number];
+
 export interface EventDef {
   id: string;
+  about?: About;
   conditions: EventConditions;
   frequency: Frequency;
   once: boolean;
@@ -216,6 +245,9 @@ interface Checker {
   problems: string[];
   flagsSet: Set<string>;
   flagsTested: { at: string; flag: string }[];
+  /** D72: person tags, checked like flags. */
+  tagsSet: Set<string>;
+  tagsTested: { at: string; tag: string }[];
 }
 
 /** stats / flagsAll / flagsAny / flagsNone / habits: shared by event conditions and choice conditions. */
@@ -259,7 +291,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -312,6 +344,8 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     if (!isStringArray(list)) problems.push(`${at}: ${key} must be a list of flag names`);
     else if (key === 'setFlags') list.forEach((flag) => check.flagsSet.add(flag));
   }
+  if (e.person !== undefined) checkPersonEffect(e.person, at, check);
+  if (e.friends !== undefined) checkFriendsEffects(e.friends, at, check);
   // D70: a child is in one school at a time, so putting them in a school must
   // take them out of every other one (even at Grade 1, when there is none yet:
   // one rule for every event is easier to trust than a list of exceptions).
@@ -319,6 +353,110 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   for (const school of (isStringArray(e.setFlags) ? e.setFlags : []).filter((flag) => SCHOOL_FLAGS.includes(flag))) {
     const kept = SCHOOL_FLAGS.filter((other) => other !== school && !removed.includes(other));
     if (kept.length > 0) problems.push(`${at}: sets "${school}" but does not remove ${kept.join(', ')} (a child is in one school at a time)`);
+  }
+}
+
+function isTag(value: unknown): value is string {
+  return typeof value === 'string' && ID_PATTERN.test(value);
+}
+
+/** D72: { befriend?, become?, end?, tag?, untag? }. Which ones fit the event's `about` is checked per event. */
+function checkPersonEffect(effect: unknown, at: string, check: Checker): void {
+  const { problems } = check;
+  if (!isRecord(effect) || Object.keys(effect).length === 0) {
+    problems.push(`${at}: effects.person must be an object with at least one of befriend, become, end, tag, untag`);
+    return;
+  }
+  for (const key of unknownKeys(effect, ['befriend', 'become', 'end', 'tag', 'untag'])) problems.push(`${at}: person: unknown field "${key}"`);
+  for (const key of ['befriend', 'become'] as const) {
+    if (effect[key] !== undefined && !(RELATIONS as readonly unknown[]).includes(effect[key])) {
+      problems.push(`${at}: person.${key} must be one of ${RELATIONS.join(', ')}`);
+    }
+  }
+  if (effect.end !== undefined && !(END_REASONS as readonly unknown[]).includes(effect.end)) {
+    problems.push(`${at}: person.end must be one of ${END_REASONS.join(', ')}`);
+  }
+  for (const key of ['tag', 'untag'] as const) {
+    if (effect[key] === undefined) continue;
+    if (!isTag(effect[key])) problems.push(`${at}: person.${key} must be a tag name (lowercase letters, digits and _)`);
+    else if (key === 'tag') check.tagsSet.add(effect[key]);
+  }
+}
+
+/** D72: [{ who, end?, tag? }]: each entry changes a group of friends. */
+function checkFriendsEffects(list: unknown, at: string, check: Checker): void {
+  const { problems } = check;
+  if (!Array.isArray(list) || list.length === 0) {
+    problems.push(`${at}: effects.friends must be a non-empty list of { "who", "end"?, "tag"? }`);
+    return;
+  }
+  for (const entry of list) {
+    if (!isRecord(entry) || !(FRIEND_GROUPS as readonly unknown[]).includes(entry.who) || (entry.end === undefined && entry.tag === undefined)) {
+      problems.push(`${at}: friends: each entry needs "who" (${FRIEND_GROUPS.join(', ')}) and an "end" or a "tag": ${JSON.stringify(entry)}`);
+      continue;
+    }
+    for (const key of unknownKeys(entry, ['who', 'end', 'tag'])) problems.push(`${at}: friends: unknown field "${key}"`);
+    if (entry.end !== undefined && !(END_REASONS as readonly unknown[]).includes(entry.end)) {
+      problems.push(`${at}: friends: end must be one of ${END_REASONS.join(', ')}`);
+    }
+    if (entry.tag !== undefined) {
+      if (!isTag(entry.tag)) problems.push(`${at}: friends: tag must be a tag name (lowercase letters, digits and _)`);
+      else check.tagsSet.add(entry.tag);
+    }
+  }
+}
+
+/** D72: { bestFriend?, friendsMin?, tagsAll?, tagsNone? }. */
+function checkPeopleCondition(people: unknown, about: unknown, at: string, check: Checker): void {
+  const { problems } = check;
+  if (!isRecord(people) || Object.keys(people).length === 0) {
+    problems.push(`${at}: conditions.people must have at least one of bestFriend, friendsMin, tagsAll, tagsNone`);
+    return;
+  }
+  for (const key of unknownKeys(people, ['bestFriend', 'friendsMin', 'tagsAll', 'tagsNone'])) problems.push(`${at}: conditions.people: unknown field "${key}"`);
+  if (people.bestFriend !== undefined && typeof people.bestFriend !== 'boolean') problems.push(`${at}: conditions.people.bestFriend must be true or false`);
+  if (people.bestFriend === false && about === 'best_friend') {
+    problems.push(`${at}: an event about the best friend cannot require having no best friend`);
+  }
+  if (people.friendsMin !== undefined && !isPositiveInteger(people.friendsMin)) problems.push(`${at}: conditions.people.friendsMin must be a whole number above 0`);
+  for (const key of ['tagsAll', 'tagsNone'] as const) {
+    const list = people[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list) || list.length === 0 || !list.every(isTag)) problems.push(`${at}: conditions.people.${key} must be a non-empty list of tag names`);
+    else list.forEach((tag) => check.tagsTested.push({ at, tag }));
+    // Tags belong to a person: only an event about someone already known can test them.
+    if (about !== 'best_friend') problems.push(`${at}: conditions.people.${key} tests the person the event is about, so it needs "about": "best_friend"`);
+  }
+}
+
+/**
+ * D72: person effects must fit `about`. Someone new can only be befriended
+ * (then tagged); the best friend can change, end or be tagged, but not be
+ * befriended again. An event about someone new that never befriends them
+ * would make a person nobody can see: almost certainly a mistake.
+ */
+function checkAbout(item: Record<string, unknown>, at: string, problems: string[]): void {
+  const about = item.about;
+  const all = [item.effects, ...(Array.isArray(item.choices) ? item.choices.map((c: unknown) => (isRecord(c) ? c.effects : undefined)) : [])];
+  const personEffects = all.flatMap((effects) => (isRecord(effects) && isRecord(effects.person) ? [effects.person] : []));
+  if (about === undefined) {
+    if (personEffects.length > 0) problems.push(`${at}: effects.person needs "about" (who the event is about)`);
+    return;
+  }
+  if (!(ABOUT as readonly unknown[]).includes(about)) {
+    problems.push(`${at}: about must be one of ${ABOUT.join(', ')}`);
+    return;
+  }
+  for (const effect of personEffects) {
+    if (about === 'best_friend' && effect.befriend !== undefined) {
+      problems.push(`${at}: the best friend is already a friend: use "become", not "befriend"`);
+    }
+    if (about === 'new_person' && effect.befriend === undefined && Object.keys(effect).length > 0) {
+      problems.push(`${at}: someone new who is not befriended is not kept, so ${Object.keys(effect).join(', ')} would do nothing: add "befriend"`);
+    }
+  }
+  if (about === 'new_person' && !personEffects.some((effect) => effect.befriend !== undefined)) {
+    problems.push(`${at}: an event about someone new must befriend them in its effects or in at least one choice`);
   }
 }
 
@@ -431,7 +569,7 @@ function checkChoices(choices: unknown, at: string, check: Checker): void {
  */
 export function parseEvents(raw: unknown): EventDef[] {
   if (!Array.isArray(raw)) throw new Error('events.json must be an array');
-  const check: Checker = { problems: [], flagsSet: new Set<string>(SYSTEM_FLAGS), flagsTested: [] };
+  const check: Checker = { problems: [], flagsSet: new Set<string>(SYSTEM_FLAGS), flagsTested: [], tagsSet: new Set<string>(), tagsTested: [] };
   const { problems } = check;
   const ids = new Set<string>();
   const eventsReferenced: { at: string; eventId: string; field: string }[] = [];
@@ -445,7 +583,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     const id = typeof item.id === 'string' ? item.id : '';
     const at = id ? `event "${id}"` : where;
 
-    for (const key of unknownKeys(item, ['id', 'conditions', 'frequency', 'once', 'cooldownMonths', 'lifetimeChance', 'chanceBy', 'effects', 'choices'])) {
+    for (const key of unknownKeys(item, ['id', 'about', 'conditions', 'frequency', 'once', 'cooldownMonths', 'lifetimeChance', 'chanceBy', 'effects', 'choices'])) {
       problems.push(`${at}: unknown field "${key}"`);
     }
     if (!ID_PATTERN.test(id)) problems.push(`${at}: id must be lowercase letters, digits and _`);
@@ -483,7 +621,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     } else {
       for (const key of unknownKeys(c, [
         'ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin', 'eventsNone',
-        'residence',
+        'residence', 'people',
       ])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
@@ -519,6 +657,7 @@ export function parseEvents(raw: unknown): EventDef[] {
         else c.eventsNone.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'eventsNone' }));
       }
       if (c.residence !== undefined) checkResidenceCondition(c.residence, at, problems);
+      if (c.people !== undefined) checkPeopleCondition(c.people, item.about, at, check);
     }
 
     const hasEffects = item.effects !== undefined;
@@ -530,6 +669,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     } else {
       checkChoices(item.choices, at, check);
     }
+    checkAbout(item, at, problems);
   });
 
   // Naming an event that does not exist: almost certainly a typo (monthsSince would block forever, notWithin never).
@@ -539,6 +679,9 @@ export function parseEvents(raw: unknown): EventDef[] {
   // A condition on a flag that nothing ever sets can never be true (or is always true): almost certainly a typo.
   for (const { at, flag } of check.flagsTested) {
     if (!check.flagsSet.has(flag)) problems.push(`${at}: tests flag "${flag}", but no event or system ever sets it`);
+  }
+  for (const { at, tag } of check.tagsTested) {
+    if (!check.tagsSet.has(tag)) problems.push(`${at}: tests person tag "${tag}", but no event ever sets it`);
   }
 
   if (problems.length > 0) {
@@ -667,6 +810,10 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
     if (c.residence.homes && !c.residence.homes.includes(state.residence.homeId)) return false;
   }
   if (event.lifetimeChance !== undefined && lifetimeRoll(state.seed, event.id) >= event.lifetimeChance) return false;
+  // D72: an event about the best friend needs one.
+  const about = event.about === 'best_friend' ? bestFriend(state) : undefined;
+  if (event.about === 'best_friend' && about === undefined) return false;
+  if (c.people && !meetsPeopleConditions(state, c.people, about)) return false;
   return meetsCharacterConditions(state, c);
 }
 
@@ -787,6 +934,22 @@ export function rollEvents(state: GameState, rng: Rng, events: readonly EventDef
   return [...result, ...hits];
 }
 
+// ── Who an event is about (D72) ─────────────────────────────────────────────
+
+/**
+ * The person an event that just happened is about: a copy of the best
+ * friend, or someone new (3 RNG draws). Undefined for events about nobody.
+ * A copy, so a choice that waits keeps the name it was shown with.
+ */
+export function personFor(event: EventDef, state: GameState, rng: Rng): Person | undefined {
+  if (event.about === 'best_friend') {
+    const current = bestFriend(state);
+    return current === undefined ? undefined : structuredClone(current);
+  }
+  if (event.about === 'new_person') return meetSomeone(state, rng, event.id);
+  return undefined;
+}
+
 // ── Effects ─────────────────────────────────────────────────────────────────
 
 /** D41: how strongly an event can still change traits at this age. */
@@ -800,7 +963,14 @@ export function traitEffectFactor(state: Pick<GameState, 'ageInMonths'>): number
  * Stats go through applyContributions (clamped, logged under `event.<id>`);
  * trait and habit changes are stored on the history record itself.
  */
-function applyEffects(state: GameState, eventId: string, effects: EventEffects, ageInMonths: number, choiceId?: string): void {
+function applyEffects(
+  state: GameState,
+  eventId: string,
+  effects: EventEffects,
+  ageInMonths: number,
+  choiceId?: string,
+  person?: Person,
+): void {
   const source = `event.${eventId}`;
   const contributions: Contribution[] = Object.entries(effects.stats ?? {}).map(([stat, amount]) => ({
     target: stat as EffectStat,
@@ -861,13 +1031,17 @@ function applyEffects(state: GameState, eventId: string, effects: EventEffects, 
   if (effects.removeFlags) {
     state.flags = state.flags.filter((flag) => !effects.removeFlags!.includes(flag));
   }
+  // D72: the group first, then the person the event is about (a best friend
+  // kept at Grade 12 must not be ended by "everyone else goes their own way").
+  if (effects.friends) applyFriendsEffects(state, effects.friends, ageInMonths);
+  if (person !== undefined) record.person = applyPersonEffect(state, person, effects.person ?? {}, ageInMonths);
   state.eventHistory.push(record);
 }
 
-/** Applies an event WITHOUT choices and records it. MUTATES `state`. */
-export function applyEvent(state: GameState, event: EventDef): void {
+/** Applies an event WITHOUT choices and records it. `person`: who it is about (see personFor). MUTATES `state`. */
+export function applyEvent(state: GameState, event: EventDef, person?: Person): void {
   if (hasChoices(event)) throw new Error(`Event "${event.id}" has choices; it must wait for the player`);
-  applyEffects(state, event.id, event.effects ?? {}, state.ageInMonths);
+  applyEffects(state, event.id, event.effects ?? {}, state.ageInMonths, undefined, person);
 }
 
 /**
@@ -875,9 +1049,9 @@ export function applyEvent(state: GameState, event: EventDef): void {
  * with the age at which the event HAPPENED. MUTATES `state`.
  * Throws for an unknown or locked choice: the UI must never offer those.
  */
-export function applyChoice(state: GameState, event: EventDef, choiceId: string, ageInMonths: number): void {
+export function applyChoice(state: GameState, event: EventDef, choiceId: string, ageInMonths: number, person?: Person): void {
   const choice = event.choices?.find((c) => c.id === choiceId);
   if (!choice) throw new Error(`Event "${event.id}" has no choice "${choiceId}"`);
   if (lockReasons(choice, state).length > 0) throw new Error(`Choice "${choiceId}" of "${event.id}" is locked`);
-  applyEffects(state, event.id, choice.effects, ageInMonths, choiceId);
+  applyEffects(state, event.id, choice.effects, ageInMonths, choiceId, person);
 }

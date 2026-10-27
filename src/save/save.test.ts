@@ -82,6 +82,24 @@ describe('save / load', () => {
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
   });
 
+  it('upgrades a version 10 save: no named friends yet (D72)', () => {
+    let life = createNewLife(21);
+    for (let i = 0; i < 3; i++) life = advanceUntilStop(life).state;
+    const { people: _people, ...v10 } = life;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 10, savedAt: '2026-10-27T00:00:00.000Z', state: v10 }));
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: { ...life, people: [] } });
+  });
+
+  it.each([
+    ['no periods', { periods: [] }],
+    ['an unknown relation', { periods: [{ relation: 'partner', from: 80 }] }],
+    ['no name', { nickname: undefined }],
+  ])('rejects a save with a person with %s (D72)', (_label, broken) => {
+    const friend = { id: 1, nickname: 'ต้น', sex: 'male', ageGapMonths: 0, metVia: 'x', tags: [], periods: [{ relation: 'friend', from: 80 }], ...broken };
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: { ...createNewLife(3), people: [friend] } }));
+    expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
+  });
+
   it('rejects a save whose habits miss a habit', () => {
     const life = createNewLife(3);
     const { smoking: _s, ...habits } = life.habits;
