@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits, SchoolId, SkillKey, Skills, TraitKey } from '../engine/types';
+import type { Habits, RegionId, SchoolId, SkillKey, Skills, TraitKey } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -22,6 +22,16 @@ export const BALANCE = {
     mentalHealth: { min: 60, max: 90 },
     looks: { min: 10, max: 90 },
     habits: { exercise: 'light', sleep: 'enough', overtime: 'none', smoking: 'none', drinking: 'none' } satisfies Habits,
+    /**
+     * D76: where the family lives depends on how well off it is. The first
+     * band whose `wealthBelow` is above the family wealth applies; the last
+     * band has no upper limit. Weights are percentages (each band sums to 100).
+     */
+    birthRegionByWealth: [
+      { wealthBelow: 35, weights: { city: 20, suburb: 30, rural: 50 } },
+      { wealthBelow: 65, weights: { city: 30, suburb: 40, rural: 30 } },
+      { wealthBelow: Infinity, weights: { city: 55, suburb: 35, rural: 10 } },
+    ] satisfies readonly { wealthBelow: number; weights: Record<RegionId, number> }[],
   },
 
   earlyChildhood: {

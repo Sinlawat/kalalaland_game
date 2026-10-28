@@ -7,7 +7,7 @@ import { BALANCE } from '../data/balance';
 import names from '../data/names.json';
 import { createRng, normalizeSeed, type Rng } from './rng';
 import { snapshotOf } from './snapshot';
-import { REGION_IDS, SEXES, type GameState } from './types';
+import { REGION_IDS, SEXES, type GameState, type RegionId } from './types';
 
 /**
  * Average of two uniform draws → a triangular distribution: values near
@@ -38,7 +38,10 @@ export function createNewLife(seed: number): GameState {
   const sex = rng.pick(SEXES);
   const nickname = rng.pick(names[sex]);
   const birthMonth = rng.int(1, 12);
-  const birthRegionId = rng.pick(REGION_IDS);
+  // D76: the region's random number is drawn here, where the region used to
+  // be picked, but read only after the family wealth is known (below). One
+  // draw at the same place keeps every other value of a seed's life as it was.
+  const birthRegionRoll = rng.next();
 
   const state: GameState = {
     seed: normalizedSeed,
@@ -47,8 +50,8 @@ export function createNewLife(seed: number): GameState {
     nickname,
     ageInMonths: 0,
     birthMonth,
-    birthRegionId,
-    residence: { regionId: birthRegionId, homeId: 'parents' },
+    birthRegionId: 'city', // set below, once the family wealth is drawn
+    residence: { regionId: 'city', homeId: 'parents' },
     traits: {
       discipline: attribute(),
       resilience: attribute(),
@@ -85,9 +88,31 @@ export function createNewLife(seed: number): GameState {
     death: null,
   };
 
+  const birthRegionId = birthRegionFor(state.environment.familyWealth, birthRegionRoll);
+  state.birthRegionId = birthRegionId;
+  state.residence = { regionId: birthRegionId, homeId: 'parents' };
+
   state.rngState = rng.state;
   state.birthSnapshot = snapshotOf(state);
   return state;
+}
+
+/**
+ * D76: the birth region for a family wealth and a random number in [0, 1).
+ * The wealth picks the band in BALANCE.birth.birthRegionByWealth; the roll
+ * walks its weights in REGION_IDS order (city, suburb, rural).
+ */
+export function birthRegionFor(familyWealth: number, roll: number): RegionId {
+  const bands = BALANCE.birth.birthRegionByWealth;
+  const band = bands.find((b) => familyWealth < b.wealthBelow) ?? bands[bands.length - 1]!;
+  const total = REGION_IDS.reduce((sum, id) => sum + band.weights[id], 0);
+  let threshold = roll * total;
+  for (const id of REGION_IDS) {
+    threshold -= band.weights[id];
+    if (threshold < 0) return id;
+  }
+  // Only reached through floating-point rounding at roll ≈ 1.
+  return REGION_IDS[REGION_IDS.length - 1]!;
 }
 
 /** A fresh random seed for a new game (UI only — the engine never calls this). */

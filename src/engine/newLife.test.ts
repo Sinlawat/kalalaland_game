@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import names from '../data/names.json';
-import { createNewLife } from './newLife';
+import { birthRegionFor, createNewLife } from './newLife';
 import { createRng, normalizeSeed } from './rng';
 import { REGION_IDS, SEXES } from './types';
 
@@ -77,6 +77,64 @@ describe('createNewLife', () => {
   it('produces every region over enough seeds', () => {
     const regions = new Set(Array.from({ length: 200 }, (_, seed) => createNewLife(seed).birthRegionId));
     expect(regions).toEqual(new Set(REGION_IDS));
+  });
+
+  describe('D76: birth region by family wealth', () => {
+    const bandOf = (wealth: number) => (wealth < 35 ? 'poor' : wealth < 65 ? 'middle' : 'rich');
+
+    it('maps the roll onto the weights of the wealth band, in city → suburb → rural order', () => {
+      // Rich band 55 / 35 / 10.
+      expect(birthRegionFor(80, 0)).toBe('city');
+      expect(birthRegionFor(80, 0.5499)).toBe('city');
+      expect(birthRegionFor(80, 0.55)).toBe('suburb');
+      expect(birthRegionFor(80, 0.8999)).toBe('suburb');
+      expect(birthRegionFor(80, 0.9)).toBe('rural');
+      expect(birthRegionFor(80, 0.999999)).toBe('rural');
+      // Poor band 20 / 30 / 50: the same roll lands somewhere else.
+      expect(birthRegionFor(20, 0.3)).toBe('suburb');
+      expect(birthRegionFor(20, 0.5)).toBe('rural');
+    });
+
+    it('switches band exactly at 35 and 65 (each limit belongs to the band above)', () => {
+      // A roll of 0.25 is city in the middle band (30) but suburb in the poor band (20).
+      expect(birthRegionFor(34, 0.25)).toBe('suburb');
+      expect(birthRegionFor(35, 0.25)).toBe('city');
+      // A roll of 0.8 is rural in the middle band (from 0.7) but suburb in the rich band (0.55–0.9).
+      expect(birthRegionFor(64, 0.8)).toBe('rural');
+      expect(birthRegionFor(65, 0.8)).toBe('suburb');
+    });
+
+    it('gives each wealth band its share of regions over many lives', () => {
+      const counts = { poor: { city: 0, suburb: 0, rural: 0, n: 0 }, middle: { city: 0, suburb: 0, rural: 0, n: 0 }, rich: { city: 0, suburb: 0, rural: 0, n: 0 } };
+      for (let seed = 0; seed < 20000; seed++) {
+        const life = createNewLife(seed);
+        const band = counts[bandOf(life.environment.familyWealth)];
+        band[life.birthRegionId]++;
+        band.n++;
+      }
+      // Target ± 5 points: wide enough never to flake (each band has 3000+ lives), narrow enough to catch a wrong table.
+      const share = (band: keyof typeof counts, region: 'city' | 'suburb' | 'rural') => counts[band][region] / counts[band].n;
+      expect(share('rich', 'city')).toBeCloseTo(0.55, 1);
+      expect(share('rich', 'rural')).toBeLessThan(0.15);
+      expect(share('poor', 'rural')).toBeGreaterThan(0.45);
+      expect(share('poor', 'city')).toBeLessThan(0.25);
+      expect(share('middle', 'suburb')).toBeGreaterThan(0.35);
+      expect(share('middle', 'suburb')).toBeLessThan(0.45);
+    });
+
+    it('draws the region roll where the region used to be picked, so nothing else of a seed changes', () => {
+      for (const seed of [0, 1, 42, 123456, 4294967295]) {
+        const rng = createRng(normalizeSeed(seed));
+        rng.next(); // sex
+        rng.next(); // nickname
+        rng.int(1, 12); // birth month
+        const roll = rng.next();
+        const discipline = Math.round(((10 + rng.next() * 80) + (10 + rng.next() * 80)) / 2);
+        const life = createNewLife(seed);
+        expect(life.traits.discipline).toBe(discipline);
+        expect(life.birthRegionId).toBe(birthRegionFor(life.environment.familyWealth, roll));
+      }
+    });
   });
 
   describe('D71: sex and nickname', () => {
