@@ -27,6 +27,7 @@ import { createNewLife } from './newLife';
 import { createRng } from './rng';
 import { makeState } from './testUtils';
 import { currentFriends } from './people';
+import { enroll } from './education';
 import { SCHOOL_FLAGS, SCHOOL_IDS, type GameState } from './types';
 
 /** A valid event to start from; each test changes only what it checks. */
@@ -1328,7 +1329,7 @@ describe('real events over many lives (Monte Carlo)', () => {
     const relationAt = (person: GameState['people'][number], age: number) =>
       person.periods.find((period) => period.from <= age && (period.to === undefined || age < period.to))?.relation;
     const schoolStartAt = (end: GameState) => end.eventHistory.find((r) => r.id.startsWith('school_start_'))?.ageInMonths;
-    const GRADUATION = ['social_graduation', 'social_graduation_best_friend'];
+    const GRADUATION = ['social_graduation', 'social_graduation_best_friend', 'social_graduation_best_friend_far'];
     /** Never picks a choice that makes or keeps a friend, when another choice is open. */
     const loner: Chooser = (state, event) => {
       const open = event.choices!.filter((c) => lockReasons(c, state).length === 0);
@@ -1415,15 +1416,53 @@ describe('real events over many lives (Monte Carlo)', () => {
       'family_live_with_grandparents',
       'family_live_with_grandparents_after_job_loss',
       'school_fees_burden',
-    ])('changing school (%s) ends the old classmates and leaves the best friend "growing apart"', (eventId) => {
+    ])('changing school (%s) ends the old classmates and leaves the best friend "growing apart", at another school', (eventId) => {
       const friend = (id: number, relation: 'friend' | 'best_friend') => ({
         id, nickname: `n${id}`, sex: 'male' as const, ageGapMonths: 0, metVia: 'x', tags: [], periods: [{ relation, from: 80 }],
       });
       const state = makeState({ ageInMonths: 12 * 12, flags: ['school_private', 'plan_m1_exam'], people: [friend(1, 'best_friend'), friend(2, 'friend')] });
       applyEvent(state, findEvent(eventId)!);
       expect(state.people[0]!.endReason).toBeUndefined();
-      expect(state.people[0]!.tags).toEqual(['growing_apart']);
+      expect(state.people[0]!.tags).toEqual(['growing_apart', 'other_school']);
       expect(state.people[1]!.endReason).toBe('changed_school');
+    });
+
+    describe('a best friend at another school (other_school)', () => {
+      const SAME_SCHOOL = ['social_fell_out', 'social_controlling_friend', 'social_friend_confides', 'social_best_friend_new_group', 'social_graduation_best_friend'];
+      const FAR = ['social_friend_confides_far', 'social_graduation_best_friend_far'];
+      const withBestFriend = (tags: string[]) => {
+        const state = makeState({
+          ageInMonths: 17 * 12,
+          flags: ['school_public'],
+          people: [{ id: 1, nickname: 'n1', sex: 'male', ageGapMonths: 0, metVia: 'x', tags, periods: [{ relation: 'best_friend', from: 80 }] }],
+        });
+        enroll(state, 'upper_secondary_arts_math', 17 * 12 - 34);
+        return state;
+      };
+      const eligible = (state: GameState, ids: string[]) => ids.filter((id) => isEligible(findEvent(id)!, state));
+
+      it('is tagged when the best friend moves away and the two keep in touch', () => {
+        const state = withBestFriend([]);
+        applyChoice(state, findEvent('social_best_friend_moves')!, 'keep_in_touch', state.ageInMonths, state.people[0]!);
+        expect([...state.people[0]!.tags].sort()).toEqual(['growing_apart', 'other_school']);
+      });
+
+      it('never gets the events that need the same school; gets the far versions instead', () => {
+        // In March of the last year at school (calendar month does not matter for these conditions).
+        expect(eligible(withBestFriend([]), FAR)).toEqual([]);
+        const far = withBestFriend(['other_school']);
+        expect(eligible(far, SAME_SCHOOL)).toEqual([]);
+        expect(eligible(far, FAR)).toEqual(FAR);
+      });
+
+      it('at graduation: keeping in touch keeps only the best friend; classmates part ways either way', () => {
+        const state = withBestFriend(['growing_apart', 'other_school']);
+        state.people.push({ id: 2, nickname: 'n2', sex: 'male', ageGapMonths: 0, metVia: 'x', tags: [], periods: [{ relation: 'friend', from: 90 }] });
+        applyChoice(state, findEvent('social_graduation_best_friend_far')!, 'meet_yearly', state.ageInMonths, state.people[0]!);
+        expect(state.people[0]!.periods.at(-1)!.to).toBeUndefined();
+        expect(state.people[0]!.tags).toEqual(['other_school']);
+        expect(state.people[1]!.endReason).toBe('graduated');
+      });
     });
 
     it('the player\'s choices matter: making and keeping friends gives more friends than turning them down', () => {

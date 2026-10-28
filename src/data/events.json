@@ -1069,6 +1069,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -1144,6 +1148,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -2271,6 +2279,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -4009,6 +4021,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -4058,6 +4074,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -4107,6 +4127,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -5164,7 +5188,8 @@
       ],
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "bestFriend": false
@@ -5239,7 +5264,8 @@
       "eventsNone": [
         "social_group_rejected",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "guaranteed",
@@ -5288,7 +5314,8 @@
       "eventsNone": [
         "social_group_accepted",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "guaranteed",
@@ -5335,8 +5362,14 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
-      ]
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
+      ],
+      "people": {
+        "tagsNone": [
+          "other_school"
+        ]
+      }
     },
     "frequency": "normal",
     "once": false,
@@ -5404,7 +5437,8 @@
       ],
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "uncommon",
@@ -5479,7 +5513,8 @@
         "school_bullied",
         "social_defend_classmate_was_bullied",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "uncommon",
@@ -5556,7 +5591,8 @@
       "eventsNone": [
         "social_defend_classmate",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "uncommon",
@@ -5617,8 +5653,77 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
-      ]
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far",
+        "social_friend_confides_far"
+      ],
+      "people": {
+        "tagsNone": [
+          "other_school"
+        ]
+      }
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "listen",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 45
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 2,
+            "mentalHealth": -2
+          }
+        }
+      },
+      {
+        "id": "suggest_adult",
+        "effects": {
+          "stats": {
+            "communication": 1
+          }
+        }
+      },
+      {
+        "id": "change_subject",
+        "effects": {
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_friend_confides_far",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 10,
+      "ageMax": 17,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far",
+        "social_friend_confides"
+      ],
+      "people": {
+        "tagsAll": [
+          "other_school"
+        ]
+      }
     },
     "frequency": "normal",
     "once": true,
@@ -5680,7 +5785,8 @@
       ],
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "friendsMin": 1
@@ -5747,7 +5853,8 @@
       ],
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "uncommon",
@@ -5810,7 +5917,8 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "tagsNone": [
@@ -5830,7 +5938,13 @@
           },
           "person": {
             "tag": "growing_apart"
-          }
+          },
+          "friends": [
+            {
+              "who": "best_friend",
+              "tag": "other_school"
+            }
+          ]
         }
       },
       {
@@ -5875,7 +5989,8 @@
       "eventsNone": [
         "social_different_wealth_poor",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "normal",
@@ -5947,7 +6062,8 @@
       "eventsNone": [
         "social_different_wealth_rich",
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "normal",
@@ -5979,7 +6095,8 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "tagsAll": [
@@ -6037,11 +6154,13 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "tagsNone": [
-          "growing_apart"
+          "growing_apart",
+          "other_school"
         ]
       }
     },
@@ -6100,7 +6219,8 @@
       ],
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ]
     },
     "frequency": "uncommon",
@@ -6141,8 +6261,14 @@
       "ageMax": 17,
       "eventsNone": [
         "social_graduation",
-        "social_graduation_best_friend"
-      ]
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
+      ],
+      "people": {
+        "tagsNone": [
+          "other_school"
+        ]
+      }
     },
     "frequency": "uncommon",
     "once": true,
@@ -6183,7 +6309,8 @@
       "ageMin": 17,
       "ageMax": 18,
       "eventsNone": [
-        "social_graduation_best_friend"
+        "social_graduation_best_friend",
+        "social_graduation_best_friend_far"
       ],
       "people": {
         "bestFriend": false
@@ -6221,8 +6348,74 @@
       "ageMin": 17,
       "ageMax": 18,
       "eventsNone": [
-        "social_graduation"
+        "social_graduation",
+        "social_graduation_best_friend_far"
       ],
+      "education": {
+        "current": [
+          "upper_secondary_science",
+          "upper_secondary_arts_math",
+          "upper_secondary_arts_lang",
+          "vocational_electrical",
+          "vocational_mechanical",
+          "vocational_computer",
+          "vocational_business"
+        ],
+        "monthsIn": {
+          "min": 34
+        }
+      },
+      "people": {
+        "tagsNone": [
+          "other_school"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "meet_yearly",
+        "effects": {
+          "friends": [
+            {
+              "who": "friends",
+              "end": "graduated"
+            }
+          ]
+        }
+      },
+      {
+        "id": "separate",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "friends": [
+            {
+              "who": "everyone",
+              "end": "graduated"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_graduation_best_friend_far",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 18,
+      "eventsNone": [
+        "social_graduation",
+        "social_graduation_best_friend"
+      ],
+      "people": {
+        "tagsAll": [
+          "other_school"
+        ]
+      },
       "education": {
         "current": [
           "upper_secondary_science",
@@ -6244,6 +6437,12 @@
       {
         "id": "meet_yearly",
         "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "untag": "growing_apart"
+          },
           "friends": [
             {
               "who": "friends",
@@ -6621,6 +6820,10 @@
         {
           "who": "best_friend",
           "tag": "growing_apart"
+        },
+        {
+          "who": "best_friend",
+          "tag": "other_school"
         }
       ]
     }
@@ -6679,6 +6882,10 @@
             {
               "who": "best_friend",
               "tag": "growing_apart"
+            },
+            {
+              "who": "best_friend",
+              "tag": "other_school"
             }
           ],
           "work": {
@@ -6722,6 +6929,10 @@
             {
               "who": "best_friend",
               "tag": "growing_apart"
+            },
+            {
+              "who": "best_friend",
+              "tag": "other_school"
             }
           ],
           "work": {
@@ -6760,6 +6971,10 @@
             {
               "who": "best_friend",
               "tag": "growing_apart"
+            },
+            {
+              "who": "best_friend",
+              "tag": "other_school"
             }
           ],
           "work": {

@@ -1143,5 +1143,20 @@
   "work.now.weekend": "ทำงาน part-time เสาร์-อาทิตย์ · {job}",
   "work.now.daily": "ทำงาน part-time ทุกวัน · {job}",
   "work.now.school_break": "ทำงานช่วงปิดเทอม · {job}",
-  "work.now.full_time": "ทำงานเต็มเวลา · {job}"
+  "work.now.full_time": "ทำงานเต็มเวลา · {job}",
+  "event.social_friend_confides_far.title": "กลายเป็นคนที่เพื่อนพึ่งพา",
+  "event.social_friend_confides_far.text": "{name} โทรหาคุณตอนดึก เล่าว่าที่บ้านทะเลาะกันหนักจนไม่อยากกลับบ้าน ตั้งแต่ไม่ได้เรียนที่เดียวกัน {name} ก็ไม่ค่อยมีใครให้คุยด้วยเลย",
+  "event.social_friend_confides_far.choice.listen": "ตั้งใจฟังและอยู่ข้าง {name} ทางโทรศัพท์",
+  "event.social_friend_confides_far.choice.listen.locked.mentalHealth": "ใจคุณเองยังหนักอยู่ จนรับเรื่องหนักของ {name} ไว้ไม่ไหว",
+  "event.social_friend_confides_far.result.listen": "คุณคุยกับ {name} จนเกือบตีหนึ่ง แก้ปัญหาให้ไม่ได้ แต่ {name} บอกว่าดีใจที่ยังมีคุณ แม้จะอยู่ไกลกัน",
+  "event.social_friend_confides_far.choice.suggest_adult": "ชวน {name} ไปคุยกับครูแนะแนวที่โรงเรียนของ {name}",
+  "event.social_friend_confides_far.result.suggest_adult": "{name} รับปากว่าพรุ่งนี้จะไปหาครูแนะแนว ตกเย็น {name} ส่งข้อความมาบอกว่าคุยแล้วสบายใจขึ้น",
+  "event.social_friend_confides_far.choice.change_subject": "เปลี่ยนเรื่องเพราะไม่รู้จะพูดอะไร",
+  "event.social_friend_confides_far.result.change_subject": "คุณไม่รู้จะพูดอะไรจึงเปลี่ยนเรื่อง {name} เงียบไปและวางสายเร็วกว่าทุกครั้ง",
+  "event.social_graduation_best_friend_far.title": "แยกย้ายหลังเรียนจบ",
+  "event.social_graduation_best_friend_far.text": "วันสุดท้ายของชั้นปีสุดท้าย เพื่อนร่วมห้องเขียนข้อความลงเสื้อให้กัน คุณถ่ายรูปเสื้อส่งให้ {name} ดู {name} ก็เพิ่งเรียนจบจากโรงเรียนของตัวเองเหมือนกัน",
+  "event.social_graduation_best_friend_far.choice.meet_yearly": "ชวน {name} มาเจอกันฉลองเรียนจบ",
+  "event.social_graduation_best_friend_far.result.meet_yearly": "คุณกับ {name} ได้เจอกันอีกครั้ง คุยกันเหมือนไม่เคยห่างกันไป แล้วนัดกันว่าจะเจอกันทุกปี ส่วนเพื่อนในห้องค่อยๆ หายไปตามทางของตัวเอง",
+  "event.social_graduation_best_friend_far.choice.separate": "ต่างคนต่างไปตามทางของตัวเอง",
+  "event.social_graduation_best_friend_far.result.separate": "คุณกดถูกใจรูปของ {name} แล้ววางโทรศัพท์ ต่างคนต่างเริ่มชีวิตใหม่ ไม่ได้ติดต่อกันอีก"
 }
