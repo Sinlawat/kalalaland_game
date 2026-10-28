@@ -8,5 +8,13 @@
   { "id": "vocational_mechanical", "level": "vocational", "months": 36 },
   { "id": "vocational_computer", "level": "vocational", "months": 36 },
   { "id": "vocational_business", "level": "vocational", "months": 36 },
-  { "id": "non_formal", "level": "non_formal", "months": 24 }
+  { "id": "non_formal", "level": "non_formal", "months": 24 },
+  { "id": "higher_vocational", "level": "higher_vocational", "months": 24 },
+  { "id": "bachelor_medicine", "level": "bachelor", "months": 72 },
+  { "id": "bachelor_health", "level": "bachelor", "months": 48 },
+  { "id": "bachelor_engineering", "level": "bachelor", "months": 48 },
+  { "id": "bachelor_business", "level": "bachelor", "months": 48 },
+  { "id": "bachelor_education", "level": "bachelor", "months": 48 },
+  { "id": "bachelor_humanities", "level": "bachelor", "months": 48 },
+  { "id": "bachelor_arts", "level": "bachelor", "months": 48 }
 ]

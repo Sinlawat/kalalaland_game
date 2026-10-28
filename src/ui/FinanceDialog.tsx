@@ -2,7 +2,7 @@ import { BALANCE } from '../data/balance';
 import { SPENDING_LEVELS, type GameState, type SpendingLevel } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatMoney } from './format';
-import { jobIncomes, lifeTotals, moneyText, showsFamilyMoneyStress, spendingLines, stressLines, yearLines, type SourceLine } from './work';
+import { jobIncomes, lifeTotals, moneyText, showsFamilyMoneyStress, spendingLines, stressLines, studyMoney, yearLines, type SourceLine } from './work';
 import { useModal } from './useModal';
 
 interface Props {
@@ -40,6 +40,7 @@ export function FinanceDialog({ game, onSpendingChange, onClose }: Props) {
   const life = lifeTotals(game);
   const stress = stressLines(game);
   const spending = spendingLines(game);
+  const study = studyMoney(game);
 
   return (
     <dialog ref={dialogRef} className="dialog" aria-labelledby="finance-title" onClose={onClose}>
@@ -69,9 +70,30 @@ export function FinanceDialog({ game, onSpendingChange, onClose }: Props) {
                   saved: job.saved < 0 ? `−${formatMoney(-job.saved)}` : formatMoney(job.saved),
                 })}
               </span>
+              {job.otherIncome > 0 && <span className="muted small">{t('finance.splitWithStudy', { amount: formatMoney(job.otherIncome) })}</span>}
             </li>
           ))}
         </ul>
+      )}
+
+      {/* D82: the studies after Grade 12: tuition, who pays, money from home, the student loan. */}
+      {study !== undefined && (
+        <>
+          <h3 className="residence-history__title">{t('finance.study.title')}</h3>
+          <ul className="finance-jobs">
+            {study.studying !== undefined && (
+              <li>
+                <strong>{study.studying}</strong>
+                {study.tuitionPerTerm !== undefined && study.paidBy !== undefined && (
+                  <span>{t('finance.study.tuition', { amount: formatMoney(study.tuitionPerTerm), who: t(`finance.study.by.${study.paidBy}`) })}</span>
+                )}
+                {study.allowance > 0 && <span className="muted small">{t('finance.study.allowance', { amount: formatMoney(study.allowance) })}</span>}
+                {study.loanLiving > 0 && <span className="muted small">{t('finance.study.loanLiving', { amount: formatMoney(study.loanLiving) })}</span>}
+              </li>
+            )}
+            {study.debt > 0 && <li className="muted small">{t('finance.study.debt', { amount: formatMoney(study.debt) })}</li>}
+          </ul>
+        </>
       )}
 
       {/* D80: what the character pays for themselves, and how freely. */}

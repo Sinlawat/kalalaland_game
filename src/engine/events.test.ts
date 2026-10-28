@@ -792,11 +792,13 @@ describe('real events over many lives (Monte Carlo)', () => {
       for (const end of ends) {
         const moves = ids(end).filter((id) => GRANDPARENTS.includes(id));
         expect(moves.length).toBeLessThanOrEqual(1);
+        // D82: a student far from home lives in a dorm for the studies; home is where they go back to.
+        const home = end.residence.homeId === 'dorm' ? end.education.homeBeforeStudy : end.residence;
         if (moves.length === 1) {
           moved += 1;
-          expect(end.residence).toEqual({ regionId: 'rural', homeId: 'grandparents' });
+          expect(home).toEqual({ regionId: 'rural', homeId: 'grandparents' });
         } else {
-          expect(end.residence).toEqual({ regionId: end.birthRegionId, homeId: 'parents' });
+          expect(home).toEqual({ regionId: end.birthRegionId, homeId: 'parents' });
         }
       }
       expect(moved).toBeGreaterThan(0);

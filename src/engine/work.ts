@@ -25,6 +25,7 @@
 import { BALANCE } from '../data/balance';
 import { currentEnrollment } from './education';
 import { setHabitFromEvent } from './lifestyle';
+import { currentStudy, DORM_CATEGORIES, dormLiving, isTermStart, livesInDorm, loanLiving, monthlyAllowance, parentsStudySupport, syncStudyHome, tuitionPerTerm } from './study';
 import {
   ADDICTION_HABITS,
   EXERCISE_LEVELS,
@@ -77,13 +78,22 @@ export function monthlyWage(job: JobId, level: WorkLevel, region: GameState['res
  *
  * D81: an addiction adds its fixed monthly cost (cigarettes and alcohol cost
  * the same everywhere, and spending less does not make the craving smaller).
+ *
+ * D82: a student living in a dorm pays the room and all their own living
+ * (with or without a job), at the dorm amounts of the area.
  */
-export function monthlySpending(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): Record<SpendingCategory, number> {
+export function monthlySpending(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits' | 'education' | 'flags'>): Record<SpendingCategory, number> {
   const job = currentJob(state);
-  const result = { food: 0, transport: 0, phone: 0, leisure: 0, smoking: 0, drinking: 0 };
-  if (job === undefined) return result;
-  const factor = B.regionCostFactor[state.residence.regionId] * B.spendingLevels[state.money.spendingLevel].factor;
-  for (const category of LIVING_SPENDING_CATEGORIES) result[category] = Math.round(B.personalSpending[job.level][category] * factor);
+  const result = { dorm: 0, food: 0, transport: 0, phone: 0, leisure: 0, smoking: 0, drinking: 0 };
+  if (livesInDorm(state)) {
+    const living = dormLiving(state, state.money.spendingLevel);
+    for (const category of DORM_CATEGORIES) result[category] = living[category];
+  } else if (job !== undefined) {
+    const factor = B.regionCostFactor[state.residence.regionId] * B.spendingLevels[state.money.spendingLevel].factor;
+    for (const category of LIVING_SPENDING_CATEGORIES) result[category] = Math.round(B.personalSpending[job.level][category] * factor);
+  } else {
+    return result;
+  }
   for (const habit of ADDICTION_HABITS) if (state.habits[habit] === 'addicted') result[habit] = B.addictionSpending[habit];
   return result;
 }
@@ -189,14 +199,16 @@ export interface FamilyMoneyStressParts {
   giving: number;
   /** A one-off gift that still helps (negative). */
   gift: number;
+  /** D82: what the parents pay for the studies after Grade 12. */
+  study: number;
   total: number;
 }
 
-type StressSource = Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths'>;
+type StressSource = Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths' | 'education' | 'residence'>;
 
 export function familyMoneyStressParts(state: StressSource): FamilyMoneyStressParts {
   const b = BALANCE.familyMoneyStress;
-  const none = { wealth: 0, parentOutOfWork: 0, recovering: 0, giving: 0, gift: 0, total: 0 };
+  const none = { wealth: 0, parentOutOfWork: 0, recovering: 0, giving: 0, gift: 0, study: 0, total: 0 };
   if (state.ageInMonths >= b.untilAge * 12) return none;
   const outOfWork = state.flags.includes('parent_lost_job');
   const until = state.money.jobLossRecoveryUntil;
@@ -207,8 +219,9 @@ export function familyMoneyStressParts(state: StressSource): FamilyMoneyStressPa
     recovering: !outOfWork && until !== undefined && until > state.ageInMonths ? (b.parentLostJob * (until - state.ageInMonths)) / b.jobLossRecoveryMonths : 0,
     giving: -Math.min(b.maxReliefFromGiving, (state.money.monthGiven / 1000) * b.reliefPer1000Given),
     gift: relief !== undefined && state.ageInMonths <= relief.untilMonth ? -relief.amount : 0,
+    study: state.environment.familyWealth < b.studySupportFreeFromWealth ? (parentsStudySupport(state) / 1000) * b.perStudySupport1000 : 0,
   };
-  const sum = parts.wealth + parts.parentOutOfWork + parts.recovering + parts.giving + parts.gift;
+  const sum = parts.wealth + parts.parentOutOfWork + parts.recovering + parts.giving + parts.gift + parts.study;
   return { ...parts, total: Math.round(Math.min(100, Math.max(0, sum))) };
 }
 
@@ -227,15 +240,47 @@ function addTo(totals: Record<string, number>, source: string, amount: number): 
   totals[source] = (totals[source] ?? 0) + amount;
 }
 
+/** D82: money in for a student this month (allowance, loan living), and the tuition the character pays themselves. */
+function studyMoney(state: GameState): { ownTuition: number } {
+  const study = currentStudy(state);
+  if (study === undefined) return { ownTuition: 0 };
+  const allowance = monthlyAllowance(state);
+  if (allowance > 0) {
+    state.money.cash += allowance;
+    addTo(state.money.year.income, 'family.allowance', allowance);
+  }
+  const living = loanLiving(state);
+  if (living > 0) {
+    state.money.cash += living;
+    state.money.studentLoan += living;
+    addTo(state.money.year.income, 'loan.living', living);
+  }
+  if (!isTermStart(state)) return { ownTuition: 0 };
+  const tuition = tuitionPerTerm(study.program, study.place);
+  switch (state.money.study?.tuition ?? 'parents') {
+    case 'parents':
+      return { ownTuition: 0 };
+    case 'loan':
+      state.money.studentLoan += tuition;
+      return { ownTuition: 0 };
+    case 'self':
+      return { ownTuition: tuition };
+  }
+}
+
 /**
  * Monthly step (game.ts, after education): pays the wage of a job started
  * before this month, ends jobs that ran their course, and updates the
  * family's money stress.
+ * D82: first a student moves into (or out of) a dorm; then the student's
+ * money comes in and the tuition falls due.
  */
 export function advanceWork(state: GameState): void {
+  syncStudyHome(state);
   const job = currentJob(state);
   state.money.monthGiven = 0;
-  if (job !== undefined && job.from < state.ageInMonths) {
+  const paidJob = job !== undefined && job.from < state.ageInMonths;
+  if (paidJob) {
     const wage = monthlyWage(job.job, job.level, state.residence.regionId);
     const given = Math.round((wage * state.money.familySharePercent) / 100);
     state.money.cash += wage - given;
@@ -243,16 +288,25 @@ export function advanceWork(state: GameState): void {
     state.money.year.earned += wage;
     state.money.year.given += given;
     addTo(state.money.year.income, `job.${job.job}`, wage);
-    // D80: then their own spending; what the savings cannot cover is not spent (and asks the player what to do).
-    const spending = monthlySpending(state);
-    const need = totalSpending(spending);
+  }
+  const { ownTuition } = studyMoney(state);
+  // D80: then their own spending (only with an income of their own, or living in a dorm);
+  // what the savings cannot cover is not spent (and asks the player what to do).
+  const paysOwnLiving = paidJob || livesInDorm(state);
+  if (paysOwnLiving || ownTuition > 0) {
+    const spending = paysOwnLiving ? monthlySpending(state) : undefined;
+    const bills: [string, number][] = [
+      ['study.tuition', ownTuition],
+      ...SPENDING_CATEGORIES.map((category): [string, number] => [`living.${category}`, spending?.[category] ?? 0]),
+    ];
+    const need = bills.reduce((sum, [, amount]) => sum + amount, 0);
     const paid = Math.min(need, state.money.cash);
     state.money.cash -= paid;
     state.money.shortfall = need - paid;
     let left = paid;
-    for (const category of SPENDING_CATEGORIES) {
-      const part = Math.min(left, spending[category]);
-      if (part > 0) addTo(state.money.year.spent, `living.${category}`, part);
+    for (const [source, amount] of bills) {
+      const part = Math.min(left, amount);
+      if (part > 0) addTo(state.money.year.spent, source, part);
       left -= part;
     }
   } else {

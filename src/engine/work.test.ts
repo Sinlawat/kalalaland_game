@@ -137,7 +137,7 @@ describe('the monthly money step (D77)', () => {
     const state = student({ residence: { regionId: 'suburb', homeId: 'parents' } });
     expect(totalSpending(monthlySpending(state))).toBe(0);
     startJob(state, 'restaurant', 'full_time');
-    expect(monthlySpending(state)).toEqual({ food: 3000, transport: 1200, phone: 400, leisure: 1000, smoking: 0, drinking: 0 });
+    expect(monthlySpending(state)).toEqual({ dorm: 0, food: 3000, transport: 1200, phone: 400, leisure: 1000, smoking: 0, drinking: 0 });
     state.residence.regionId = 'rural';
     expect(totalSpending(monthlySpending(state))).toBe(Math.round(3000 * 0.58) + Math.round(1200 * 0.58) + Math.round(400 * 0.58) + Math.round(1000 * 0.58));
     state.residence.regionId = 'suburb';
@@ -433,7 +433,7 @@ describe('D79: stress after a job loss fades; money by source; the yearly questi
     const state = makeState({ ageInMonths: 16 * 12, environment: { familyWealth: 40 } });
     state.money.monthGiven = 1000;
     state.money.familyRelief = { amount: 5, untilMonth: 16 * 12 + 1 };
-    expect(familyMoneyStressParts(state)).toEqual({ wealth: 30, parentOutOfWork: 0, recovering: 0, giving: -10, gift: -5, total: 15 });
+    expect(familyMoneyStressParts(state)).toEqual({ wealth: 30, parentOutOfWork: 0, recovering: 0, giving: -10, gift: -5, study: 0, total: 15 });
   });
 
   it('counts money by source: wages by job, events in and out', () => {

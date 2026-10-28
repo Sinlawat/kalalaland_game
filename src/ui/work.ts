@@ -4,8 +4,9 @@
  */
 
 import { BALANCE } from '../data/balance';
+import { currentStudy, loanLiving, monthlyAllowance, tuitionPerTerm } from '../engine/study';
 import { currentJob, familyMoneyStressParts, isPartTime, monthlySpending, monthlyWage, totalSpending } from '../engine/work';
-import type { GameState, WorkChange, WorkLevel, WorkResult, YearMoney } from '../engine/types';
+import type { GameState, StudyFunding, WorkChange, WorkLevel, WorkResult, YearMoney } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatMoney } from './format';
 
@@ -93,6 +94,8 @@ export function sourceLabel(source: string): string {
   const id = rest.join('.');
   if (kind === 'job') return t('finance.source.job', { job: t(`job.${id}`) });
   if (kind === 'living') return t(`finance.spending.${id}`);
+  // D82: money for the studies.
+  if (kind === 'family' || kind === 'loan' || kind === 'study') return t(`finance.source.${source}`);
   if (kind === 'event') return t(`event.${id}.title`);
   return source;
 }
@@ -116,16 +119,19 @@ export interface JobIncome {
   given: number;
   /** D80: the character's own spending each month (paid from this income). */
   spending: number;
+  /** D82: money from home and the student loan's living allowance each month (a student in a dorm). */
+  otherIncome: number;
   /** Into the savings each month (can be below 0: then the savings pay the rest). */
   saved: number;
 }
 
-export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): JobIncome[] {
+export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits' | 'education' | 'flags' | 'environment'>): JobIncome[] {
   const job = currentJob(state);
   if (job === undefined) return [];
   const monthly = monthlyWage(job.job, job.level, state.residence.regionId);
   const given = Math.round((monthly * state.money.familySharePercent) / 100);
   const spending = totalSpending(monthlySpending(state));
+  const otherIncome = monthlyAllowance(state) + loanLiving(state);
   return [
     {
       job: t(`job.${job.job}`),
@@ -135,7 +141,8 @@ export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence'
       sharePercent: state.money.familySharePercent,
       given,
       spending,
-      saved: monthly - given - spending,
+      otherIncome,
+      saved: monthly + otherIncome - given - spending,
     },
   ];
 }
@@ -160,9 +167,9 @@ export function lifeTotals(state: Pick<GameState, 'history' | 'money'>): { wages
 }
 
 /** The family's money stress, part by part, without the parts that are 0. */
-export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths'>): { total: number; parts: { key: string; amount: number }[] } {
+export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths' | 'education' | 'residence'>): { total: number; parts: { key: string; amount: number }[] } {
   const parts = familyMoneyStressParts(state);
-  const keys = ['wealth', 'parentOutOfWork', 'recovering', 'giving', 'gift'] as const;
+  const keys = ['wealth', 'parentOutOfWork', 'recovering', 'giving', 'gift', 'study'] as const;
   return {
     total: parts.total,
     parts: keys.map((key) => ({ key, amount: Math.round(parts[key]) })).filter((part) => part.amount !== 0),
@@ -170,10 +177,41 @@ export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'mo
 }
 
 /** D80: the character's own monthly spending by category, and in total (0 without an income). D81: an addiction is a line of its own. */
-export function spendingLines(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): { lines: SourceLine[]; total: number } {
+export function spendingLines(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits' | 'education' | 'flags'>): { lines: SourceLine[]; total: number } {
   const spending = monthlySpending(state);
   const lines = (Object.entries(spending) as [string, number][])
     .filter(([, amount]) => amount > 0)
     .map(([category, amount]) => ({ source: `living.${category}`, label: t(`finance.spending.${category}`), amount }));
   return { lines, total: totalSpending(spending) };
+}
+
+// ── D82: studying after Grade 12 ────────────────────────────────────────────
+
+/** The finance dialog's study section: what the studies cost, who pays, and the student loan. */
+export interface StudyMoney {
+  /** "ปริญญาตรี วิศวกรรมและวิทยาศาสตร์ · มหาวิทยาลัยรัฐชื่อดัง"; undefined when not studying now. */
+  studying?: string;
+  tuitionPerTerm?: number;
+  paidBy?: StudyFunding;
+  allowance: number;
+  loanLiving: number;
+  debt: number;
+}
+
+/** Undefined when there is nothing to say (not studying after Grade 12 and no student loan). */
+export function studyMoney(state: Pick<GameState, 'education' | 'flags' | 'residence' | 'environment' | 'money'>): StudyMoney | undefined {
+  const study = currentStudy(state);
+  if (study === undefined && state.money.studentLoan === 0) return undefined;
+  return {
+    ...(study !== undefined
+      ? {
+          studying: `${t(`program.${study.program}`)} · ${t(`studyPlace.${study.place}`)}`,
+          tuitionPerTerm: tuitionPerTerm(study.program, study.place),
+          paidBy: state.money.study?.tuition ?? 'parents',
+        }
+      : {}),
+    allowance: monthlyAllowance(state),
+    loanLiving: loanLiving(state),
+    debt: state.money.studentLoan,
+  };
 }

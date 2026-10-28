@@ -3,7 +3,7 @@ import { makeState } from '../engine/testUtils';
 import { startJob, stopWork } from '../engine/work';
 import { formatMoney, formatMoneyChange } from './format';
 import { buildTimeline } from './timeline';
-import { jobIncomes, spendingLines, lifeMoney, lifeTotals, overtimeLabels, showsFamilyMoneyStress, sourceLabel, stressLines, workChangeText, workLine, workRows, yearLines } from './work';
+import { jobIncomes, spendingLines, studyMoney, lifeMoney, lifeTotals, overtimeLabels, showsFamilyMoneyStress, sourceLabel, stressLines, workChangeText, workLine, workRows, yearLines } from './work';
 
 describe('work and money on screen (D77)', () => {
   it('money: whole baht with thousands separators, changes with a real minus sign', () => {
@@ -82,7 +82,7 @@ describe('the finance dialog (D79)', () => {
     expect(jobIncomes(state)).toEqual([]);
     startJob(state, 'cafe', 'weekend');
     state.money.familySharePercent = 30;
-    expect(jobIncomes(state)).toEqual([{ job: 'ร้านกาแฟ', level: 'part-time เสาร์-อาทิตย์', monthly: 2400, yearly: 28800, sharePercent: 30, given: 720, spending: 1500, saved: 180 }]);
+    expect(jobIncomes(state)).toEqual([{ job: 'ร้านกาแฟ', level: 'part-time เสาร์-อาทิตย์', monthly: 2400, yearly: 28800, sharePercent: 30, given: 720, spending: 1500, otherIncome: 0, saved: 180 }]);
   });
 
   it("names this year's money by source, largest first", () => {
@@ -139,5 +139,28 @@ describe('the spending section (D80)', () => {
     expect(lines.at(-1)).toEqual({ source: 'living.smoking', label: 'บุหรี่', amount: 1800 });
     expect(total).toBe(1200 + 1800);
     expect(sourceLabel('living.drinking')).toBe('เหล้าและเบียร์');
+  });
+});
+
+describe('the study section (D82)', () => {
+  it('names the studies, the tuition and who pays it, the money from home and the student loan', () => {
+    const state = makeState({ ageInMonths: 19 * 12, residence: { regionId: 'city', homeId: 'dorm' }, environment: { familyWealth: 30 }, flags: ['study_private'] });
+    expect(studyMoney(state)).toBeUndefined();
+    state.education = { history: [{ program: 'bachelor_business', from: 18 * 12 }] };
+    state.money.study = { tuition: 'loan', livingLoan: true };
+    state.money.studentLoan = 90000;
+    expect(studyMoney(state)).toMatchObject({
+      studying: 'ปริญญาตรี บริหารธุรกิจและบัญชี · มหาวิทยาลัยเอกชน',
+      tuitionPerTerm: 45000,
+      paidBy: 'loan',
+      loanLiving: 3000,
+      debt: 90000,
+    });
+    expect([sourceLabel('family.allowance'), sourceLabel('loan.living'), sourceLabel('study.tuition'), sourceLabel('living.dorm')]).toEqual([
+      'เงินจากพ่อแม่',
+      'กยศ. ค่าครองชีพ',
+      'ค่าเทอม',
+      'ค่าหอพัก (รวมน้ำไฟ)',
+    ]);
   });
 });

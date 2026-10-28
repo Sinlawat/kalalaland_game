@@ -7566,6 +7566,1178 @@
     ]
   },
   {
+    "id": "edu_after_secondary",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 19,
+      "months": [
+        12
+      ],
+      "education": {
+        "current": [
+          "upper_secondary_science",
+          "upper_secondary_arts_math",
+          "upper_secondary_arts_lang"
+        ],
+        "monthsIn": {
+          "min": 24
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "university",
+        "effects": {
+          "setFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "work",
+        "effects": {
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_after_nonformal",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "education": {
+        "current": [
+          "non_formal"
+        ],
+        "monthsIn": {
+          "min": 18
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "university",
+        "effects": {
+          "setFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "work",
+        "effects": {
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_after_vocational",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 19,
+      "months": [
+        12
+      ],
+      "education": {
+        "current": [
+          "vocational_electrical",
+          "vocational_mechanical",
+          "vocational_computer",
+          "vocational_business"
+        ],
+        "monthsIn": {
+          "min": 24
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "higher_vocational",
+        "effects": {
+          "setFlags": [
+            "study_vocational_college",
+            "uni_admitted",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "university",
+        "effects": {
+          "setFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "work",
+        "effects": {
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_choose_university",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "plan_university"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "top_public",
+        "effects": {
+          "setFlags": [
+            "study_top_public",
+            "uni_applying"
+          ],
+          "removeFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "regional",
+        "effects": {
+          "setFlags": [
+            "study_regional",
+            "uni_applying"
+          ],
+          "removeFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "private",
+        "effects": {
+          "setFlags": [
+            "study_private",
+            "uni_admitted"
+          ],
+          "removeFlags": [
+            "plan_university"
+          ]
+        }
+      },
+      {
+        "id": "open",
+        "effects": {
+          "setFlags": [
+            "study_open",
+            "uni_admitted"
+          ],
+          "removeFlags": [
+            "plan_university"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_choose_faculty_science",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAny": [
+        "study_top_public",
+        "study_regional",
+        "study_private",
+        "study_open"
+      ],
+      "flagsNone": [
+        "faculty_chosen",
+        "faculty_other"
+      ],
+      "education": {
+        "last": [
+          "upper_secondary_science"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "medicine",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "academic",
+              "op": ">=",
+              "value": 45
+            }
+          ],
+          "flagsNone": [
+            "study_open"
+          ]
+        },
+        "effects": {
+          "setFlags": [
+            "faculty_medicine",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "health",
+        "conditions": {
+          "flagsNone": [
+            "study_open"
+          ]
+        },
+        "effects": {
+          "setFlags": [
+            "faculty_health",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "engineering",
+        "conditions": {
+          "flagsNone": [
+            "study_open"
+          ]
+        },
+        "effects": {
+          "setFlags": [
+            "faculty_engineering",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "other",
+        "effects": {
+          "setFlags": [
+            "faculty_other"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_choose_faculty",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAny": [
+        "study_top_public",
+        "study_regional",
+        "study_private",
+        "study_open"
+      ],
+      "flagsNone": [
+        "faculty_chosen"
+      ],
+      "education": {
+        "last": [
+          "upper_secondary_arts_math",
+          "upper_secondary_arts_lang",
+          "non_formal",
+          "vocational_electrical",
+          "vocational_mechanical",
+          "vocational_computer",
+          "vocational_business"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "business",
+        "effects": {
+          "setFlags": [
+            "faculty_business",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "education",
+        "effects": {
+          "setFlags": [
+            "faculty_education",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "humanities",
+        "effects": {
+          "setFlags": [
+            "faculty_humanities",
+            "faculty_chosen"
+          ]
+        }
+      },
+      {
+        "id": "arts",
+        "effects": {
+          "setFlags": [
+            "faculty_arts",
+            "faculty_chosen"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_choose_faculty_other",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "faculty_other"
+      ],
+      "flagsNone": [
+        "faculty_chosen"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "business",
+        "effects": {
+          "setFlags": [
+            "faculty_business",
+            "faculty_chosen"
+          ],
+          "removeFlags": [
+            "faculty_other"
+          ]
+        }
+      },
+      {
+        "id": "education",
+        "effects": {
+          "setFlags": [
+            "faculty_education",
+            "faculty_chosen"
+          ],
+          "removeFlags": [
+            "faculty_other"
+          ]
+        }
+      },
+      {
+        "id": "humanities",
+        "effects": {
+          "setFlags": [
+            "faculty_humanities",
+            "faculty_chosen"
+          ],
+          "removeFlags": [
+            "faculty_other"
+          ]
+        }
+      },
+      {
+        "id": "arts",
+        "effects": {
+          "setFlags": [
+            "faculty_arts",
+            "faculty_chosen"
+          ],
+          "removeFlags": [
+            "faculty_other"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_top_public_pass",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        3
+      ],
+      "flagsAll": [
+        "study_top_public",
+        "uni_applying",
+        "faculty_chosen"
+      ],
+      "flagsNone": [
+        "admission_prep"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 42.5
+        }
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {
+      "removeFlags": [
+        "uni_applying"
+      ],
+      "setFlags": [
+        "uni_admitted"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_top_public_pass_prep",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        3
+      ],
+      "flagsAll": [
+        "study_top_public",
+        "uni_applying",
+        "faculty_chosen",
+        "admission_prep"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 39.5
+        }
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {
+      "removeFlags": [
+        "uni_applying"
+      ],
+      "setFlags": [
+        "uni_admitted"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_top_public_fail",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        4
+      ],
+      "flagsAll": [
+        "study_top_public",
+        "uni_applying"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "regional",
+        "effects": {
+          "removeFlags": [
+            "study_top_public"
+          ],
+          "setFlags": [
+            "study_regional"
+          ]
+        }
+      },
+      {
+        "id": "private",
+        "effects": {
+          "removeFlags": [
+            "study_top_public",
+            "uni_applying"
+          ],
+          "setFlags": [
+            "study_private",
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "open",
+        "effects": {
+          "removeFlags": [
+            "study_top_public",
+            "uni_applying",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "study_open",
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "gap_year",
+        "conditions": {
+          "flagsNone": [
+            "gap_year_used"
+          ]
+        },
+        "effects": {
+          "removeFlags": [
+            "study_top_public",
+            "uni_applying",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "gap_year"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_regional_pass",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        3,
+        5
+      ],
+      "flagsAll": [
+        "study_regional",
+        "uni_applying",
+        "faculty_chosen"
+      ],
+      "flagsNone": [
+        "admission_prep"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 30
+        }
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {
+      "removeFlags": [
+        "uni_applying"
+      ],
+      "setFlags": [
+        "uni_admitted"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_regional_pass_prep",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        3,
+        5
+      ],
+      "flagsAll": [
+        "study_regional",
+        "uni_applying",
+        "faculty_chosen",
+        "admission_prep"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 27
+        }
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {
+      "removeFlags": [
+        "uni_applying"
+      ],
+      "setFlags": [
+        "uni_admitted"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_regional_fail",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "months": [
+        4,
+        6
+      ],
+      "flagsAll": [
+        "study_regional",
+        "uni_applying"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "private",
+        "effects": {
+          "removeFlags": [
+            "study_regional",
+            "uni_applying"
+          ],
+          "setFlags": [
+            "study_private",
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "open",
+        "effects": {
+          "removeFlags": [
+            "study_regional",
+            "uni_applying",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "study_open",
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "gap_year",
+        "conditions": {
+          "flagsNone": [
+            "gap_year_used"
+          ]
+        },
+        "effects": {
+          "removeFlags": [
+            "study_regional",
+            "uni_applying",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "gap_year"
+          ]
+        }
+      },
+      {
+        "id": "work",
+        "effects": {
+          "removeFlags": [
+            "study_regional",
+            "uni_applying",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_study_funding",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "uni_admitted",
+        "faculty_chosen"
+      ],
+      "flagsAny": [
+        "study_top_public",
+        "study_regional"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "parents",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "study": {
+            "funding": "parents"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "loan",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": "<",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "study": {
+            "funding": "loan"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "self",
+        "conditions": {
+          "money": {
+            "min": 10000
+          }
+        },
+        "effects": {
+          "study": {
+            "funding": "self"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {
+          "removeFlags": [
+            "uni_admitted",
+            "study_top_public",
+            "study_regional",
+            "study_private",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_study_funding_private",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "uni_admitted",
+        "faculty_chosen"
+      ],
+      "flagsAny": [
+        "study_private"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "parents",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "study": {
+            "funding": "parents"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "loan",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": "<",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "study": {
+            "funding": "loan"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "self",
+        "conditions": {
+          "money": {
+            "min": 45000
+          }
+        },
+        "effects": {
+          "study": {
+            "funding": "self"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {
+          "removeFlags": [
+            "uni_admitted",
+            "study_top_public",
+            "study_regional",
+            "study_private",
+            "faculty_chosen",
+            "faculty_other",
+            "faculty_medicine",
+            "faculty_health",
+            "faculty_engineering",
+            "faculty_business",
+            "faculty_education",
+            "faculty_humanities",
+            "faculty_arts"
+          ],
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_study_funding_cheap",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "uni_admitted",
+        "faculty_chosen"
+      ],
+      "flagsAny": [
+        "study_open",
+        "study_vocational_college"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "parents",
+        "effects": {
+          "study": {
+            "funding": "parents"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "loan",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": "<",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "study": {
+            "funding": "loan"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      },
+      {
+        "id": "self",
+        "conditions": {
+          "money": {
+            "min": 3000
+          }
+        },
+        "effects": {
+          "study": {
+            "funding": "self"
+          },
+          "removeFlags": [
+            "uni_admitted"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_gap_year_retry",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 40,
+      "months": [
+        12
+      ],
+      "flagsAll": [
+        "gap_year"
+      ],
+      "education": {
+        "enrolled": false
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "university",
+        "effects": {
+          "removeFlags": [
+            "gap_year"
+          ],
+          "setFlags": [
+            "plan_university",
+            "gap_year_used"
+          ]
+        }
+      },
+      {
+        "id": "work",
+        "effects": {
+          "removeFlags": [
+            "gap_year"
+          ],
+          "setFlags": [
+            "seeking_first_job",
+            "gap_year_used"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_first_job_after_school",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 40,
+      "flagsAll": [
+        "seeking_first_job"
+      ],
+      "education": {
+        "enrolled": false
+      },
+      "work": {
+        "employed": false
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "choices": [
+      {
+        "id": "convenience_store",
+        "effects": {
+          "removeFlags": [
+            "seeking_first_job"
+          ],
+          "work": {
+            "start": {
+              "job": "convenience_store",
+              "level": "full_time"
+            }
+          }
+        }
+      },
+      {
+        "id": "restaurant",
+        "effects": {
+          "removeFlags": [
+            "seeking_first_job"
+          ],
+          "work": {
+            "start": {
+              "job": "restaurant",
+              "level": "full_time"
+            }
+          }
+        }
+      },
+      {
+        "id": "local_shop",
+        "effects": {
+          "removeFlags": [
+            "seeking_first_job"
+          ],
+          "work": {
+            "start": {
+              "job": "local_shop",
+              "level": "full_time"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_parttime_offer_university",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "work": {
+        "employed": false
+      }
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "chanceBy": [
+      {
+        "stat": "familyWealth",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "weekend",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "cafe",
+              "level": "weekend"
+            }
+          }
+        }
+      },
+      {
+        "id": "daily",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "restaurant",
+              "level": "daily"
+            }
+          }
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {}
+      }
+    ]
+  },
+  {
     "id": "edu_exchange_program",
     "conditions": {
       "ageMin": 15,

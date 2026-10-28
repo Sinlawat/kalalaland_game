@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { AddictionHabit, Habits, JobId, LivingSpendingCategory, RegionId, SchoolId, SkillKey, Skills, SpendingLevel, TraitKey, WorkLevel } from '../engine/types';
+import type { AddictionHabit, Habits, JobId, LivingSpendingCategory, ProgramId, RegionId, SchoolId, SkillKey, Skills, SpendingLevel, StudyPlace, TraitKey, WorkLevel } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -320,6 +320,72 @@ export const BALANCE = {
     reliefPer1000Given: 10,
     /** ...but by no more than this. */
     maxReliefFromGiving: 40,
+    /**
+     * D82: what the parents pay for the studies after Grade 12 (the monthly
+     * allowance, and the tuition when they pay it, as a monthly average)
+     * raises it by this much per 1,000 baht a month...
+     */
+    perStudySupport1000: 5,
+    /** ...except in a family this well off (it pays without strain). */
+    studySupportFreeFromWealth: 65,
+  },
+
+  /**
+   * D82: studying after Grade 12 / ปวช. (design doc, real price data section 7).
+   * Amounts in baht; proposed values from the real data, to adjust from play.
+   */
+  study: {
+    /** Tuition per term (two terms a year, paid at the start of each), by where. */
+    tuitionPerTerm: { top_public: 18000, regional: 10000, private: 45000, open: 1500, vocational_college: 3000 } satisfies Record<StudyPlace, number>,
+    /** Some faculties cost more (Thammasat 2569: medicine 28,500, nursing 26,500, engineering 19,700 vs 14,000–18,000). */
+    tuitionFactor: { bachelor_medicine: 1.6, bachelor_health: 1.4, bachelor_engineering: 1.1 } satisfies Partial<Record<ProgramId, number>>,
+    termMonths: 6,
+    /**
+     * Living away from home in a dorm, per month in the suburb at the "normal"
+     * spending level; the area's cost factor applies to all, the spending
+     * level to all but the room. City ≈ 11,600, suburb 9,300, rural ≈ 5,400.
+     */
+    dormLiving: { dorm: 3500, food: 4000, transport: 1000, phone: 300, leisure: 500 },
+    /** Share of the dorm living the parents send each month, by Family wealth (the first band it is at least). */
+    allowanceShare: [
+      { wealthFrom: 65, share: 1 },
+      { wealthFrom: 40, share: 0.6 },
+      { wealthFrom: 0, share: 0.2 },
+    ],
+    /** The parents can pay the tuition from this Family wealth (by where). */
+    parentsPayFromWealth: { top_public: 40, regional: 40, private: 50, open: 0, vocational_college: 0 } satisfies Record<StudyPlace, number>,
+    /** A student loan (กยศ.) only below this Family wealth (stands for a family income up to 360,000 a year). */
+    loanBelowWealth: 50,
+    /** กยศ. living allowance, per month, for a student living in a dorm. */
+    loanLivingPerMonth: 3000,
+    /** Where each place is: in the city, or in the home area (a rural home still means a dorm). */
+    inCity: ['top_public', 'private'] as readonly StudyPlace[],
+    /** Places studied from home (no dorm). */
+    fromHome: ['open', 'vocational_college'] as readonly StudyPlace[],
+    /** A waiting program with no current one (a gap year) starts in these calendar months (the start of the school year). */
+    startMonths: [5, 6, 7, 8],
+    /**
+     * What each program teaches per year (before the trait factor), on top of
+     * life experience. The place multiplies it (placeLearning).
+     */
+    learningPerYear: {
+      higher_vocational: { practical: 2, academic: 0.5 },
+      bachelor_medicine: { academic: 3, communication: 1 },
+      bachelor_health: { academic: 2.5, communication: 1, practical: 0.5 },
+      bachelor_engineering: { academic: 2.5, practical: 1 },
+      bachelor_business: { academic: 1.5, communication: 1.5 },
+      bachelor_education: { academic: 1.5, communication: 1.5 },
+      bachelor_humanities: { academic: 1.5, communication: 1, creative: 0.5 },
+      bachelor_arts: { creative: 2.5, academic: 0.5 },
+    } satisfies Partial<Record<ProgramId, Partial<Skills>>>,
+    placeLearning: {
+      top_public: { academic: 1.25 },
+      regional: {},
+      private: { academic: 1.1 },
+      // Studying alone from books, with few classes.
+      open: { academic: 0.8, communication: 0.8 },
+      vocational_college: { practical: 1.3 },
+    } satisfies Record<StudyPlace, Partial<Skills>>,
   },
 
   /** D72: people the character meets. */

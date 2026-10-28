@@ -104,7 +104,7 @@ export const REGION_IDS = ['city', 'suburb', 'rural'] as const;
 export type RegionId = (typeof REGION_IDS)[number];
 
 /** Whose home the character lives in. Events change it (save version 7). */
-export const HOME_IDS = ['parents', 'grandparents'] as const;
+export const HOME_IDS = ['parents', 'grandparents', 'dorm'] as const;
 export type HomeId = (typeof HOME_IDS)[number];
 
 /**
@@ -292,8 +292,29 @@ export const PROGRAM_IDS = [
   'vocational_computer',
   'vocational_business',
   'non_formal',
+  // D82: after Grade 12 / ปวช.
+  'higher_vocational',
+  'bachelor_medicine',
+  'bachelor_health',
+  'bachelor_engineering',
+  'bachelor_business',
+  'bachelor_education',
+  'bachelor_humanities',
+  'bachelor_arts',
 ] as const;
 export type ProgramId = (typeof PROGRAM_IDS)[number];
+
+/**
+ * D82: where the character studies after Grade 12 / ปวช. (the program is
+ * what). Stored as the flag `study_<id>`, set when the character decides
+ * where to apply, like the school flags of D66.
+ */
+export const STUDY_PLACES = ['top_public', 'regional', 'private', 'open', 'vocational_college'] as const;
+export type StudyPlace = (typeof STUDY_PLACES)[number];
+
+/** D82: who pays the tuition: the parents, a student loan (กยศ.), or the character's own savings. */
+export const STUDY_FUNDING = ['parents', 'loan', 'self'] as const;
+export type StudyFunding = (typeof STUDY_FUNDING)[number];
 
 /** How a program ended: finished it, moved to another program, or left before the end. */
 export const ENROLLMENT_RESULTS = ['graduated', 'switched', 'left'] as const;
@@ -312,8 +333,14 @@ export interface Enrollment {
 export interface Education {
   /** In order; at most the last one is still going on. */
   history: Enrollment[];
-  /** Chosen and waiting: starts the month the current program ends (e.g. the Grade 10 plan chosen in Grade 9). */
+  /**
+   * Chosen and waiting: starts the month the current program ends (e.g. the
+   * Grade 10 plan chosen in Grade 9). D82: with no current program (a gap
+   * year), it starts at the start of the next school year.
+   */
   next?: ProgramId;
+  /** D82: where the character lived before moving into a dorm to study; they move back when the studies end. */
+  homeBeforeStudy?: Residence;
 }
 
 // ── Work and money (D77, finance phase 1) ───────────────────────────────────
@@ -383,6 +410,13 @@ export interface Money {
   spendingLevel: SpendingLevel;
   /** D80: what the character could not pay for last month (0 = enough money). */
   shortfall: number;
+  /**
+   * D82: how the studies after Grade 12 / ปวช. are paid for (save version
+   * 16). Chosen once admitted; cleared when those studies end.
+   */
+  study?: { tuition: StudyFunding; livingLoan: boolean };
+  /** D82: the student loan (กยศ.) borrowed so far, in baht. Paid back with the career system. */
+  studentLoan: number;
 }
 
 /** D80: frugal ×0.6 (a little unhappier), normal, comfortable ×1.6 (a little happier). */
@@ -396,9 +430,10 @@ export type LivingSpendingCategory = (typeof LIVING_SPENDING_CATEGORIES)[number]
 /**
  * D81: every category of own spending: living costs (scaled by job level,
  * area and spending level), then an addiction (a fixed amount while addicted).
+ * D82: a student living away pays the dorm first.
  * Order = the order they are paid in when the money runs short.
  */
-export const SPENDING_CATEGORIES = [...LIVING_SPENDING_CATEGORIES, ...ADDICTION_HABITS] as const;
+export const SPENDING_CATEGORIES = ['dorm', ...LIVING_SPENDING_CATEGORIES, ...ADDICTION_HABITS] as const;
 export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number];
 
 /**

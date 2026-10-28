@@ -10,8 +10,9 @@
 import { BALANCE } from '../data/balance';
 import { currentEnrollment } from './education';
 import type { Contribution } from './stats';
+import { currentStudy } from './study';
 import { currentJob, workShare } from './work';
-import { ADDICTION_HABITS, SCHOOL_IDS, SKILL_KEYS, type AddictionLevel, type GameState, type Habits, type SchoolId, type SkillKey, type Skills } from './types';
+import { ADDICTION_HABITS, SCHOOL_IDS, SKILL_KEYS, type AddictionLevel, type GameState, type Habits, type ProgramId, type SchoolId, type SkillKey, type Skills } from './types';
 
 const MONTHS_PER_YEAR = 12;
 
@@ -261,7 +262,30 @@ function skillContributions(state: GameState, age: number): Contribution[] {
       result.push({ target: skill, source: 'body.aging', amount: perMonth(b.agingPerYear) });
     }
   }
-  return [...result, ...workSkillContributions(state, growingUp)];
+  return [...result, ...studySkillContributions(state), ...workSkillContributions(state, growingUp)];
+}
+
+/**
+ * D82: what the studies after Grade 12 teach, on top of life experience:
+ * each program its own skills ("study.<program>"), scaled by the skill's
+ * trait like all learning, and once more by the place
+ * ("studyPlace.<place>.learning", e.g. a top university, or the open
+ * university's studying alone).
+ */
+function studySkillContributions(state: GameState): Contribution[] {
+  const study = currentStudy(state);
+  if (study === undefined) return [];
+  const s = BALANCE.study;
+  const perYear: Partial<Skills> = (s.learningPerYear as Partial<Record<ProgramId, Partial<Skills>>>)[study.program] ?? {};
+  const placeTable: Partial<Skills> = s.placeLearning[study.place];
+  const result: Contribution[] = [];
+  for (const [skill, yearly] of Object.entries(perYear) as [SkillKey, number][]) {
+    const factor = traitFactor(state.traits[BALANCE.skills.learningTrait[skill]], BALANCE.traits.learningMin, BALANCE.traits.learningMax);
+    result.push({ target: skill, source: `study.${study.program}`, amount: perMonth(yearly * factor) });
+    const placeFactor = placeTable[skill] ?? 1;
+    if (placeFactor !== 1) result.push({ target: skill, source: `studyPlace.${study.place}.learning`, amount: perMonth(yearly * factor * (placeFactor - 1)) });
+  }
+  return result;
 }
 
 /**

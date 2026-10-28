@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, JOB_IDS, PROGRAM_IDS, RELATIONS, SEXES, SPENDING_LEVELS, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
+import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, HOME_IDS, JOB_IDS, PROGRAM_IDS, REGION_IDS, RELATIONS, SEXES, SPENDING_LEVELS, STUDY_FUNDING, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 15;
+export const CURRENT_SAVE_VERSION = 16;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -55,7 +55,14 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   12: addWorkAndMoney,
   13: addMoneyBySource,
   14: addSpending,
+  15: addStudentLoan,
 };
+
+/** 15 → 16 (D82): no student loan yet (nobody could study after Grade 12 before). */
+function addStudentLoan(state: unknown): unknown {
+  if (!isRecord(state) || !isRecord(state.money)) return state;
+  return { ...state, money: { ...state.money, studentLoan: 0 } };
+}
 
 /** 14 → 15 (D80): the character's own spending starts at the normal level, with nothing unpaid. */
 function addSpending(state: unknown): unknown {
@@ -140,10 +147,15 @@ function hasNumbers(value: unknown, keys: readonly string[]): boolean {
   return isRecord(value) && keys.every((key) => typeof value[key] === 'number' && Number.isFinite(value[key]));
 }
 
+function isValidResidence(value: unknown): boolean {
+  return isRecord(value) && oneOf(REGION_IDS, value.regionId) && oneOf(HOME_IDS, value.homeId);
+}
+
 /** D72: the fields the friends card and the life summary read. */
 function isValidEducation(value: unknown): boolean {
   if (!isRecord(value) || !Array.isArray(value.history)) return false;
   if (value.next !== undefined && !(PROGRAM_IDS as readonly unknown[]).includes(value.next)) return false;
+  if (value.homeBeforeStudy !== undefined && !isValidResidence(value.homeBeforeStudy)) return false;
   return value.history.every(
     (e) =>
       isRecord(e) &&
@@ -189,6 +201,9 @@ function isValidMoney(value: unknown): boolean {
     (value.jobLossRecoveryUntil === undefined || typeof value.jobLossRecoveryUntil === 'number') &&
     oneOf(SPENDING_LEVELS, value.spendingLevel) &&
     typeof value.shortfall === 'number' &&
+    typeof value.studentLoan === 'number' &&
+    (value.studentLoan as number) >= 0 &&
+    (value.study === undefined || (isRecord(value.study) && oneOf(STUDY_FUNDING, value.study.tuition) && typeof value.study.livingLoan === 'boolean')) &&
     (value.familyRelief === undefined || hasNumbers(value.familyRelief, ['amount', 'untilMonth']))
   );
 }

@@ -27,6 +27,7 @@
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
 import { applyEducationEffect, meetsEducationConditions, type EducationConditions, type EducationEffect } from './education';
+import { applyStudyFunding } from './study';
 import { setHabitFromEvent } from './lifestyle';
 import {
   applyFriendsEffects,
@@ -61,6 +62,7 @@ import {
   RELATIONS,
   SCHOOL_FLAGS,
   SPENDING_LEVELS,
+  STUDY_FUNDING,
   type EnvironmentKey,
   type EventRecord,
   type GameState,
@@ -71,6 +73,7 @@ import {
   type RegionId,
   type SpendingLevel,
   type StatTarget,
+  type StudyFunding,
   type TraitKey,
 } from './types';
 
@@ -205,6 +208,8 @@ export interface EventEffects {
   familyRelief?: { amount: number; months: number };
   /** D80: how freely the character spends from now on. */
   spendingLevel?: SpendingLevel;
+  /** D82: a place to study after Grade 12 is won: who pays the tuition (the program then waits to start). */
+  study?: { funding: StudyFunding };
 }
 
 export interface EventChoice {
@@ -337,7 +342,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel', 'study'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -397,6 +402,12 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   if (e.work !== undefined) checkWorkEffect(e.work, at, problems);
   if (e.familyShare !== undefined && !(Number.isInteger(e.familyShare) && (e.familyShare as number) >= 0 && (e.familyShare as number) <= 100)) {
     problems.push(`${at}: effects.familyShare must be a whole percent 0–100`);
+  }
+  if (e.study !== undefined) {
+    const study = e.study;
+    if (!isRecord(study) || !(STUDY_FUNDING as readonly unknown[]).includes(study.funding) || unknownKeys(study, ['funding']).length > 0) {
+      problems.push(`${at}: effects.study must be { "funding": one of ${STUDY_FUNDING.join(', ')} }`);
+    }
   }
   if (e.spendingLevel !== undefined && !(SPENDING_LEVELS as readonly unknown[]).includes(e.spendingLevel)) {
     problems.push(`${at}: effects.spendingLevel must be one of ${SPENDING_LEVELS.join(', ')}`);
@@ -473,14 +484,15 @@ const isProgramList = (value: unknown): boolean => Array.isArray(value) && value
 /** D74: { enroll?, next?, leave? }. */
 function checkEducationEffect(effect: unknown, at: string, problems: string[]): void {
   if (!isRecord(effect) || Object.keys(effect).length === 0) {
-    problems.push(`${at}: effects.education must have at least one of enroll, next, leave`);
+    problems.push(`${at}: effects.education must have at least one of enroll, next, leave, clearNext`);
     return;
   }
-  for (const key of unknownKeys(effect, ['enroll', 'next', 'leave'])) problems.push(`${at}: effects.education: unknown field "${key}"`);
+  for (const key of unknownKeys(effect, ['enroll', 'next', 'leave', 'clearNext'])) problems.push(`${at}: effects.education: unknown field "${key}"`);
   for (const key of ['enroll', 'next'] as const) {
     if (effect[key] !== undefined && !isProgramId(effect[key])) problems.push(`${at}: effects.education.${key} must be one of ${PROGRAM_IDS.join(', ')}`);
   }
   if (effect.leave !== undefined && effect.leave !== true) problems.push(`${at}: effects.education.leave must be true`);
+  if (effect.clearNext !== undefined && effect.clearNext !== true) problems.push(`${at}: effects.education.clearNext must be true`);
 }
 
 /** D77: exactly one of { start: { job, level } }, { level }, { quit: true }. */
@@ -526,12 +538,12 @@ function checkWorkCondition(c: unknown, at: string, problems: string[]): void {
 /** D74: { enrolled?, current?, monthsIn?, completed?, notCompleted? }. */
 function checkEducationCondition(c: unknown, at: string, problems: string[]): void {
   if (!isRecord(c) || Object.keys(c).length === 0) {
-    problems.push(`${at}: conditions.education must have at least one of enrolled, current, monthsIn, completed, notCompleted`);
+    problems.push(`${at}: conditions.education must have at least one of enrolled, current, monthsIn, completed, notCompleted, last`);
     return;
   }
-  for (const key of unknownKeys(c, ['enrolled', 'current', 'monthsIn', 'completed', 'notCompleted'])) problems.push(`${at}: conditions.education: unknown field "${key}"`);
+  for (const key of unknownKeys(c, ['enrolled', 'current', 'monthsIn', 'completed', 'notCompleted', 'last'])) problems.push(`${at}: conditions.education: unknown field "${key}"`);
   if (c.enrolled !== undefined && typeof c.enrolled !== 'boolean') problems.push(`${at}: conditions.education.enrolled must be true or false`);
-  for (const key of ['current', 'completed', 'notCompleted'] as const) {
+  for (const key of ['current', 'completed', 'notCompleted', 'last'] as const) {
     if (c[key] !== undefined && !isProgramList(c[key])) problems.push(`${at}: conditions.education.${key} must be a non-empty list of program ids`);
   }
   if (c.monthsIn !== undefined) {
@@ -1217,6 +1229,7 @@ function applyMoneyAndWork(state: GameState, effects: EventEffects, record: Even
   }
   if (effects.familyShare !== undefined) state.money.familySharePercent = effects.familyShare;
   if (effects.spendingLevel !== undefined) state.money.spendingLevel = effects.spendingLevel;
+  if (effects.study) applyStudyFunding(state, effects.study.funding);
   if (effects.familyRelief) {
     state.money.familyRelief = { amount: effects.familyRelief.amount, untilMonth: state.ageInMonths + effects.familyRelief.months };
   }

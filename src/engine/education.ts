@@ -21,10 +21,11 @@
  * rest of the engine); the read helpers never do.
  */
 
+import { BALANCE } from '../data/balance';
 import programs from '../data/programs.json';
 import { PROGRAM_IDS, type Education, type Enrollment, type EnrollmentResult, type GameState, type ProgramId } from './types';
 
-export const PROGRAM_LEVELS = ['primary', 'lower_secondary', 'upper_secondary', 'vocational', 'non_formal'] as const;
+export const PROGRAM_LEVELS = ['primary', 'lower_secondary', 'upper_secondary', 'vocational', 'non_formal', 'higher_vocational', 'bachelor'] as const;
 export type ProgramLevel = (typeof PROGRAM_LEVELS)[number];
 
 export interface ProgramDef {
@@ -79,6 +80,11 @@ export function monthsInProgram(state: Pick<GameState, 'education' | 'ageInMonth
   return current === undefined ? undefined : state.ageInMonths - current.from + (current.credit ?? 0);
 }
 
+/** D82: the program studied now, or else the last one studied (finished, left or switched). */
+export function lastProgram(state: Pick<GameState, 'education'>): ProgramId | undefined {
+  return state.education.history.at(-1)?.program;
+}
+
 /** Finished (not left or switched) any of these programs. */
 export function hasCompleted(state: Pick<GameState, 'education'>, ids: readonly ProgramId[]): boolean {
   return state.education.history.some((e) => e.result === 'graduated' && ids.includes(e.program));
@@ -120,13 +126,28 @@ export function leaveEducation(state: GameState, age: number): void {
  */
 export function advanceEducation(state: GameState): boolean {
   const current = currentEnrollment(state);
-  if (current === undefined) return false;
+  if (current === undefined) return startWaitingProgram(state);
   const def = programDef(current.program);
   if ((monthsInProgram(state) ?? 0) < def.months) return false;
   endCurrent(state.education, state.ageInMonths, 'graduated');
   const following = def.then ?? state.education.next;
   delete state.education.next;
   if (following !== undefined) state.education.history.push({ program: following, from: state.ageInMonths });
+  return true;
+}
+
+/**
+ * D82: with no current program, a program chosen to follow (a place won after
+ * a gap year, or one won after the last school year had already ended)
+ * starts at the start of the school year.
+ */
+function startWaitingProgram(state: GameState): boolean {
+  const next = state.education.next;
+  if (next === undefined) return false;
+  const month = ((state.birthMonth - 1 + state.ageInMonths) % 12) + 1;
+  if (!(BALANCE.study.startMonths as readonly number[]).includes(month)) return false;
+  delete state.education.next;
+  state.education.history.push({ program: next, from: state.ageInMonths });
   return true;
 }
 
@@ -140,9 +161,12 @@ export interface EducationEffect {
   next?: ProgramId;
   /** Leave the current program now. */
   leave?: true;
+  /** D82: forget the program chosen to follow (e.g. a university place not won). */
+  clearNext?: true;
 }
 
 export function applyEducationEffect(state: GameState, effect: EducationEffect, age: number): void {
+  if (effect.clearNext) delete state.education.next;
   if (effect.leave) leaveEducation(state, age);
   if (effect.enroll !== undefined) enroll(state, effect.enroll, age);
   if (effect.next !== undefined) state.education.next = effect.next;
@@ -160,6 +184,8 @@ export interface EducationConditions {
   completed?: ProgramId[];
   /** Finished none of these. */
   notCompleted?: ProgramId[];
+  /** D82: the program studied now or, when not studying, the last one studied, is one of these. */
+  last?: ProgramId[];
 }
 
 export function meetsEducationConditions(state: Pick<GameState, 'education' | 'ageInMonths'>, c: EducationConditions): boolean {
@@ -174,5 +200,9 @@ export function meetsEducationConditions(state: Pick<GameState, 'education' | 'a
   }
   if (c.completed !== undefined && !hasCompleted(state, c.completed)) return false;
   if (c.notCompleted !== undefined && hasCompleted(state, c.notCompleted)) return false;
+  if (c.last !== undefined) {
+    const last = lastProgram(state);
+    if (last === undefined || !c.last.includes(last)) return false;
+  }
   return true;
 }

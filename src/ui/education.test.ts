@@ -22,6 +22,15 @@ describe('educationLine (D74)', () => {
     );
   });
 
+  it('D82: after Grade 12 names the year, the faculty and the university (not the old school)', () => {
+    expect(educationLine(at(19 * 12 + 2, { history: [{ program: 'bachelor_engineering', from: 18 * 12 }] }, ['school_public', 'study_top_public']))).toBe(
+      'กำลังเรียน ปี 2 คณะวิศวะ · มหาวิทยาลัยรัฐชื่อดัง',
+    );
+    expect(educationLine(at(18 * 12 + 2, { history: [{ program: 'higher_vocational', from: 18 * 12 }] }, ['school_vocational', 'study_vocational_college']))).toBe(
+      'กำลังเรียน ปวส. ปี 1 · วิทยาลัยอาชีวะ',
+    );
+  });
+
   it('counts the months carried over from a switch of plan', () => {
     expect(educationLine(at(16 * 12, { history: [{ program: 'upper_secondary_arts_math', from: 16 * 12 - 2, credit: 12 }] }, ['school_public']))).toBe(
       'กำลังเรียน ม.5 แผนศิลป์-คำนวณ · โรงเรียนรัฐ',

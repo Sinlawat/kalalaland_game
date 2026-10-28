@@ -6,6 +6,7 @@
 
 import { currentEnrollment, monthsInProgram, programDef } from '../engine/education';
 import { currentSchool } from '../engine/passive';
+import { currentStudy } from '../engine/study';
 import type { EnrollmentResult, GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
 
@@ -28,6 +29,11 @@ function currentClass(state: EducationSource): string | undefined {
       return t('education.grade.vocational', { year, major: t(`education.short.${current.program}`) });
     case 'non_formal':
       return t('education.grade.nonFormal');
+    // D82
+    case 'higher_vocational':
+      return t('education.grade.higherVocational', { year });
+    case 'bachelor':
+      return t('education.grade.bachelor', { year, faculty: t(`education.short.${current.program}`) });
   }
 }
 
@@ -39,6 +45,9 @@ function currentClass(state: EducationSource): string | undefined {
 export function educationLine(state: EducationSource): string | undefined {
   const now = currentClass(state);
   if (now !== undefined) {
+    // D82: after Grade 12 the place is a university or college, not a school.
+    const study = currentStudy(state);
+    if (study !== undefined) return `${t('education.now', { what: now })} · ${t(`studyPlace.${study.place}`)}`;
     const school = currentSchool(state);
     const where = school !== undefined && programDef(currentEnrollment(state)!.program).level !== 'non_formal' ? ` · ${t(`school.${school}`)}` : '';
     return t('education.now', { what: now }) + where;

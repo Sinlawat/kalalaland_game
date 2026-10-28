@@ -122,13 +122,20 @@ describe('save / load', () => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 12, savedAt: '2026-10-28T00:00:00.000Z', state: v12 }));
     expect(loadGame(storage)).toEqual({
       status: 'ok',
-      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} }, spendingLevel: 'normal', shortfall: 0 } },
+      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} }, spendingLevel: 'normal', shortfall: 0, studentLoan: 0 } },
     });
+  });
+
+  it('upgrades a version 15 save: no student loan yet (D82)', () => {
+    const life = createNewLife(21);
+    const { studentLoan: _loan, ...money15 } = life.money;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 15, savedAt: '2026-10-28T00:00:00.000Z', state: { ...life, money: money15 } }));
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: life });
   });
 
   it('upgrades a version 14 save: spending starts at the normal level, nothing unpaid (D80)', () => {
     const life = createNewLife(21);
-    const { spendingLevel: _level, shortfall: _short, ...money14 } = life.money;
+    const { spendingLevel: _level, shortfall: _short, studentLoan: _loan, ...money14 } = life.money;
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 14, savedAt: '2026-10-28T00:00:00.000Z', state: { ...life, money: money14 } }));
     expect(loadGame(storage)).toEqual({ status: 'ok', state: life });
   });
@@ -148,6 +155,9 @@ describe('save / load', () => {
     ['an unknown job', { work: { history: [{ job: 'bank', level: 'weekend', from: 180 }] } }],
     ['an unknown work level', { work: { history: [{ job: 'cafe', level: 'night_shift', from: 180 }] } }],
     ['no work history', { work: {} }],
+    ['a negative student loan (D82)', { money: { ...createNewLife(3).money, studentLoan: -1 } }],
+    ['an unknown way to pay the tuition (D82)', { money: { ...createNewLife(3).money, study: { tuition: 'lottery', livingLoan: false } } }],
+    ['an unknown home before the dorm (D82)', { education: { history: [], homeBeforeStudy: { regionId: 'city', homeId: 'castle' } } }],
   ])('rejects a save with %s (D77)', (_label, broken) => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: { ...createNewLife(3), ...broken } }));
     expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });

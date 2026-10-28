@@ -87,7 +87,7 @@ export function createNewLife(seed: number): GameState {
     people: [],
     education: { history: [] },
     work: { history: [] },
-    money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} }, spendingLevel: 'normal', shortfall: 0 },
+    money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} }, spendingLevel: 'normal', shortfall: 0, studentLoan: 0 },
     death: null,
   };
 
