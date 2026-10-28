@@ -7409,6 +7409,25 @@
     ]
   },
   {
+    "id": "edu_internship_allowance",
+    "conditions": {
+      "ageMin": 16,
+      "ageMax": 18,
+      "monthsSince": {
+        "events": [
+          "edu_vocational_internship"
+        ],
+        "min": 4
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "lifetimeChance": 0.5,
+    "effects": {
+      "money": 12000
+    }
+  },
+  {
     "id": "edu_career_guidance",
     "conditions": {
       "ageMin": 15,

@@ -555,3 +555,21 @@ describe('D81: money in events that already existed', () => {
     }
   });
 });
+
+describe('D81: the internship allowance', () => {
+  it('half of the lives get 12,000 baht 4 months after the internship started; the roll is fixed for a life', () => {
+    const allowance = findEvent('edu_internship_allowance')!;
+    expect(allowance.lifetimeChance).toBe(0.5);
+    const after = (seed: number, months: number) =>
+      makeState({ seed, ageInMonths: 16 * 12 + months, eventHistory: [{ id: 'edu_vocational_internship', ageInMonths: 16 * 12, choiceId: 'get_through' }] });
+    const paid = Array.from({ length: 400 }, (_, i) => i + 1).filter((seed) => isEligible(allowance, after(seed, 4)));
+    expect(paid.length / 400).toBeGreaterThan(0.4);
+    expect(paid.length / 400).toBeLessThan(0.6);
+    const seed = paid[0]!;
+    expect([isEligible(allowance, after(seed, 3)), isEligible(allowance, after(seed, 4))]).toEqual([false, true]);
+    const state = after(seed, 4);
+    applyEvent(state, allowance);
+    expect(state.money.cash).toBe(12000);
+    expect(state.money.year.income).toEqual({ 'event.edu_internship_allowance': 12000 });
+  });
+});

@@ -948,6 +948,8 @@
   "event.edu_vocational_internship.result.work_hard": "พี่เลี้ยงชมว่าคุณทำงานละเอียด และบอกว่าจบแล้วให้มาสมัครที่นี่",
   "event.edu_vocational_internship.choice.get_through": "ทำตามที่ถูกสั่งให้ผ่านเกณฑ์",
   "event.edu_vocational_internship.result.get_through": "คุณฝึกงานครบตามเกณฑ์",
+  "event.edu_internship_allowance.title": "ได้เบี้ยเลี้ยงฝึกงาน",
+  "event.edu_internship_allowance.text": "ฝึกงานครบเทอมแล้ว ที่ที่คุณไปฝึกจ่ายเบี้ยเลี้ยงให้วันละครึ่งหนึ่งของค่าแรงขั้นต่ำ หักค่ากินค่ารถระหว่างฝึกแล้ว คุณยังมีเงินเหลือเก็บก้อนหนึ่ง",
   "event.edu_career_guidance.title": "วันแนะแนวอาชีพ",
   "event.edu_career_guidance.text": "โรงเรียนจัดวันแนะแนวอาชีพ รุ่นพี่หลายคนกลับมาเล่าว่าเรียนอะไร ทำงานอะไร และงานจริงต่างจากที่คิดไว้แค่ไหน",
   "event.edu_career_guidance.choice.ask": "เข้าไปคุยกับรุ่นพี่ในสายที่สนใจจนจบงาน",
