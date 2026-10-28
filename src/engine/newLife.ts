@@ -8,6 +8,7 @@ import names from '../data/names.json';
 import { createRng, normalizeSeed, type Rng } from './rng';
 import { snapshotOf } from './snapshot';
 import { REGION_IDS, SEXES, type GameState, type RegionId } from './types';
+import { familyMoneyStress } from './work';
 
 /**
  * Average of two uniform draws → a triangular distribution: values near
@@ -85,12 +86,16 @@ export function createNewLife(seed: number): GameState {
     history: [],
     people: [],
     education: { history: [] },
+    work: { history: [] },
+    money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } },
     death: null,
   };
 
   const birthRegionId = birthRegionFor(state.environment.familyWealth, birthRegionRoll);
   state.birthRegionId = birthRegionId;
   state.residence = { regionId: birthRegionId, homeId: 'parents' };
+  // D77: the family's money stress is known from birth (no random draw).
+  state.environment.financialStress = familyMoneyStress(state);
 
   state.rngState = rng.state;
   state.birthSnapshot = snapshotOf(state);

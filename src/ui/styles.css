@@ -154,6 +154,27 @@ p { margin: 0 0 8px; }
   .hud--left { left: 20px; }
   .hud--right { right: 20px; }
 }
+/* D77: the family's money stress, bottom centre of the picture (phone: under it). */
+.scene__stress {
+  grid-column: 1 / -1;
+  margin: 0;
+  justify-self: center;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+@media (min-width: 760px) {
+  .scene__stress {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, var(--surface) 93%, transparent);
+  }
+}
 .hud__group { display: grid; gap: 2px; }
 .hud__title { margin: 0; font-size: 0.72rem; font-weight: 600; color: var(--muted); line-height: 1.3; }
 .hud__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }

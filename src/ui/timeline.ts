@@ -8,7 +8,7 @@
  */
 
 import { calendarMonth } from '../engine/events';
-import { TRAIT_KEYS, type EnvironmentKey, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey } from '../engine/types';
+import { TRAIT_KEYS, type EnvironmentKey, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey, type WorkChange } from '../engine/types';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
@@ -47,6 +47,10 @@ export interface TimelineEntry {
   residenceChange?: EventRecord['residenceChange'];
   /** D72: the name of the person the event was about. */
   personName?: string;
+  /** D77: what the event did to the savings, summed over occurrences. */
+  moneyChange?: number;
+  /** D77: the job the event started, changed or ended (the latest occurrence wins). */
+  workChange?: WorkChange;
   /** Month of life of the LATEST occurrence in this year of age (entries are sorted by it, newest first). */
   ageInMonths: number;
   /** Calendar month (1–12) of that occurrence, shown beside the title so the order is visible. */
@@ -61,9 +65,19 @@ export interface TimelineYear {
   /** Whole years of age when the events happened (0 = first year of life). */
   age: number;
   entries: TimelineEntry[];
+  /** D77: wages earned and money given to the family in that year, when there were wages. */
+  money?: { earned: number; given: number };
 }
 
-export type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'>;
+export type TimelineSource = Pick<GameState, 'eventHistory' | 'history' | 'yearLog' | 'birthMonth'> & Partial<Pick<GameState, 'money'>>;
+
+/** D77: wages of the summary year of age `age` (closed on the next birthday, or the running year). */
+function yearMoney(state: TimelineSource, age: number): TimelineYear['money'] {
+  // The summary closed on the next birthday (or, in the year of death, a fraction of a year later).
+  const closed = state.history.find((summary) => summary.age > age && summary.age <= age + 1);
+  const money = closed !== undefined ? closed.money : state.history.every((summary) => summary.age <= age) ? state.money?.year : undefined;
+  return money !== undefined && money.earned > 0 ? { earned: money.earned, given: money.given } : undefined;
+}
 
 /**
  * The summary year that contains month `ageInMonths`, as a month range.
@@ -148,6 +162,8 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
       if (record.habitChanges) existing.habitChanges = { ...existing.habitChanges, ...record.habitChanges };
       if (record.habitMonths) existing.habitMonths = { ...existing.habitMonths, ...record.habitMonths };
       if (record.residenceChange) existing.residenceChange = record.residenceChange;
+      if (record.moneyChange !== undefined) existing.moneyChange = (existing.moneyChange ?? 0) + record.moneyChange;
+      if (record.workChange) existing.workChange = record.workChange;
       existing.ageInMonths = record.ageInMonths;
       existing.calendarMonth = calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths });
       latestIndex.set(existing, index);
@@ -161,6 +177,8 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         ...(record.habitMonths ? { habitMonths: { ...record.habitMonths } } : {}),
         ...(record.residenceChange ? { residenceChange: record.residenceChange } : {}),
         ...(record.person ? { personName: record.person.nickname } : {}),
+        ...(record.moneyChange !== undefined ? { moneyChange: record.moneyChange } : {}),
+        ...(record.workChange ? { workChange: record.workChange } : {}),
         ageInMonths: record.ageInMonths,
         calendarMonth: calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths }),
         count: 1,
@@ -176,6 +194,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
     .sort(([a], [b]) => b - a)
     .map(([age, entries]) => ({
       age,
+      ...(yearMoney(state, age) !== undefined ? { money: yearMoney(state, age)! } : {}),
       entries: [...entries.values()]
         .sort((a, b) => latestIndex.get(b)! - latestIndex.get(a)!)
         .map((entry) => ({

@@ -16,6 +16,7 @@ import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
 import { TraitRevealDialog } from './TraitRevealDialog';
 import { useGame } from './useGame';
+import { workLine } from './work';
 
 export function App() {
   const controller = useGame();
@@ -45,6 +46,7 @@ export function App() {
   }
 
   const educationNow = educationLine(game);
+  const workNow = workLine(game);
 
   return (
     <main className="screen screen--wide">
@@ -56,6 +58,8 @@ export function App() {
           </p>
           {/* D74: what the character studies now and where (none before Grade 1). */}
           {educationNow !== undefined && <p className="topbar__education">{educationNow}</p>}
+          {/* D77: the job now, if any. */}
+          {workNow !== undefined && <p className="topbar__education">{workNow}</p>}
           <div className="topbar__actions">
             <button type="button" className="button button--small" onClick={() => setResidenceOpen(true)}>
               {t('residence.open')}

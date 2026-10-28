@@ -8,7 +8,9 @@
  */
 
 import { BALANCE } from '../data/balance';
+import { currentEnrollment } from './education';
 import type { Contribution } from './stats';
+import { currentJob, workShare } from './work';
 import { ADDICTION_HABITS, SCHOOL_IDS, SKILL_KEYS, type AddictionLevel, type GameState, type Habits, type SchoolId, type SkillKey, type Skills } from './types';
 
 const MONTHS_PER_YEAR = 12;
@@ -17,8 +19,13 @@ export function ageInYears(state: Pick<GameState, 'ageInMonths'>): number {
   return state.ageInMonths / MONTHS_PER_YEAR;
 }
 
-export function isWorking(state: Pick<GameState, 'flags'>): boolean {
-  return state.flags.includes('working');
+/**
+ * Has work that costs time and energy: a full-time job (the 'working' flag)
+ * or, D77, any job in the work history (a weekend part-time job counts).
+ * The overtime habit and work stress only act while working.
+ */
+export function isWorking(state: Pick<GameState, 'flags' | 'work'>): boolean {
+  return state.flags.includes('working') || currentJob(state) !== undefined;
 }
 
 /** Grade 1 (ป.1): the age at which the child starts making their own choices. */
@@ -250,6 +257,30 @@ function skillContributions(state: GameState, age: number): Contribution[] {
     if (age >= b.agingStartAge) {
       result.push({ target: skill, source: 'body.aging', amount: perMonth(b.agingPerYear) });
     }
+  }
+  return [...result, ...workSkillContributions(state, growingUp)];
+}
+
+/**
+ * D77: what work does to the skills. A job teaches its own skills (more
+ * hours, more learning), and daily part-time work slows down what school
+ * teaches: the academic skill learns ×0.7 of its school-age speed. Each is
+ * its own log line ("work.<job>", "work.daily.study").
+ */
+function workSkillContributions(state: GameState, growingUp: boolean): Contribution[] {
+  const job = currentJob(state);
+  if (job === undefined) return [];
+  const w = BALANCE.work;
+  const result: Contribution[] = [];
+  const share = workShare(job.level);
+  for (const [skill, yearly] of Object.entries(w.skillsPerYear[job.job]) as [SkillKey, number][]) {
+    result.push({ target: skill, source: `work.${job.job}`, amount: perMonth(yearly * share) });
+  }
+  if (job.level === 'daily' && growingUp && currentEnrollment(state) !== undefined) {
+    const b = BALANCE.skills;
+    const factor = traitFactor(state.traits[b.learningTrait.academic], BALANCE.traits.learningMin, BALANCE.traits.learningMax);
+    const schoolSpeed = b.childhoodPerYear.academic * factor * schoolLearningFactor(state, 'academic');
+    result.push({ target: 'academic', source: 'work.daily.study', amount: perMonth(schoolSpeed * (w.dailyAcademicLearning - 1)) });
   }
   return result;
 }

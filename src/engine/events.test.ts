@@ -169,7 +169,7 @@ describe('parseEvents (data validation)', () => {
         ]),
         'at least one choice must have no conditions',
       ],
-      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats, flags and lifestyle'],
+      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats, flags, lifestyle and money'],
       ['an unsupported trait', choiceEvent([open('a'), open('b', { traits: { charm: 5 } as never })]), 'unsupported trait "charm"'],
       ['a habit level that does not exist', choiceEvent([open('a'), open('b', { habits: { exercise: 'daily' } as never })]), 'has no level "daily"'],
     ])('rejects %s', (_label, raw, expected) => {

@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { ENROLLMENT_RESULTS, PROGRAM_IDS, RELATIONS, SEXES, type Enrollment, type GameState } from '../engine/types';
+import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, JOB_IDS, PROGRAM_IDS, RELATIONS, SEXES, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 12;
+export const CURRENT_SAVE_VERSION = 13;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -52,7 +52,22 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   // New steps go here: key N upgrades a version-N state to version N+1.
   10: addPeople,
   11: addEducation,
+  12: addWorkAndMoney,
 };
+
+/**
+ * 12 → 13 (D77): work and money. Nobody had a paid job before, so the work
+ * history starts empty and the savings at 0. The family's money stress is
+ * filled in by the next month's step.
+ */
+function addWorkAndMoney(state: unknown): unknown {
+  if (!isRecord(state)) return state;
+  return {
+    ...state,
+    work: { history: [] },
+    money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } },
+  };
+}
 
 /**
  * 10 → 11 (D72): people. Lives before had no named friends, so the list
@@ -122,6 +137,34 @@ function isValidEducation(value: unknown): boolean {
   );
 }
 
+const oneOf = (list: readonly unknown[], value: unknown): boolean => list.includes(value);
+
+/** D77: the jobs, in order. */
+function isValidWork(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.history)) return false;
+  return value.history.every(
+    (job) =>
+      isRecord(job) &&
+      oneOf(JOB_IDS, job.job) &&
+      oneOf(WORK_LEVELS, job.level) &&
+      typeof job.from === 'number' &&
+      (job.to === undefined || typeof job.to === 'number') &&
+      (job.result === undefined || oneOf(WORK_RESULTS, job.result)) &&
+      (job.untilMonth === undefined || typeof job.untilMonth === 'number') &&
+      (job.restoreExercise === undefined || oneOf(EXERCISE_LEVELS, job.restoreExercise)),
+  );
+}
+
+/** D77: savings are whole baht and never negative. */
+function isValidMoney(value: unknown): boolean {
+  if (!isRecord(value) || !hasNumbers(value, ['cash', 'familySharePercent', 'monthGiven'])) return false;
+  return (
+    (value.cash as number) >= 0 &&
+    hasNumbers(value.year, ['earned', 'given']) &&
+    (value.familyRelief === undefined || hasNumbers(value.familyRelief, ['amount', 'untilMonth']))
+  );
+}
+
 function isValidPerson(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -170,6 +213,8 @@ export function isValidGameState(value: unknown): value is GameState {
     Array.isArray(value.people) &&
     value.people.every(isValidPerson) &&
     isValidEducation(value.education) &&
+    isValidWork(value.work) &&
+    isValidMoney(value.money) &&
     (value.death === null || isRecord(value.death))
   );
 }

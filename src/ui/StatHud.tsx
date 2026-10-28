@@ -36,7 +36,7 @@ function HudBox({ side, groups, flashes }: { side: 'left' | 'right'; groups: Hud
           <h3 className="hud__title">{t(group.titleKey)}</h3>
           <ul className="hud__list">
             {group.items.map((item) => (
-              <HudRow key={item.key} item={item} flash={flashes[item.key]} />
+              <HudRow key={item.key} item={item} flash={item.key === 'money' ? undefined : flashes[item.key]} />
             ))}
           </ul>
         </div>

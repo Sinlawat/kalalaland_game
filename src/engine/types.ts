@@ -24,7 +24,12 @@ export interface Environment {
   familyWarmth: number;
   /** 0 while not working. Set by the career system (later increment). */
   workStress: number;
-  /** Derived from debt and cash by the finance system (later increment). */
+  /**
+   * D77: while the character lives with the parents, the family's money
+   * stress, computed every month from Family wealth, a parent out of work and
+   * what the character gives (work.ts). Later the finance system derives the
+   * character's own from debt and cash.
+   */
   financialStress: number;
 }
 export type EnvironmentKey = keyof Environment;
@@ -152,6 +157,8 @@ export interface YearSummary {
    * Missing for years played before version 4.
    */
   habits?: Habits[];
+  /** D77: wages and money given to the family in the year (save version 13). Missing for earlier years. */
+  money?: YearMoney;
 }
 
 // ── Events ──────────────────────────────────────────────────────────────────
@@ -177,6 +184,16 @@ export interface EventRecord {
   residenceChange?: { from: Residence; to: Residence };
   /** D72: who the event was about (save version 11). */
   person?: PersonRef;
+  /** D77: what the event REALLY did to the savings (after keeping them at 0 or above). */
+  moneyChange?: number;
+  /** D77: the job the event started, changed or ended. */
+  workChange?: WorkChange;
+}
+
+/** D77: a job change on an event record: before and after (absent = no job). */
+export interface WorkChange {
+  from?: { job: JobId; level: WorkLevel };
+  to?: { job: JobId; level: WorkLevel };
 }
 
 /**
@@ -298,6 +315,70 @@ export interface Education {
   next?: ProgramId;
 }
 
+// ── Work and money (D77, finance phase 1) ───────────────────────────────────
+/** Where the character works. Teen jobs only for now; careers come with the career system. */
+export const JOB_IDS = ['convenience_store', 'cafe', 'restaurant', 'family_shop', 'local_shop'] as const;
+export type JobId = (typeof JOB_IDS)[number];
+
+/**
+ * How much the character works:
+ * - weekend: part-time, Saturday and Sunday, while studying;
+ * - daily: part-time, every evening after school and the weekend;
+ * - school_break: full days for the two months of the long school break;
+ * - full_time: a full-time job (no longer studying at school).
+ */
+export const WORK_LEVELS = ['weekend', 'daily', 'school_break', 'full_time'] as const;
+export type WorkLevel = (typeof WORK_LEVELS)[number];
+
+/** How a job ended: quit, ran its course (the school break is over, school ended), or became another level of work. */
+export const WORK_RESULTS = ['quit', 'ended', 'changed'] as const;
+export type WorkResult = (typeof WORK_RESULTS)[number];
+
+/** One period at one job and level, from `from` until `to` (months of age); `to` absent = working there now. */
+export interface Job {
+  job: JobId;
+  level: WorkLevel;
+  from: number;
+  to?: number;
+  result?: WorkResult;
+  /** A job that ends by itself (the school break job): it ends in this month of age. */
+  untilMonth?: number;
+  /** The exercise level before the job took the time for it; given back when the job ends. */
+  restoreExercise?: Habits['exercise'];
+}
+
+export interface Work {
+  /** In order; at most the last one is still going on. */
+  history: Job[];
+}
+
+/**
+ * D77: the character's own money. Living costs are paid by the parents
+ * while the character lives with them (not simulated as numbers); the
+ * character's wages go to their savings, minus the share given to the family.
+ * All amounts are whole baht (one unit of the game's currency).
+ */
+export interface Money {
+  /** Savings. Never below 0. */
+  cash: number;
+  /** Percent (0–100) of each month's wage given to the family. */
+  familySharePercent: number;
+  /** Given to the family in the last paid month (it lowers the family's money stress). */
+  monthGiven: number;
+  /** A one-off gift to the family that eases its money stress until `untilMonth`. */
+  familyRelief?: { amount: number; untilMonth: number };
+  /** Running totals for the current (unfinished) year. */
+  year: { earned: number; given: number };
+}
+
+/** What the character earned and gave in one year of life. */
+export interface YearMoney {
+  earned: number;
+  given: number;
+  /** Savings on the birthday. */
+  cash: number;
+}
+
 export interface GameState {
   /** The seed the life started from (shown to the player, used to replay). */
   seed: number;
@@ -357,6 +438,11 @@ export interface GameState {
 
   /** D74: what the character studied and studies now (save version 12). */
   education: Education;
+
+  /** D77: jobs the character has had (save version 13). */
+  work: Work;
+  /** D77: the character's own money (save version 13). */
+  money: Money;
 
   death: Death | null;
 }

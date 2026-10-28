@@ -9,7 +9,7 @@
 import { knowsOwnTraits } from '../engine/passive';
 import { SKILL_KEYS, TRAIT_KEYS, type GameState } from '../engine/types';
 import type { FlashTarget } from './eventFlash';
-import { formatStat } from './format';
+import { formatMoney, formatStat } from './format';
 
 /** One emoji per stat the screen shows. */
 export const STAT_EMOJI = {
@@ -28,10 +28,13 @@ export const STAT_EMOJI = {
   familyWarmth: '🏡',
 } as const satisfies Partial<Record<FlashTarget, string>>;
 
+/** D77: the savings (not a 0–100 stat, so it never flashes like the others). */
+export const MONEY_EMOJI = '💵';
+
 export type HudStat = keyof typeof STAT_EMOJI;
 
 export interface HudItem {
-  key: HudStat;
+  key: HudStat | 'money';
   emoji: string;
   /** Rounded like the cards; undefined while the value is hidden (traits before Grade 1). */
   value?: string;
@@ -49,7 +52,7 @@ export interface Hud {
   right: HudGroup[];
 }
 
-type HudSource = Pick<GameState, 'condition' | 'skills' | 'outcome' | 'traits' | 'environment' | 'ageInMonths'>;
+type HudSource = Pick<GameState, 'condition' | 'skills' | 'outcome' | 'traits' | 'environment' | 'ageInMonths' | 'money'>;
 
 function item(key: HudStat, value: number | undefined): HudItem {
   return value === undefined ? { key, emoji: STAT_EMOJI[key] } : { key, emoji: STAT_EMOJI[key], value: formatStat(value) };
@@ -62,7 +65,7 @@ export function hudGroups(game: HudSource): Hud {
     left: [
       { titleKey: 'layer.condition', items: [item('physicalHealth', game.condition.physicalHealth), item('mentalHealth', game.condition.mentalHealth)] },
       { titleKey: 'layer.skills', items: SKILL_KEYS.map((key) => item(key, game.skills[key])) },
-      { titleKey: 'layer.outcome', items: [item('looks', game.outcome.looks)] },
+      { titleKey: 'layer.outcome', items: [item('looks', game.outcome.looks), { key: 'money', emoji: MONEY_EMOJI, value: formatMoney(game.money.cash) }] },
     ],
     right: [
       { titleKey: 'layer.traits', items: TRAIT_KEYS.map((key) => item(key, traitsKnown ? game.traits[key] : undefined)) },

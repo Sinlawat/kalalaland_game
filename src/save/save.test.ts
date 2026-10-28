@@ -115,6 +115,28 @@ describe('save / load', () => {
     expect(loaded.status === 'ok' && loaded.state.education).toEqual({ history: [] });
   });
 
+  it('upgrades a version 12 save: no job yet, savings 0 (D77)', () => {
+    let life = createNewLife(21);
+    for (let i = 0; i < 3; i++) life = advanceUntilStop(life).state;
+    const { work: _work, money: _money, ...v12 } = life;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 12, savedAt: '2026-10-28T00:00:00.000Z', state: v12 }));
+    expect(loadGame(storage)).toEqual({
+      status: 'ok',
+      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } } },
+    });
+  });
+
+  it.each([
+    ['negative savings', { money: { cash: -1, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } } }],
+    ['no yearly totals', { money: { cash: 0, familySharePercent: 0, monthGiven: 0 } }],
+    ['an unknown job', { work: { history: [{ job: 'bank', level: 'weekend', from: 180 }] } }],
+    ['an unknown work level', { work: { history: [{ job: 'cafe', level: 'night_shift', from: 180 }] } }],
+    ['no work history', { work: {} }],
+  ])('rejects a save with %s (D77)', (_label, broken) => {
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: { ...createNewLife(3), ...broken } }));
+    expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
+  });
+
   it.each([
     ['no history', { next: 'primary' }],
     ['an unknown program', { history: [{ program: 'university', from: 80 }] }],

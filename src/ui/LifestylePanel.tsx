@@ -4,6 +4,8 @@ import { ADDICTION_HABITS, type GameState, type HabitKey, type Habits } from '..
 import { t } from '../i18n/i18n';
 import { habitReason, type HabitReason } from './lifestyle';
 import { countHabitMonths, monthSlots } from './months';
+import { overtimeLabels } from './work';
+import { currentJob } from '../engine/work';
 
 interface Props {
   game: GameState;
@@ -49,7 +51,7 @@ function reasonText(habit: HabitKey, reason: HabitReason): string {
  * year shown in the month bar, plus "regular 3 months · light 9 months".
  * Needed because events can change habits mid-year.
  */
-function HabitYearStrip<K extends HabitKey>({ game, habit }: { game: GameState; habit: K }) {
+function HabitYearStrip<K extends HabitKey>({ game, habit, levelName }: { game: GameState; habit: K; levelName: (level: string) => string }) {
   const slots = monthSlots(game);
   const lived = slots.flatMap((slot) => (slot.habits ? [slot.habits] : []));
   const counts = [...countHabitMonths(lived, habit).entries()];
@@ -63,7 +65,7 @@ function HabitYearStrip<K extends HabitKey>({ game, habit }: { game: GameState; 
         })}
       </span>
       <span className="muted small">
-        {counts.map(([level, count]) => t('habit.monthsCount', { level: t(`habit.${habit}.${level}`), count })).join(' · ')}
+        {counts.map(([level, count]) => t('habit.monthsCount', { level: levelName(level), count })).join(' · ')}
       </span>
     </div>
   );
@@ -85,6 +87,10 @@ export function LifestylePanel({ game }: Props) {
   }
 
   const working = isWorking(game);
+  // D77: for a student working part-time, the overtime habit reads as "extra work".
+  const overtime = overtimeLabels(currentJob(game)?.level);
+  const habitName = (habit: HabitKey) => (habit === 'overtime' ? overtime.name : t(`habit.${habit}`));
+  const levelName = (habit: HabitKey, level: string) => t(habit === 'overtime' ? overtime.levelKey(level) : `habit.${habit}.${level}`);
   return (
     <section className="card">
       <h2>{t('layer.habits')}</h2>
@@ -96,7 +102,7 @@ export function LifestylePanel({ game }: Props) {
             return (
               <li key={habit} className="lifestyle__item lifestyle__item--inactive">
                 <div className="lifestyle__head">
-                  <span>{t(`habit.${habit}`)}</span>
+                  <span>{habitName(habit)}</span>
                   <span className="muted small">{t('habit.overtime.inactive')}</span>
                 </div>
               </li>
@@ -105,11 +111,11 @@ export function LifestylePanel({ game }: Props) {
           return (
             <li key={habit} className="lifestyle__item">
               <div className="lifestyle__head">
-                <span>{t(`habit.${habit}`)}</span>
-                <span className={`lifestyle__level lifestyle__level--${toneOf(habit, level)}`}>{t(`habit.${habit}.${level}`)}</span>
+                <span>{habitName(habit)}</span>
+                <span className={`lifestyle__level lifestyle__level--${toneOf(habit, level)}`}>{levelName(habit, level)}</span>
               </div>
               <p className="muted small lifestyle__reason">{reasonText(habit, habitReason(game, habit))}</p>
-              <HabitYearStrip game={game} habit={habit} />
+              <HabitYearStrip game={game} habit={habit} levelName={(l) => levelName(habit, l)} />
             </li>
           );
         })}

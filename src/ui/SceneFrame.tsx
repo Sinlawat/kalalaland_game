@@ -1,6 +1,9 @@
 import type { GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
+import { formatStat } from './format';
 import { StatHud } from './StatHud';
+import { showsFamilyMoneyStress } from './work';
+import { BALANCE } from '../data/balance';
 
 /**
  * The frame for the future pixel-art scene that shows the character's life
@@ -18,6 +21,12 @@ export function SceneFrame({ game }: { game: GameState }) {
         <span className="muted small">{t('scene.placeholder')}</span>
       </div>
       <StatHud game={game} />
+      {/* D77: the family's money stress, bottom centre of the picture, while it is the family's. */}
+      {showsFamilyMoneyStress(game) && (
+        <p className="scene__stress" title={t('familyStress.hint', { until: BALANCE.familyMoneyStress.untilAge })}>
+          <span aria-hidden="true">😟</span> {t('familyStress.label')} <strong>{formatStat(game.environment.financialStress)}</strong>
+        </p>
+      )}
     </section>
   );
 }

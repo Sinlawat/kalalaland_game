@@ -12,13 +12,14 @@
  */
 
 import { advanceEducation } from './education';
-import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, lockReasons, personFor, rollEvents, type EventDef } from './events';
+import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, isEligible, lockReasons, personFor, rollEvents, type EventDef } from './events';
 import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
 import { rollDeath } from './mortality';
 import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
 import { snapshotOf } from './snapshot';
 import { applyContributions } from './stats';
+import { advanceWork } from './work';
 import type { GameState, StopReason } from './types';
 import { applyMonthlyWear, yearlyWearChange } from './wear';
 
@@ -45,9 +46,11 @@ function closeYear(state: GameState): void {
     changes: state.yearLog,
     snapshot: snapshotOf(state),
     habits: state.yearHabits,
+    money: { ...state.money.year, cash: state.money.cash },
   });
   state.yearLog = {};
   state.yearHabits = [];
+  state.money.year = { earned: 0, given: 0 };
 }
 
 /**
@@ -84,20 +87,28 @@ function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EV
   applyContributions(state, contributions);
   applyMonthlyWear(state, wearChange);
 
-  // 3. Finance            — later increment
+  // 3. Finance (D77): the wage of a job started before this month, jobs that
+  //    ran their course, and the family's money stress.
+  advanceWork(state);
 
   // 4. Events. Without choices: applied now. With choices (D39): queued in
   //    the order they were rolled, and the month pauses here.
   //    D72: who each event is about is settled as it happens (someone new
   //    draws from the RNG here), so the choice popup can show their name.
-  for (const event of rollEvents(state, rng, events)) {
+  rollEvents(state, rng, events).forEach((event, index) => {
+    // D72/D77: an event about someone is settled as it happens, so it is
+    //    checked again here: an earlier event of this month may have made it
+    //    impossible (everyone parted ways at the end of Grade 12, so no new
+    //    school friend that month). Other events keep D67's rule: all that
+    //    were eligible at the start of the month happen.
+    if (index > 0 && event.about !== undefined && !isEligible(event, state)) return;
     const person = personFor(event, state, rng);
     // The best friend can be gone by now (an earlier event this month ended it): then the event has nobody to be about.
-    if (event.about !== undefined && person === undefined) continue;
+    if (event.about !== undefined && person === undefined) return;
     if (hasChoices(event)) {
       state.pendingChoices.push({ eventId: event.id, ageInMonths: state.ageInMonths, ...(person !== undefined ? { person } : {}) });
     } else applyEvent(state, event, person);
-  }
+  });
   state.rngState = rng.state;
   if (state.pendingChoices.length > 0) return 'choice';
 

@@ -3,6 +3,7 @@ import { t } from '../i18n/i18n';
 import { formatStat } from './format';
 import { educationRows } from './education';
 import { FriendsSummary } from './FriendsSummary';
+import { lifeMoney, moneyText, workRows } from './work';
 
 interface Props {
   game: GameState;
@@ -89,6 +90,33 @@ export function DeathScreen({ game, onReplay, onNewLife }: Props) {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* D77: jobs, in order, and what the work brought in. */}
+      <section className="card">
+        <h2>{t('work.title')}</h2>
+        {game.work.history.length === 0 ? (
+          <p className="muted">{t('work.none')}</p>
+        ) : (
+          <ul className="education-list">
+            {workRows(game, game.death.ageInMonths).map((row, index) => (
+              <li key={index}>
+                <span>
+                  {row.level} · {row.job}
+                </span>
+                <span className="muted small">
+                  {t('work.row', { from: row.fromAge, to: row.toAge })} · {t(`work.result.${row.result ?? 'ongoing'}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="muted small">
+          {(() => {
+            const money = lifeMoney(game);
+            return t('work.totals', { earned: moneyText(money.earned), given: moneyText(money.given), cash: moneyText(money.cash) });
+          })()}
+        </p>
       </section>
 
       <FriendsSummary game={game} endAge={game.death.ageInMonths} />

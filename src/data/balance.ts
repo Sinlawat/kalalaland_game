@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits, RegionId, SchoolId, SkillKey, Skills, TraitKey } from '../engine/types';
+import type { Habits, JobId, RegionId, SchoolId, SkillKey, Skills, TraitKey, WorkLevel } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -229,6 +229,67 @@ export const BALANCE = {
      *  physical health at or above `illnessBelowHealth`; otherwise "illness". */
     oldAgeFromAge: 60,
     illnessBelowHealth: 40,
+  },
+
+  /**
+   * D77: work and money while living with the parents (finance phase 1).
+   * Sources: design doc "Real price data" (minimum wage by area) and the
+   * student part-time scheme (40 baht an hour; up to 4 hours on school days,
+   * 7 hours a day and 36 a week in the school break).
+   */
+  work: {
+    /** Part-time pay for students, in baht per hour (city rate). */
+    partTimeHourly: 40,
+    /** Hours a month: weekends 2 × 7 h × 4.3 weeks; daily adds 5 × 3 h; the school break is 36 h × 4.3. */
+    hoursPerMonth: { weekend: 60, daily: 125, school_break: 155 },
+    /** Part-time pay by where the character lives: the ratio of the areas' minimum daily wages (400 / 372 / 350). */
+    regionWageFactor: { city: 1, suburb: 0.93, rural: 0.875 } satisfies Record<RegionId, number>,
+    /** Full-time pay: the minimum daily wage of the area × working days in a month. */
+    fullTimeDailyWage: { city: 400, suburb: 372, rural: 350 } satisfies Record<RegionId, number>,
+    fullTimeDaysPerMonth: 26,
+    /** Hours of a full-time month, to scale what part-time work teaches (8 h × 26 days). */
+    fullTimeHoursPerMonth: 208,
+    /** Jobs that pay less than the going rate (the family shop pays its own child half). */
+    jobPayFactor: { family_shop: 0.5 } satisfies Partial<Record<JobId, number>>,
+    /** How long the school break job lasts. */
+    schoolBreakMonths: 2,
+    /** The overtime habit while working at each level. Under 18 nobody may work overtime, so full time is 'none'. */
+    overtime: { weekend: 'some', daily: 'heavy', school_break: 'none', full_time: 'none' } satisfies Record<WorkLevel, Habits['overtime']>,
+    /** The most exercise there is time for at each level (absent = no limit). */
+    exerciseCap: { weekend: 'light', daily: 'none' } satisfies Partial<Record<WorkLevel, Habits['exercise']>>,
+    /** Daily part-time work leaves less time to study: the school's academic learning × this. */
+    dailyAcademicLearning: 0.7,
+    /** What a job teaches per year at full-time hours (scaled by the hours worked). */
+    skillsPerYear: {
+      convenience_store: { communication: 1.5 },
+      cafe: { communication: 1, creative: 0.5 },
+      restaurant: { practical: 1.5 },
+      family_shop: { communication: 0.75, practical: 0.75 },
+      local_shop: { communication: 0.75, practical: 0.75 },
+    } satisfies Record<JobId, Partial<Skills>>,
+  },
+
+  /**
+   * D77: the family's money stress while the character lives with the parents
+   * (stored as financialStress, 0–100). Parents' money is not simulated: Family
+   * wealth stands for it (design decision "A").
+   */
+  familyMoneyStress: {
+    /** (wealthAtZero − Family wealth) × perWealthPoint, never below 0: wealth 10 → 75, 30 → 45, 50 → 15, 60+ → 0. */
+    wealthAtZero: 60,
+    perWealthPoint: 1.5,
+    /** Added while a parent is out of work (flag parent_lost_job). */
+    parentLostJob: 30,
+    /**
+     * Only while growing up and starting out ("from birth to working age"):
+     * from this age the character's own finances (finance phase 2) take
+     * over, so until then it is 0.
+     */
+    untilAge: 22,
+    /** Every 1,000 baht a month the character gives lowers it by this much... */
+    reliefPer1000Given: 10,
+    /** ...but by no more than this. */
+    maxReliefFromGiving: 40,
   },
 
   /** D72: people the character meets. */

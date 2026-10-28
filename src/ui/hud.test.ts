@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeState } from '../engine/testUtils';
 import { hasMessage } from '../i18n/i18n';
-import { formatHudDelta, hudGroups, STAT_EMOJI } from './hud';
+import { formatHudDelta, hudGroups, MONEY_EMOJI, STAT_EMOJI } from './hud';
 
 const keysOf = (groups: ReturnType<typeof hudGroups>['left']) => groups.flatMap((group) => group.items.map((item) => item.key));
 
@@ -10,8 +10,17 @@ describe('hudGroups (D75)', () => {
     const hud = hudGroups(makeState());
     expect(hud.left.map((group) => group.titleKey)).toEqual(['layer.condition', 'layer.skills', 'layer.outcome']);
     expect(hud.right.map((group) => group.titleKey)).toEqual(['layer.traits', 'layer.environment']);
-    expect(keysOf(hud.left)).toEqual(['physicalHealth', 'mentalHealth', 'academic', 'creative', 'communication', 'practical', 'looks']);
+    expect(keysOf(hud.left)).toEqual(['physicalHealth', 'mentalHealth', 'academic', 'creative', 'communication', 'practical', 'looks', 'money']);
     expect(keysOf(hud.right)).toEqual(['discipline', 'resilience', 'riskTaking', 'imagination', 'familyWealth', 'familyWarmth']);
+  });
+
+  it('D77: the savings sit with the outcome, in baht with thousands separators, and never flash like a 0–100 stat', () => {
+    const state = makeState();
+    state.money.cash = 12400;
+    const money = hudGroups(state).left[2]!.items.at(-1)!;
+    expect(money).toEqual({ key: 'money', emoji: MONEY_EMOJI, value: '12,400' });
+    expect(Object.values(STAT_EMOJI)).not.toContain(MONEY_EMOJI);
+    expect(hasMessage('stat.money')).toBe(true);
   });
 
   it('every stat has its own emoji and a Thai name', () => {

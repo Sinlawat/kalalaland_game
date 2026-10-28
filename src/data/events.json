@@ -6440,18 +6440,15 @@
           ]
         },
         "effects": {
-          "environment": {
-            "familyWarmth": 3
-          },
           "traits": {
             "discipline": 1
           },
-          "habits": {
-            "sleep": {
-              "level": "short",
-              "months": 12
-            }
-          }
+          "environment": {
+            "familyWarmth": 3
+          },
+          "setFlags": [
+            "part_time_promised"
+          ]
         }
       },
       {
@@ -6631,7 +6628,7 @@
   {
     "id": "work_teen_first_job",
     "conditions": {
-      "ageMin": 14,
+      "ageMin": 15,
       "ageMax": 17,
       "flagsAny": [
         "plan_work",
@@ -6683,7 +6680,13 @@
               "who": "best_friend",
               "tag": "growing_apart"
             }
-          ]
+          ],
+          "work": {
+            "start": {
+              "job": "family_shop",
+              "level": "full_time"
+            }
+          }
         }
       },
       {
@@ -6720,7 +6723,13 @@
               "who": "best_friend",
               "tag": "growing_apart"
             }
-          ]
+          ],
+          "work": {
+            "start": {
+              "job": "convenience_store",
+              "level": "full_time"
+            }
+          }
         }
       },
       {
@@ -6752,7 +6761,13 @@
               "who": "best_friend",
               "tag": "growing_apart"
             }
-          ]
+          ],
+          "work": {
+            "start": {
+              "job": "restaurant",
+              "level": "full_time"
+            }
+          }
         }
       }
     ]
@@ -7491,5 +7506,464 @@
         "effects": {}
       }
     ]
+  },
+  {
+    "id": "work_parttime_offer",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "education": {
+        "current": [
+          "upper_secondary_science",
+          "upper_secondary_arts_math",
+          "upper_secondary_arts_lang",
+          "vocational_electrical",
+          "vocational_mechanical",
+          "vocational_computer",
+          "vocational_business"
+        ]
+      },
+      "work": {
+        "employed": false
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "chanceBy": [
+      {
+        "stat": "familyWealth",
+        "toward": "low"
+      }
+    ],
+    "choices": [
+      {
+        "id": "weekend_shop",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "convenience_store",
+              "level": "weekend"
+            }
+          }
+        }
+      },
+      {
+        "id": "weekend_cafe",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "cafe",
+              "level": "weekend"
+            }
+          }
+        }
+      },
+      {
+        "id": "daily",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "restaurant",
+              "level": "daily"
+            }
+          }
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "work_parttime_promised",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 16,
+      "flagsAll": [
+        "part_time_promised"
+      ],
+      "education": {
+        "current": [
+          "upper_secondary_science",
+          "upper_secondary_arts_math",
+          "upper_secondary_arts_lang",
+          "vocational_electrical",
+          "vocational_mechanical",
+          "vocational_computer",
+          "vocational_business"
+        ],
+        "monthsIn": {
+          "max": 0
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "work": {
+        "start": {
+          "job": "convenience_store",
+          "level": "weekend"
+        }
+      },
+      "removeFlags": [
+        "part_time_promised"
+      ]
+    }
+  },
+  {
+    "id": "work_first_paycheck",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 25,
+      "work": {
+        "employed": true,
+        "monthsIn": {
+          "min": 1
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "save",
+        "effects": {
+          "familyShare": 0,
+          "traits": {
+            "discipline": 1
+          }
+        }
+      },
+      {
+        "id": "share",
+        "effects": {
+          "familyShare": 30,
+          "environment": {
+            "familyWarmth": 3
+          }
+        }
+      },
+      {
+        "id": "treat",
+        "effects": {
+          "money": -500,
+          "stats": {
+            "mentalHealth": 2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_family_short_money",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 21,
+      "stats": [
+        {
+          "stat": "financialStress",
+          "op": ">=",
+          "value": 50
+        }
+      ],
+      "work": {
+        "employed": true
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 24,
+    "choices": [
+      {
+        "id": "share_half",
+        "effects": {
+          "familyShare": 50,
+          "environment": {
+            "familyWarmth": 4
+          }
+        }
+      },
+      {
+        "id": "lump",
+        "conditions": {
+          "money": {
+            "min": 3000
+          }
+        },
+        "effects": {
+          "money": -3000,
+          "familyRelief": {
+            "amount": 20,
+            "months": 3
+          },
+          "environment": {
+            "familyWarmth": 3
+          }
+        }
+      },
+      {
+        "id": "cant",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_late_nights",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "habits": {
+        "sleep": "enough"
+      },
+      "education": {
+        "enrolled": true
+      },
+      "work": {
+        "levels": [
+          "daily"
+        ]
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "push",
+        "effects": {
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          }
+        }
+      },
+      {
+        "id": "cut",
+        "effects": {
+          "work": {
+            "level": "weekend"
+          }
+        }
+      },
+      {
+        "id": "plan",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 55
+            }
+          ]
+        },
+        "effects": {
+          "traits": {
+            "discipline": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_grades_drop",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "education": {
+        "enrolled": true
+      },
+      "work": {
+        "levels": [
+          "daily"
+        ],
+        "monthsIn": {
+          "min": 4
+        }
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "quit",
+        "effects": {
+          "work": {
+            "quit": true
+          },
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "reduce",
+        "effects": {
+          "work": {
+            "level": "weekend"
+          }
+        }
+      },
+      {
+        "id": "keep",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_parttime_burnout",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "stats": [
+        {
+          "stat": "mentalHealth",
+          "op": "<",
+          "value": 45
+        }
+      ],
+      "education": {
+        "enrolled": true
+      },
+      "work": {
+        "levels": [
+          "weekend",
+          "daily"
+        ]
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "quit",
+        "effects": {
+          "work": {
+            "quit": true
+          },
+          "stats": {
+            "mentalHealth": 3
+          }
+        }
+      },
+      {
+        "id": "talk",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2
+          },
+          "environment": {
+            "familyWarmth": 2
+          }
+        }
+      },
+      {
+        "id": "endure",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "traits": {
+            "discipline": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_school_break_job",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "months": [
+        3
+      ],
+      "education": {
+        "enrolled": true
+      },
+      "work": {
+        "employed": false
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 11,
+    "choices": [
+      {
+        "id": "work",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "local_shop",
+              "level": "school_break"
+            }
+          }
+        }
+      },
+      {
+        "id": "rest",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "life_birthday_money",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "birthday": true,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": "<",
+          "value": 65
+        }
+      ]
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "money": 500
+    }
+  },
+  {
+    "id": "life_birthday_money_rich",
+    "conditions": {
+      "ageMin": 6,
+      "ageMax": 17,
+      "birthday": true,
+      "stats": [
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 65
+        }
+      ]
+    },
+    "frequency": "common",
+    "once": false,
+    "cooldownMonths": 12,
+    "effects": {
+      "money": 1500
+    }
   }
 ]

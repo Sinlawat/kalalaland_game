@@ -4,6 +4,17 @@ export function formatAge(ageInMonths: number): string {
   return t('status.age', { years: Math.floor(ageInMonths / 12), months: ageInMonths % 12 });
 }
 
+/** D77: whole baht with thousands separators: "12,400". */
+export function formatMoney(amount: number): string {
+  return Math.round(amount).toLocaleString('en-US');
+}
+
+/** D77: a money change with its sign: "+500", "−3,000". */
+export function formatMoneyChange(amount: number): string {
+  const text = formatMoney(Math.abs(amount));
+  return amount >= 0 ? `+${text}` : `−${text}`;
+}
+
 /** Stats are floats internally; the player only ever sees whole numbers. */
 export function formatStat(value: number): string {
   return String(Math.round(value));

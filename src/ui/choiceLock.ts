@@ -19,7 +19,7 @@ import type { EventChoice, LockReason } from '../engine/events';
 import { knowsOwnTraits } from '../engine/passive';
 import { TRAIT_KEYS, type GameState } from '../engine/types';
 import { hasMessage, t } from '../i18n/i18n';
-import { formatStat } from './format';
+import { formatMoney, formatStat } from './format';
 
 type Params = Record<string, string>;
 
@@ -38,6 +38,8 @@ function automaticReason(game: GameState, reason: LockReason): string {
         value: reason.value,
         current: formatStat(reason.current),
       });
+    case 'money':
+      return t('choice.locked.money', { min: formatMoney(reason.min), current: formatMoney(reason.current) });
   }
 }
 

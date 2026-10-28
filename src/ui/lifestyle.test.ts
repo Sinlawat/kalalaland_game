@@ -9,6 +9,7 @@ describe('habitReason (why is my lifestyle like this?)', () => {
 
   it('a lasting change names its event', () => {
     const state = makeState({ eventHistory: [{ id: 'fight', ageInMonths: 90, habitChanges: { sleep: 'short' } }] });
+    state.habits.sleep = 'short';
     expect(habitReason(state, 'sleep')).toEqual({ kind: 'event', eventId: 'fight' });
     expect(habitReason(state, 'exercise')).toEqual({ kind: 'family' });
   });
@@ -19,6 +20,7 @@ describe('habitReason (why is my lifestyle like this?)', () => {
       eventHistory: [{ id: 'exams', ageInMonths: 100, habitChanges: { sleep: 'short' }, habitMonths: { sleep: 2 } }],
       habitTimers: { sleep: { revertTo: 'enough', untilMonth: 102 } },
     });
+    state.habits.sleep = 'short';
     expect(habitReason(state, 'sleep')).toEqual({ kind: 'temporary', eventId: 'exams', monthsLeft: 1, revertTo: 'enough' });
   });
 
@@ -31,7 +33,23 @@ describe('habitReason (why is my lifestyle like this?)', () => {
       ],
       habitTimers: {},
     });
+    state.habits.exercise = 'regular';
     expect(habitReason(state, 'exercise')).toEqual({ kind: 'event', eventId: 'club' });
+  });
+
+  it('D77: a level changed back since the latest event (exercise returned when a job ended) is explained by the event before it', () => {
+    const state = makeState({
+      ageInMonths: 200,
+      eventHistory: [
+        { id: 'club', ageInMonths: 90, habitChanges: { exercise: 'regular' } },
+        { id: 'work_parttime_offer', ageInMonths: 180, habitChanges: { exercise: 'none', overtime: 'heavy' } },
+      ],
+      habitTimers: {},
+    });
+    state.habits.exercise = 'regular';
+    state.habits.overtime = 'none';
+    expect(habitReason(state, 'exercise')).toEqual({ kind: 'event', eventId: 'club' });
+    expect(habitReason(state, 'overtime')).toEqual({ kind: 'family' });
   });
 
   it('changes before Grade 1 do not count (the family lifestyle replaced them)', () => {
