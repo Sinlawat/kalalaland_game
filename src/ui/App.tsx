@@ -13,6 +13,8 @@ import { PlaybackBar } from './PlaybackBar';
 import { residenceLabel } from './residence';
 import { FinanceDialog } from './FinanceDialog';
 import { ResidenceDialog } from './ResidenceDialog';
+import { ScheduleDialog } from './ScheduleDialog';
+import { showsSchedule } from './schedule';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
 import { TraitRevealDialog } from './TraitRevealDialog';
@@ -25,6 +27,7 @@ export function App() {
   // Hooks must run on every render, so this sits above the early returns.
   const [residenceOpen, setResidenceOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   if (game === null) {
     return (
@@ -70,12 +73,19 @@ export function App() {
             <button type="button" className="button button--small" onClick={() => setFinanceOpen(true)}>
               {t('finance.open')}
             </button>
+            {/* D83: a typical month: what each day is made of (from Grade 1). */}
+            {showsSchedule(game) && (
+              <button type="button" className="button button--small" onClick={() => setScheduleOpen(true)}>
+                {t('schedule.open')}
+              </button>
+            )}
           </div>
         </div>
         <span className="muted small">{t('status.seed', { seed: game.seed })}</span>
       </header>
 
       {residenceOpen && <ResidenceDialog game={game} onClose={() => setResidenceOpen(false)} />}
+      {scheduleOpen && <ScheduleDialog game={game} onClose={() => setScheduleOpen(false)} />}
       {financeOpen && <FinanceDialog game={game} onSpendingChange={controller.setSpending} onClose={() => setFinanceOpen(false)} />}
 
       {/* Time sits right under who and how old: the two things read together. */}

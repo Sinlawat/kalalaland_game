@@ -40,6 +40,8 @@ function automaticReason(game: GameState, reason: LockReason): string {
       });
     case 'money':
       return t('choice.locked.money', { min: formatMoney(reason.min), current: formatMoney(reason.current) });
+    case 'time':
+      return t('choice.locked.time');
   }
 }
 

@@ -48,10 +48,14 @@ export function setHabitFromEvent<K extends HabitKey>(
 ): boolean {
   const timers = state.habitTimers as Record<HabitKey, { revertTo: string; untilMonth: number } | undefined>;
   const before = state.habits[habit];
+  // D83: a habit the week had no time for goes back to what the character wanted, not to the cut level.
+  const cut = state.timeCut as Partial<Record<HabitKey, string>> | undefined;
+  const wanted = cut?.[habit] ?? before;
+  if (cut !== undefined) delete cut[habit];
   if (months === undefined) {
     delete timers[habit];
   } else {
-    const revertTo = timers[habit]?.revertTo ?? before;
+    const revertTo = timers[habit]?.revertTo ?? wanted;
     if (revertTo === level) delete timers[habit];
     else timers[habit] = { revertTo, untilMonth: state.ageInMonths + months };
   }

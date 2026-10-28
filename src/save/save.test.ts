@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { advanceOneMonth, advanceUntilStop } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
+import { makeState } from '../engine/testUtils';
 import { CURRENT_SAVE_VERSION, deleteSave, loadGame, SAVE_KEY, saveGame, type SaveStorage } from './save';
 
 /** In-memory stand-in for localStorage. */
@@ -126,6 +127,17 @@ describe('save / load', () => {
     });
   });
 
+  it('upgrades a version 16 save: the exercise a job took away becomes what the week has no time for (D83)', () => {
+    const life = makeState({ ageInMonths: 16 * 12, habits: { exercise: 'none' } });
+    life.work = { history: [{ job: 'restaurant', level: 'daily', from: 16 * 12 - 3, restoreExercise: 'regular' }] };
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 16, savedAt: '2026-10-28T00:00:00.000Z', state: life }));
+    const loaded = loadGame(storage);
+    expect(loaded.status === 'ok' && loaded.state.timeCut).toEqual({ exercise: 'regular' });
+    const noJob = makeState({ ageInMonths: 16 * 12 });
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 16, savedAt: '2026-10-28T00:00:00.000Z', state: noJob }));
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: noJob });
+  });
+
   it('upgrades a version 15 save: no student loan yet (D82)', () => {
     const life = createNewLife(21);
     const { studentLoan: _loan, ...money15 } = life.money;
@@ -157,6 +169,7 @@ describe('save / load', () => {
     ['no work history', { work: {} }],
     ['a negative student loan (D82)', { money: { ...createNewLife(3).money, studentLoan: -1 } }],
     ['an unknown way to pay the tuition (D82)', { money: { ...createNewLife(3).money, study: { tuition: 'lottery', livingLoan: false } } }],
+    ['a time cut of an unknown level (D83)', { timeCut: { sleep: 'nap' } }],
     ['an unknown home before the dorm (D82)', { education: { history: [], homeBeforeStudy: { regionId: 'city', homeId: 'castle' } } }],
   ])('rejects a save with %s (D77)', (_label, broken) => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: { ...createNewLife(3), ...broken } }));

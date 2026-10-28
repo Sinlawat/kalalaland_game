@@ -43,6 +43,8 @@ function reasonText(habit: HabitKey, reason: HabitReason): string {
         months: reason.monthsLeft,
         level: t(`habit.${habit}.${reason.revertTo}`),
       });
+    case 'time':
+      return t('habit.reason.time', { level: t(`habit.${habit}.${reason.wanted}`) });
   }
 }
 

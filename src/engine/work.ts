@@ -28,7 +28,6 @@ import { setHabitFromEvent } from './lifestyle';
 import { currentStudy, DORM_CATEGORIES, dormLiving, isTermStart, livesInDorm, loanLiving, monthlyAllowance, parentsStudySupport, syncStudyHome, tuitionPerTerm } from './study';
 import {
   ADDICTION_HABITS,
-  EXERCISE_LEVELS,
   JOB_IDS,
   LIVING_SPENDING_CATEGORIES,
   SPENDING_CATEGORIES,
@@ -110,38 +109,18 @@ export function workShare(level: WorkLevel): number {
 
 // ── Lifestyle that comes with a job ─────────────────────────────────────────
 
-type ExerciseLevel = Habits['exercise'];
-
-function lowerExercise(a: ExerciseLevel, b: ExerciseLevel | undefined): ExerciseLevel {
-  if (b === undefined) return a;
-  return EXERCISE_LEVELS.indexOf(a) <= EXERCISE_LEVELS.indexOf(b) ? a : b;
-}
-
-/** The exercise a job at this level leaves time for, given the exercise before the job. */
-function exerciseWhileWorking(restore: ExerciseLevel, level: WorkLevel): ExerciseLevel {
-  return lowerExercise(restore, (B.exerciseCap as Partial<Record<WorkLevel, ExerciseLevel>>)[level]);
-}
-
 /** Habit changes made by a job change, for the event record. */
 export type HabitChanges = Partial<Habits>;
 
 /**
- * Sets the overtime habit and the exercise that fits the new situation.
- * `before`: the job before the change (undefined = had none); `after`: the
- * job now (undefined = no job any more). Exercise only moves if it is still
- * what the old situation made it (an event may have changed it since).
+ * Sets the overtime habit for the job now (`after`; undefined = no job any
+ * more). D83: the time a job takes from sleep and exercise is the time
+ * budget's to decide (time.ts), no longer a limit per job level.
  */
-function applyJobLifestyle(state: GameState, before: Job | undefined, after: Job | undefined, restore: ExerciseLevel): HabitChanges {
+function applyJobLifestyle(state: GameState, after: Job | undefined): HabitChanges {
   const changes: HabitChanges = {};
   const overtime = after === undefined ? 'none' : B.overtime[after.level];
   if (setHabitFromEvent(state, 'overtime', overtime)) changes.overtime = overtime;
-
-  const expectedNow = before === undefined ? state.habits.exercise : exerciseWhileWorking(restore, before.level);
-  const target = after === undefined ? restore : exerciseWhileWorking(restore, after.level);
-  if (state.habits.exercise === expectedNow && target !== state.habits.exercise) {
-    setHabitFromEvent(state, 'exercise', target);
-    changes.exercise = target;
-  }
   return changes;
 }
 
@@ -157,13 +136,11 @@ function endJob(state: GameState, result: WorkResult): Job | undefined {
 
 /** Starts a job now; a job going on ends as 'changed'. */
 export function startJob(state: GameState, job: JobId, level: WorkLevel): HabitChanges {
-  const before = currentJob(state);
-  const restore = before?.restoreExercise ?? state.habits.exercise;
   endJob(state, 'changed');
-  const next: Job = { job, level, from: state.ageInMonths, restoreExercise: restore };
+  const next: Job = { job, level, from: state.ageInMonths };
   if (level === 'school_break') next.untilMonth = state.ageInMonths + B.schoolBreakMonths;
   state.work.history.push(next);
-  return applyJobLifestyle(state, before, next, restore);
+  return applyJobLifestyle(state, next);
 }
 
 /** Same job, another level (e.g. from every day to weekends only). */
@@ -175,10 +152,9 @@ export function changeWorkLevel(state: GameState, level: WorkLevel): HabitChange
 
 /** Ends the current job (result 'quit' when the character decided, 'ended' when it ran its course). */
 export function stopWork(state: GameState, result: WorkResult = 'quit'): HabitChanges {
-  const before = currentJob(state);
-  if (before === undefined) return {};
+  if (currentJob(state) === undefined) return {};
   endJob(state, result);
-  return applyJobLifestyle(state, before, undefined, before.restoreExercise ?? state.habits.exercise);
+  return applyJobLifestyle(state, undefined);
 }
 
 // ── Monthly step ────────────────────────────────────────────────────────────

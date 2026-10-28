@@ -74,9 +74,9 @@ describe('D82: what studying costs', () => {
     const state = student('top_public', { residence: { regionId: 'city', homeId: 'dorm' }, environment: { familyWealth: 50 } });
     const city = BALANCE.work.regionCostFactor.city;
     expect(monthlySpending(state)).toMatchObject({ dorm: Math.round(3500 * city), food: Math.round(4000 * city) });
-    expect([allowanceShare(70), allowanceShare(50), allowanceShare(20)]).toEqual([1, 0.6, 0.2]);
+    expect([allowanceShare(70), allowanceShare(50), allowanceShare(20)]).toEqual([1, 0.7, 0.4]);
     const living = Object.values(monthlySpending(state)).reduce((a, b) => a + b, 0);
-    expect(monthlyAllowance(state)).toBe(Math.round(living * 0.6));
+    expect(monthlyAllowance(state)).toBe(Math.round(living * 0.7));
   });
 
   it('parents pay: no money of the character; the family feels it, unless the family is well off', () => {

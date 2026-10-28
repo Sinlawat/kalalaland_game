@@ -9298,7 +9298,7 @@
       "ageMin": 15,
       "ageMax": 17,
       "habits": {
-        "sleep": "enough"
+        "sleep": "short"
       },
       "education": {
         "enrolled": true
@@ -9316,11 +9316,8 @@
       {
         "id": "push",
         "effects": {
-          "habits": {
-            "sleep": {
-              "level": "short",
-              "months": 6
-            }
+          "stats": {
+            "mentalHealth": -2
           }
         }
       },

@@ -372,6 +372,7 @@ export interface Job {
   /** A job that ends by itself (the school break job): it ends in this month of age. */
   untilMonth?: number;
   /** The exercise level before the job took the time for it; given back when the job ends. */
+  /** Before D83: the exercise to give back when the job ends (save version 16 and older; now the time budget's). */
   restoreExercise?: Habits['exercise'];
 }
 
@@ -486,6 +487,11 @@ export interface GameState {
   habits: Habits;
   /** Temporary lifestyle changes still running (save version 6). */
   habitTimers: HabitTimers;
+  /**
+   * D83: sleep and exercise the week has no time for: the level the
+   * character would have with time to spare (save version 17). Absent = all fits.
+   */
+  timeCut?: Partial<Pick<Habits, 'exercise' | 'sleep'>>;
   condition: Condition;
   /** D65: four skills instead of one knowledge value (save version 8). */
   skills: Skills;

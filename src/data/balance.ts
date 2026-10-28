@@ -255,8 +255,6 @@ export const BALANCE = {
     schoolBreakMonths: 2,
     /** The overtime habit while working at each level. Under 18 nobody may work overtime, so full time is 'none'. */
     overtime: { weekend: 'some', daily: 'heavy', school_break: 'none', full_time: 'none' } satisfies Record<WorkLevel, Habits['overtime']>,
-    /** The most exercise there is time for at each level (absent = no limit). */
-    exerciseCap: { weekend: 'light', daily: 'none' } satisfies Partial<Record<WorkLevel, Habits['exercise']>>,
     /** Daily part-time work leaves less time to study: the school's academic learning × this. */
     dailyAcademicLearning: 0.7,
     /**
@@ -349,8 +347,9 @@ export const BALANCE = {
     /** Share of the dorm living the parents send each month, by Family wealth (the first band it is at least). */
     allowanceShare: [
       { wealthFrom: 65, share: 1 },
-      { wealthFrom: 40, share: 0.6 },
-      { wealthFrom: 0, share: 0.2 },
+      // D83: from 0.6 / 0.2 (students in a dorm were short of money 36% of the months).
+      { wealthFrom: 40, share: 0.7 },
+      { wealthFrom: 0, share: 0.4 },
     ],
     /** The parents can pay the tuition from this Family wealth (by where). */
     parentsPayFromWealth: { top_public: 40, regional: 40, private: 50, open: 0, vocational_college: 0 } satisfies Record<StudyPlace, number>,
@@ -386,6 +385,29 @@ export const BALANCE = {
       open: { academic: 0.8, communication: 0.8 },
       vocational_college: { practical: 1.3 },
     } satisfies Record<StudyPlace, Partial<Skills>>,
+  },
+
+  /**
+   * D83: hours in a week (design doc D83). Sources: AASM sleep (teens 8–10 h,
+   * adults 7+), WHO activity (adults 150–300 min a week), the lower
+   * secondary curriculum (at least 1,200 class hours a year).
+   */
+  time: {
+    hoursPerWeek: 168,
+    /** Free time a week below which the week counts as full. */
+    minFree: 14,
+    /** Eating, washing, errands: 3 hours a day. */
+    essentials: 21,
+    /** School / ปวช. / ปวส. (8 hours a day on site); university classes; กศน. and the open university. */
+    study: { school: 40, university: 25, distance: 6 },
+    /** Getting to school, university or a full-time job; a home far from school adds more. */
+    commute: 5,
+    longCommute: 5,
+    work: { weekend: 14, daily: 29, school_break: 48, full_time: 48 } satisfies Record<WorkLevel, number>,
+    /** "Enough" is 9 hours a night before 18, 8 hours from 18; "short" is 6. */
+    sleep: { enoughChild: 63, enoughAdult: 56, short: 42 },
+    sleepAdultFromAge: 18,
+    exercise: { none: 0, light: 2, regular: 5 } satisfies Record<Habits['exercise'], number>,
   },
 
   /** D72: people the character meets. */

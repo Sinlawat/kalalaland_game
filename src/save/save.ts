@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, HOME_IDS, JOB_IDS, PROGRAM_IDS, REGION_IDS, RELATIONS, SEXES, SPENDING_LEVELS, STUDY_FUNDING, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
+import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, HOME_IDS, SLEEP_LEVELS, JOB_IDS, PROGRAM_IDS, REGION_IDS, RELATIONS, SEXES, SPENDING_LEVELS, STUDY_FUNDING, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 16;
+export const CURRENT_SAVE_VERSION = 17;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -56,7 +56,20 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   13: addMoneyBySource,
   14: addSpending,
   15: addStudentLoan,
+  16: addTimeCut,
 };
+
+/**
+ * 16 → 17 (D83): a job's exercise limit became the time budget. The exercise
+ * a job took away (kept on the job as restoreExercise) becomes what the
+ * week has no time for; the next month fits the rest.
+ */
+function addTimeCut(state: unknown): unknown {
+  if (!isRecord(state) || !isRecord(state.work) || !Array.isArray(state.work.history) || !isRecord(state.habits)) return state;
+  const job = state.work.history.at(-1);
+  if (!isRecord(job) || job.to !== undefined || job.restoreExercise === undefined || job.restoreExercise === state.habits.exercise) return state;
+  return { ...state, timeCut: { exercise: job.restoreExercise } };
+}
 
 /** 15 → 16 (D82): no student loan yet (nobody could study after Grade 12 before). */
 function addStudentLoan(state: unknown): unknown {
@@ -243,6 +256,10 @@ export function isValidGameState(value: unknown): value is GameState {
     isRecord(value.habits) &&
     ['exercise', 'sleep', 'overtime', 'smoking', 'drinking'].every((habit) => typeof (value.habits as Record<string, unknown>)[habit] === 'string') &&
     isRecord(value.habitTimers) &&
+    (value.timeCut === undefined ||
+      (isRecord(value.timeCut) &&
+        (value.timeCut.exercise === undefined || oneOf(EXERCISE_LEVELS, value.timeCut.exercise)) &&
+        (value.timeCut.sleep === undefined || oneOf(SLEEP_LEVELS, value.timeCut.sleep)))) &&
     hasNumbers(value.condition, ['physicalHealth', 'mentalHealth']) &&
     hasNumbers(value.skills, ['academic', 'creative', 'communication', 'practical']) &&
     hasNumbers(value.outcome, ['looks', 'fame']) &&

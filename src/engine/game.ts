@@ -19,6 +19,7 @@ import { computePassiveContributions } from './passive';
 import { createRng } from './rng';
 import { snapshotOf } from './snapshot';
 import { applyContributions } from './stats';
+import { fitTimeBudget } from './time';
 import { advanceWork } from './work';
 import type { GameState, StopReason } from './types';
 import { applyMonthlyWear, yearlyWearChange } from './wear';
@@ -69,6 +70,8 @@ function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EV
   //    Done BEFORE recording, so the month strip shows what really applied.
   if (state.ageInMonths + 1 === OWN_LIFESTYLE_FROM_MONTH) applyStartingLifestyle(state);
   expireHabitTimers(state);
+  //    D83: what the week has time for (a job, school or habit may have changed last month).
+  fitTimeBudget(state);
   //    Remember which habits were in effect this month (events can change
   //    them mid-year, so a year may mix several levels).
   state.yearHabits.push({ ...state.habits });

@@ -5,6 +5,7 @@ import { enroll } from './education';
 import { applyChoice, applyEvent, calendarMonth, EVENTS, findEvent, isEligible, lockReasons, monthlyChance, parseEvents, yearlyChance, type EventDef } from './events';
 import { advanceOneMonth, simulateWholeLife, type Chooser } from './game';
 import { createNewLife } from './newLife';
+import { fitTimeBudget } from './time';
 import { computePassiveContributions, isWorking } from './passive';
 import { makeState } from './testUtils';
 import type { GameState, Job } from './types';
@@ -58,33 +59,30 @@ describe('wages (D77)', () => {
 });
 
 describe('jobs and the lifestyle they bring (D77)', () => {
-  it('a weekend job: overtime "some", regular exercise drops to light; quitting gives it back', () => {
+  it('a weekend job: overtime "some"; D83: the week still has time for regular exercise', () => {
     const state = student();
-    expect(startJob(state, 'cafe', 'weekend')).toEqual({ overtime: 'some', exercise: 'light' });
+    expect(startJob(state, 'cafe', 'weekend')).toEqual({ overtime: 'some' });
+    fitTimeBudget(state);
+    expect(state.habits).toMatchObject({ exercise: 'regular', sleep: 'enough' });
     expect(isWorking(state)).toBe(true);
-    expect(stopWork(state)).toEqual({ overtime: 'none', exercise: 'regular' });
+    expect(stopWork(state)).toEqual({ overtime: 'none' });
     expect(jobs(state)).toEqual(['cafe:weekend:quit']);
     expect(isWorking(state)).toBe(false);
   });
 
-  it('a daily job leaves no time for exercise; cutting down to weekends gives back light exercise', () => {
-    const state = student();
+  it('D83: a daily job next to school leaves no time for exercise, then not for enough sleep; cutting down gives both back', () => {
+    const state = student({ habits: { exercise: 'regular', sleep: 'enough' } });
     startJob(state, 'restaurant', 'daily');
-    expect(state.habits).toMatchObject({ overtime: 'heavy', exercise: 'none' });
+    fitTimeBudget(state);
+    expect(state.habits).toMatchObject({ overtime: 'heavy', exercise: 'none', sleep: 'short' });
+    expect(state.timeCut).toEqual({ exercise: 'regular', sleep: 'enough' });
     const { habits, change } = applyWorkEffect(state, { level: 'weekend' });
-    expect(habits).toEqual({ overtime: 'some', exercise: 'light' });
+    expect(habits).toEqual({ overtime: 'some' });
     expect(change).toEqual({ from: { job: 'restaurant', level: 'daily' }, to: { job: 'restaurant', level: 'weekend' } });
     expect(jobs(state)).toEqual(['restaurant:daily:changed', 'restaurant:weekend:now']);
-    stopWork(state);
-    expect(state.habits.exercise).toBe('regular');
-  });
-
-  it('exercise someone took up during the job is not taken away when it ends', () => {
-    const state = student();
-    startJob(state, 'restaurant', 'daily');
-    state.habits.exercise = 'regular'; // e.g. a new-year resolution kept
-    stopWork(state);
-    expect(state.habits.exercise).toBe('regular');
+    fitTimeBudget(state);
+    expect(state.habits).toMatchObject({ exercise: 'regular', sleep: 'enough' });
+    expect(state.timeCut).toBeUndefined();
   });
 
   it('less exercise only goes down, never up: someone who did none still does none', () => {
@@ -318,7 +316,9 @@ describe('work and money in events.json (D77)', () => {
     applyChoice(state, findEvent('work_parttime_offer')!, 'daily', state.ageInMonths);
     const record = state.eventHistory.at(-1)!;
     expect(record.workChange).toEqual({ to: { job: 'restaurant', level: 'daily' } });
-    expect(record.habitChanges).toEqual({ overtime: 'heavy', exercise: 'none' });
+    expect(record.habitChanges).toEqual({ overtime: 'heavy' });
+    // D83: what the week has no time for is the time budget's, shown as such (not as this event's).
+    expect(state.timeCut).toBeDefined();
   });
 
   it('birthday events happen only in the birthday month, with their whole yearly chance there', () => {

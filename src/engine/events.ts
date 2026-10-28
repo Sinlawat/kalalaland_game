@@ -28,6 +28,7 @@ import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
 import { applyEducationEffect, meetsEducationConditions, type EducationConditions, type EducationEffect } from './education';
 import { applyStudyFunding } from './study';
+import { fitTimeBudget, hasTimeFor } from './time';
 import { setHabitFromEvent } from './lifestyle';
 import {
   applyFriendsEffects,
@@ -981,6 +982,8 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
   if (c.work && !meetsWorkConditions(state, c.work)) return false;
   if (c.birthday && state.ageInMonths % 12 !== 0) return false;
   if (c.moneyShort && state.money.shortfall <= 0) return false;
+  // D83: no more sleep or exercise than the week has time for.
+  if (event.effects !== undefined && !hasTimeFor(state, event.effects.habits)) return false;
   return meetsCharacterConditions(state, c);
 }
 
@@ -991,12 +994,15 @@ export type LockReason =
   /** A flag condition is not met; the event's content explains it in its own words. */
   | { kind: 'flag' }
   /** D77: not enough savings. */
-  | { kind: 'money'; min: number; current: number };
+  | { kind: 'money'; min: number; current: number }
+  /** D83: the week has no time for the sleep or exercise this choice would give. */
+  | { kind: 'time' };
 
 /** Empty list = the choice is available. */
 export function lockReasons(choice: EventChoice, state: GameState): LockReason[] {
+  const time: LockReason[] = hasTimeFor(state, choice.effects.habits) ? [] : [{ kind: 'time' }];
   const c = choice.conditions;
-  if (!c) return [];
+  if (!c) return time;
   const reasons: LockReason[] = (c.stats ?? [])
     .filter((s) => !meetsStat(state, s))
     .map((s) => ({ kind: 'stat', stat: s.stat, op: s.op, value: s.value, current: readConditionStat(state, s.stat) }));
@@ -1009,7 +1015,7 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
     !(c.flagsNone ?? []).some((flag) => state.flags.includes(flag));
   if (!flagsOk) reasons.push({ kind: 'flag' });
   if (c.money !== undefined && state.money.cash < c.money.min) reasons.push({ kind: 'money', min: c.money.min, current: state.money.cash });
-  return reasons;
+  return [...reasons, ...time];
 }
 
 // ── Selection: guaranteed, window and chance events (D67, D68) ──────────────
@@ -1209,6 +1215,8 @@ function applyEffects(
   if (person !== undefined) record.person = applyPersonEffect(state, person, effects.person ?? {}, ageInMonths);
   if (effects.education) applyEducationEffect(state, effects.education, ageInMonths);
   applyMoneyAndWork(state, effects, record);
+  // D83: a job, a school or a habit may have changed what the week has time for.
+  fitTimeBudget(state);
   state.eventHistory.push(record);
 }
 

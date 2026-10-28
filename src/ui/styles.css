@@ -656,3 +656,44 @@ p { margin: 0 0 8px; }
 /* ── Life summary: education (D74) ─────────────────────────────────────── */
 .education-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .education-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; }
+
+/* ── D83: the calendar ───────────────────────────────────────────────────── */
+:root {
+  --sched-sleep: #8e9ab8;
+  --sched-essentials: #d8cbb4;
+  --sched-commute: #b9b1a6;
+  --sched-study: #3d6b5a;
+  --sched-work: #c08a1e;
+  --sched-exercise: #b0453a;
+  --sched-free: #eee7dc;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sched-sleep: #4f5a78;
+    --sched-essentials: #6a604f;
+    --sched-commute: #57504a;
+    --sched-study: #7fb39c;
+    --sched-work: #e0b45a;
+    --sched-exercise: #e88c80;
+    --sched-free: #34302b;
+  }
+}
+.schedule--sleep { background: var(--sched-sleep); }
+.schedule--essentials { background: var(--sched-essentials); }
+.schedule--commute { background: var(--sched-commute); }
+.schedule--study { background: var(--sched-study); }
+.schedule--work { background: var(--sched-work); }
+.schedule--exercise { background: var(--sched-exercise); }
+.schedule--free { background: var(--sched-free); }
+.schedule-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
+.schedule-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 12px; }
+.schedule-grid__head { text-align: center; }
+.schedule-day {
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  padding: 3px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text); font: inherit; cursor: pointer; min-width: 0;
+}
+.schedule-day--selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.schedule-day__number { font-size: 0.75rem; line-height: 1; text-align: left; }
+.schedule-bar { display: flex; flex-direction: column; height: 56px; border-radius: 3px; overflow: hidden; }
+.schedule-bar__part { display: block; min-height: 0; }

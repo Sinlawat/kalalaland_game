@@ -13,9 +13,11 @@ export type HabitReason =
   /** Set by an event that lasts. */
   | { kind: 'event'; eventId: string }
   /** Set by a temporary event still running (D56). */
-  | { kind: 'temporary'; eventId: string; monthsLeft: number; revertTo: string };
+  | { kind: 'temporary'; eventId: string; monthsLeft: number; revertTo: string }
+  /** D83: the week has no time for the level the character would have (`wanted`). */
+  | { kind: 'time'; wanted: string };
 
-type ReasonSource = Pick<GameState, 'ageInMonths' | 'eventHistory' | 'habitTimers' | 'habits'>;
+type ReasonSource = Pick<GameState, 'ageInMonths' | 'eventHistory' | 'habitTimers' | 'habits' | 'timeCut'>;
 
 /**
  * Walks the history backwards to the latest event that still explains the
@@ -25,6 +27,8 @@ type ReasonSource = Pick<GameState, 'ageInMonths' | 'eventHistory' | 'habitTimer
  * family's lifestyle replaced them.
  */
 export function habitReason(state: ReasonSource, habit: HabitKey): HabitReason {
+  const wanted = (state.timeCut as Partial<Record<HabitKey, string>> | undefined)?.[habit];
+  if (wanted !== undefined) return { kind: 'time', wanted };
   const timer = state.habitTimers[habit];
   for (let i = state.eventHistory.length - 1; i >= 0; i--) {
     const record = state.eventHistory[i]!;
