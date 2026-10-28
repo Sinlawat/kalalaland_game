@@ -344,8 +344,12 @@ export interface Education {
 }
 
 // ── Work and money (D77, finance phase 1) ───────────────────────────────────
-/** Where the character works. Teen jobs only for now; careers come with the career system. */
-export const JOB_IDS = ['convenience_store', 'cafe', 'restaurant', 'family_shop', 'local_shop'] as const;
+/**
+ * Where the character works. Jobs for students and school leavers only for
+ * now; careers come with the career system. D82 phase 2a: tutoring, for a
+ * university student with good grades.
+ */
+export const JOB_IDS = ['convenience_store', 'cafe', 'restaurant', 'family_shop', 'local_shop', 'tutor'] as const;
 export type JobId = (typeof JOB_IDS)[number];
 
 /**

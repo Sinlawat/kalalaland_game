@@ -249,8 +249,12 @@ export const BALANCE = {
     fullTimeDaysPerMonth: 26,
     /** Hours of a full-time month, to scale what part-time work teaches (8 h × 26 days). */
     fullTimeHoursPerMonth: 208,
-    /** Jobs that pay less than the going rate (the family shop pays its own child half). */
-    jobPayFactor: { family_shop: 0.5 } satisfies Partial<Record<JobId, number>>,
+    /**
+     * Jobs that pay another rate than the part-time one: the family shop pays
+     * its own child half; a tutor about 150 baht an hour (D82 phase 2a: 150 /
+     * 40 = 3.75). The tutoring rate is an estimate: no reliable price found.
+     */
+    jobPayFactor: { family_shop: 0.5, tutor: 3.75 } satisfies Partial<Record<JobId, number>>,
     /** How long the school break job lasts. */
     schoolBreakMonths: 2,
     /** The overtime habit while working at each level. Under 18 nobody may work overtime, so full time is 'none'. */
@@ -292,6 +296,7 @@ export const BALANCE = {
       restaurant: { practical: 1.5 },
       family_shop: { communication: 0.75, practical: 0.75 },
       local_shop: { communication: 0.75, practical: 0.75 },
+      tutor: { academic: 0.75, communication: 0.75 },
     } satisfies Record<JobId, Partial<Skills>>,
   },
 

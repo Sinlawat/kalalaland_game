@@ -147,8 +147,10 @@ export interface EventConditions extends CharacterConditions {
    * Only at least `min` months after the most recent of these events, and
    * never before any of them happened. E.g. a new job at least 6 months
    * after losing one: { events: ['family_parent_lost_job'], min: 6 }.
+   * D82 phase 2a: `max` also ends the wait, e.g. a result that can only
+   * come exactly 2 months after the competition: { min: 2, max: 2 }.
    */
-  monthsSince?: { events: string[]; min: number };
+  monthsSince?: { events: string[]; min: number; max?: number };
   /**
    * Not within `months` months after any of these events. Passes when none
    * of them ever happened. Keeps big life changes apart, e.g. no move to the
@@ -792,9 +794,12 @@ export function parseEvents(raw: unknown): EventDef[] {
       if (c.monthsSince !== undefined) {
         const since = c.monthsSince;
         if (!isRecord(since) || !isStringArray(since.events) || since.events.length === 0 || !isPositiveInteger(since.min)) {
-          problems.push(`${at}: monthsSince must be { "events": [event ids], "min": whole number of months above 0 }`);
+          problems.push(`${at}: monthsSince must be { "events": [event ids], "min": whole number of months above 0, "max"? }`);
         } else {
-          for (const key of unknownKeys(since, ['events', 'min'])) problems.push(`${at}: monthsSince: unknown field "${key}"`);
+          for (const key of unknownKeys(since, ['events', 'min', 'max'])) problems.push(`${at}: monthsSince: unknown field "${key}"`);
+          if (since.max !== undefined && !(isPositiveInteger(since.max) && since.max >= since.min)) {
+            problems.push(`${at}: monthsSince.max must be a whole number of months, at least min`);
+          }
           since.events.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'monthsSince' }));
         }
       }
@@ -962,7 +967,9 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
   if (c.months && !c.months.includes(calendarMonth(state))) return false;
   if (c.monthsSince) {
     const times = c.monthsSince.events.flatMap((id) => happened.get(id) ?? []);
-    if (times.length === 0 || state.ageInMonths - Math.max(...times) < c.monthsSince.min) return false;
+    if (times.length === 0) return false;
+    const since = state.ageInMonths - Math.max(...times);
+    if (since < c.monthsSince.min || (c.monthsSince.max !== undefined && since > c.monthsSince.max)) return false;
   }
   if (c.notWithin) {
     const times = c.notWithin.events.flatMap((id) => happened.get(id) ?? []);

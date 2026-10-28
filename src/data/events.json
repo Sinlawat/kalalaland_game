@@ -9529,7 +9529,10 @@
     "conditions": {
       "ageMin": 15,
       "ageMax": 99,
-      "moneyShort": true
+      "moneyShort": true,
+      "work": {
+        "employed": true
+      }
     },
     "frequency": "guaranteed",
     "once": false,
@@ -9652,6 +9655,1403 @@
     "cooldownMonths": 12,
     "effects": {
       "money": 1500
+    }
+  },
+  {
+    "id": "life_move_into_dorm",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 40,
+      "residence": {
+        "homes": [
+          "dorm"
+        ]
+      },
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "max": 1
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "call_home",
+        "effects": {
+          "environment": {
+            "familyWarmth": 2
+          }
+        }
+      },
+      {
+        "id": "meet_neighbors",
+        "effects": {
+          "stats": {
+            "communication": 1
+          },
+          "person": {
+            "befriend": "friend",
+            "tag": "uni"
+          }
+        }
+      },
+      {
+        "id": "decorate",
+        "conditions": {
+          "money": {
+            "min": 1500
+          }
+        },
+        "effects": {
+          "money": -1500,
+          "stats": {
+            "mentalHealth": 2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_uni_new_best_friend",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ],
+      "people": {
+        "bestFriend": false
+      }
+    },
+    "frequency": "common",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "best",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2
+          },
+          "person": {
+            "befriend": "best_friend",
+            "tag": "uni"
+          }
+        }
+      },
+      {
+        "id": "casual",
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend",
+            "tag": "uni"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_uni_wrong_crowd",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "chanceBy": [
+      {
+        "stat": "riskTaking",
+        "toward": "high"
+      }
+    ],
+    "choices": [
+      {
+        "id": "go_along",
+        "conditions": {
+          "money": {
+            "min": 1500
+          }
+        },
+        "effects": {
+          "traits": {
+            "discipline": -2
+          },
+          "stats": {
+            "mentalHealth": 1
+          },
+          "money": -1500,
+          "setFlags": [
+            "party_crowd"
+          ],
+          "person": {
+            "befriend": "friend",
+            "tag": "uni"
+          }
+        }
+      },
+      {
+        "id": "sometimes",
+        "effects": {
+          "money": -500,
+          "stats": {
+            "mentalHealth": 1
+          },
+          "person": {
+            "befriend": "friend",
+            "tag": "uni"
+          }
+        }
+      },
+      {
+        "id": "refuse",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "traits": {
+            "discipline": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_uni_fell_out",
+    "about": "best_friend",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ],
+      "people": {
+        "tagsAll": [
+          "uni"
+        ]
+      }
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 36,
+    "choices": [
+      {
+        "id": "apologize",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "resilience",
+              "op": ">=",
+              "value": 50
+            },
+            {
+              "stat": "mentalHealth",
+              "op": ">=",
+              "value": 55
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 1
+          }
+        }
+      },
+      {
+        "id": "wait",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "person": {
+            "tag": "growing_apart"
+          }
+        }
+      },
+      {
+        "id": "break",
+        "effects": {
+          "stats": {
+            "mentalHealth": -4
+          },
+          "person": {
+            "end": "fell_out"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_uni_copy_work",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ],
+      "people": {
+        "friendsMin": 1
+      }
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "explain",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 20
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "communication": 1
+          }
+        }
+      },
+      {
+        "id": "refuse",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          },
+          "traits": {
+            "discipline": 1
+          }
+        }
+      },
+      {
+        "id": "let_copy",
+        "effects": {
+          "traits": {
+            "discipline": -1
+          },
+          "setFlags": [
+            "copied_work"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_uni_recognized",
+    "about": "new_person",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "communication",
+          "op": ">=",
+          "value": 28
+        }
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 12
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 3
+      },
+      "setFlags": [
+        "known_on_campus"
+      ],
+      "person": {
+        "befriend": "friend",
+        "tag": "uni"
+      }
+    }
+  },
+  {
+    "id": "money_short_student",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 99,
+      "moneyShort": true,
+      "work": {
+        "employed": false
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 3,
+    "choices": [
+      {
+        "id": "frugal",
+        "effects": {
+          "spendingLevel": "frugal"
+        }
+      },
+      {
+        "id": "weekend",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "cafe",
+              "level": "weekend"
+            }
+          }
+        }
+      },
+      {
+        "id": "daily",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "restaurant",
+              "level": "daily"
+            }
+          }
+        }
+      },
+      {
+        "id": "ask_parents",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "money": 2000,
+          "environment": {
+            "familyWarmth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "work_tutor_offer",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 45
+        }
+      ],
+      "work": {
+        "employed": false
+      },
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "tutor",
+        "effects": {
+          "work": {
+            "start": {
+              "job": "tutor",
+              "level": "weekend"
+            }
+          }
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "social_uni_trip_invite",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "months": [
+        3,
+        4
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "go",
+        "conditions": {
+          "money": {
+            "min": 2500
+          }
+        },
+        "effects": {
+          "money": -2500,
+          "stats": {
+            "mentalHealth": 3
+          }
+        }
+      },
+      {
+        "id": "skip",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "life_emergency_expense",
+    "conditions": {
+      "ageMin": 17,
+      "ageMax": 40,
+      "residence": {
+        "homes": [
+          "dorm"
+        ]
+      }
+    },
+    "frequency": "uncommon",
+    "once": false,
+    "cooldownMonths": 24,
+    "choices": [
+      {
+        "id": "pay",
+        "conditions": {
+          "money": {
+            "min": 3000
+          }
+        },
+        "effects": {
+          "money": -3000
+        }
+      },
+      {
+        "id": "ask_parents",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 40
+            }
+          ]
+        },
+        "effects": {
+          "environment": {
+            "familyWarmth": -1
+          }
+        }
+      },
+      {
+        "id": "borrow",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "setFlags": [
+            "owes_friend"
+          ]
+        }
+      },
+      {
+        "id": "make_do",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_found_passion",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 3,
+          "max": 23
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "dive_in",
+        "effects": {
+          "stats": {
+            "academic": 2
+          },
+          "setFlags": [
+            "has_career_goal"
+          ]
+        }
+      },
+      {
+        "id": "keep_open",
+        "effects": {
+          "stats": {
+            "academic": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_professor_notice",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 46
+        }
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 12
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "assist",
+        "effects": {
+          "stats": {
+            "academic": 3
+          },
+          "money": 3000,
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          },
+          "setFlags": [
+            "professor_noticed"
+          ]
+        }
+      },
+      {
+        "id": "decline",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_competition",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 12
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "choices": [
+      {
+        "id": "join",
+        "effects": {
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 2
+            }
+          },
+          "setFlags": [
+            "in_competition"
+          ]
+        }
+      },
+      {
+        "id": "skip",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_competition_win",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 31,
+      "flagsAll": [
+        "in_competition"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 46
+        }
+      ],
+      "monthsSince": {
+        "events": [
+          "edu_uni_competition"
+        ],
+        "min": 2,
+        "max": 2
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "lifetimeChance": 0.7,
+    "effects": {
+      "stats": {
+        "mentalHealth": 4
+      },
+      "setFlags": [
+        "competition_winner"
+      ],
+      "removeFlags": [
+        "in_competition"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_competition_win_underdog",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 31,
+      "flagsAll": [
+        "in_competition"
+      ],
+      "stats": [
+        {
+          "stat": "academic",
+          "op": "<",
+          "value": 46
+        }
+      ],
+      "monthsSince": {
+        "events": [
+          "edu_uni_competition"
+        ],
+        "min": 2,
+        "max": 2
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "lifetimeChance": 0.3,
+    "effects": {
+      "stats": {
+        "mentalHealth": 4
+      },
+      "setFlags": [
+        "competition_winner"
+      ],
+      "removeFlags": [
+        "in_competition"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_competition_lose",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 31,
+      "flagsAll": [
+        "in_competition"
+      ],
+      "monthsSince": {
+        "events": [
+          "edu_uni_competition"
+        ],
+        "min": 3
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": -1
+      },
+      "traits": {
+        "resilience": 1
+      },
+      "removeFlags": [
+        "in_competition"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_internship_offer",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 24,
+          "max": 35
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "famous_self",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "academic",
+              "op": ">=",
+              "value": 42
+            }
+          ],
+          "money": {
+            "min": 6000
+          }
+        },
+        "effects": {
+          "money": -6000,
+          "setFlags": [
+            "internship_famous"
+          ]
+        }
+      },
+      {
+        "id": "famous_family",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "academic",
+              "op": ">=",
+              "value": 42
+            },
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 65
+            }
+          ]
+        },
+        "effects": {
+          "setFlags": [
+            "internship_famous"
+          ]
+        }
+      },
+      {
+        "id": "local",
+        "effects": {
+          "money": 8000,
+          "setFlags": [
+            "internship_local"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_internship_famous",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 31,
+      "flagsAll": [
+        "internship_famous"
+      ],
+      "monthsSince": {
+        "events": [
+          "edu_uni_internship_offer"
+        ],
+        "min": 1
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "work_hard",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "communication": 2,
+            "practical": 1
+          },
+          "setFlags": [
+            "internship_good"
+          ],
+          "removeFlags": [
+            "internship_famous"
+          ]
+        }
+      },
+      {
+        "id": "get_through",
+        "effects": {
+          "stats": {
+            "communication": 1
+          },
+          "removeFlags": [
+            "internship_famous"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_internship_local",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 31,
+      "flagsAll": [
+        "internship_local"
+      ],
+      "monthsSince": {
+        "events": [
+          "edu_uni_internship_offer"
+        ],
+        "min": 1
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "work_hard",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "discipline",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "practical": 2
+          },
+          "setFlags": [
+            "internship_good"
+          ],
+          "removeFlags": [
+            "internship_local"
+          ]
+        }
+      },
+      {
+        "id": "get_through",
+        "effects": {
+          "stats": {
+            "practical": 1
+          },
+          "removeFlags": [
+            "internship_local"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_senior_advice",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 24
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "ask",
+        "effects": {
+          "stats": {
+            "communication": 1
+          },
+          "setFlags": [
+            "has_career_goal"
+          ]
+        }
+      },
+      {
+        "id": "listen",
+        "effects": {}
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_standout_project",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "academic",
+          "op": ">=",
+          "value": 45
+        }
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 24
+        }
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "uncommon",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 3
+      },
+      "setFlags": [
+        "standout_project"
+      ]
+    }
+  },
+  {
+    "id": "edu_uni_burnout",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "mentalHealth",
+          "op": "<",
+          "value": 55
+        }
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": false,
+    "cooldownMonths": 12,
+    "choices": [
+      {
+        "id": "counseling",
+        "effects": {
+          "stats": {
+            "mentalHealth": 4
+          }
+        }
+      },
+      {
+        "id": "rest",
+        "effects": {
+          "stats": {
+            "mentalHealth": 2,
+            "academic": -1
+          }
+        }
+      },
+      {
+        "id": "push",
+        "effects": {
+          "stats": {
+            "mentalHealth": -3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_dropout_thought",
+    "conditions": {
+      "ageMin": 18,
+      "ageMax": 30,
+      "stats": [
+        {
+          "stat": "mentalHealth",
+          "op": "<",
+          "value": 50
+        }
+      ],
+      "education": {
+        "current": [
+          "higher_vocational",
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      },
+      "flagsNone": [
+        "study_open"
+      ]
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "quit",
+        "effects": {
+          "education": {
+            "leave": true
+          },
+          "setFlags": [
+            "seeking_first_job"
+          ]
+        }
+      },
+      {
+        "id": "stay",
+        "effects": {
+          "stats": {
+            "mentalHealth": -1
+          },
+          "traits": {
+            "resilience": 1
+          }
+        }
+      },
+      {
+        "id": "talk_family",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWarmth",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "stats": {
+            "mentalHealth": 3
+          },
+          "environment": {
+            "familyWarmth": 2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_uni_family_expectation",
+    "conditions": {
+      "ageMin": 19,
+      "ageMax": 30,
+      "education": {
+        "current": [
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ],
+        "monthsIn": {
+          "min": 12,
+          "max": 35
+        }
+      }
+    },
+    "frequency": "normal",
+    "once": true,
+    "choices": [
+      {
+        "id": "follow",
+        "effects": {
+          "environment": {
+            "familyWarmth": 2
+          },
+          "stats": {
+            "mentalHealth": -1
+          },
+          "setFlags": [
+            "plan_civil_service"
+          ]
+        }
+      },
+      {
+        "id": "own_way",
+        "effects": {
+          "environment": {
+            "familyWarmth": -3
+          },
+          "setFlags": [
+            "has_career_goal"
+          ]
+        }
+      },
+      {
+        "id": "talk",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "communication",
+              "op": ">=",
+              "value": 25
+            }
+          ]
+        },
+        "effects": {
+          "environment": {
+            "familyWarmth": 1
+          },
+          "setFlags": [
+            "has_career_goal"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "edu_graduation_ceremony",
+    "conditions": {
+      "ageMin": 20,
+      "ageMax": 45,
+      "education": {
+        "completed": [
+          "bachelor_medicine",
+          "bachelor_health",
+          "bachelor_engineering",
+          "bachelor_business",
+          "bachelor_education",
+          "bachelor_humanities",
+          "bachelor_arts"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "effects": {
+      "stats": {
+        "mentalHealth": 4
+      },
+      "environment": {
+        "familyWarmth": 2
+      }
     }
   }
 ]

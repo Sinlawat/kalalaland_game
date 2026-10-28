@@ -548,10 +548,30 @@ describe('monthsSince: waiting after another event', () => {
     expect(isEligible(newJob, makeState({ ageInMonths: 106, eventHistory: history }))).toBe(true);
   });
 
+  describe('D82 phase 2a: `max` ends the wait', () => {
+    const result = makeEvent({
+      id: 'result',
+      conditions: { ageMin: 0, ageMax: 99, monthsSince: { events: ['lost_job'], min: 2, max: 2 } },
+    });
+    const history = [{ id: 'lost_job', ageInMonths: 100 }];
+
+    it('happens only from `min` to `max` months after (boundary: 1 no, 2 yes, 3 no)', () => {
+      expect(isEligible(result, makeState({ ageInMonths: 101, eventHistory: history }))).toBe(false);
+      expect(isEligible(result, makeState({ ageInMonths: 102, eventHistory: history }))).toBe(true);
+      expect(isEligible(result, makeState({ ageInMonths: 103, eventHistory: history }))).toBe(false);
+    });
+
+    it('is accepted by the validator when it is at least min', () => {
+      expect(() => parseEvents([{ ...makeEvent(), conditions: { ageMin: 0, ageMax: 9, monthsSince: { events: ['test_event'], min: 6, max: 6 } } }])).not.toThrow();
+    });
+  });
+
   it.each([
     [{ events: [], min: 6 }, 'monthsSince must be'],
     [{ events: ['test_event'], min: 0 }, 'monthsSince must be'],
-    [{ events: ['test_event'], min: 6, max: 9 }, 'unknown field "max"'],
+    [{ events: ['test_event'], min: 6, max: 5 }, 'monthsSince.max must be a whole number of months, at least min'],
+    [{ events: ['test_event'], min: 6, max: 7.5 }, 'monthsSince.max must be a whole number of months, at least min'],
+    [{ events: ['test_event'], min: 6, after: 9 }, 'unknown field "after"'],
     [{ events: ['no_such_event'], min: 6 }, 'names event "no_such_event", which does not exist'],
   ])('rejects %j', (monthsSince, expected) => {
     expect(() => parseEvents([{ ...makeEvent(), conditions: { ageMin: 0, ageMax: 9, monthsSince } }])).toThrow(expected);
@@ -1402,7 +1422,9 @@ describe('real events over many lives (Monte Carlo)', () => {
         expect(parting).toHaveLength(1);
         expect(parting[0]!.ageInMonths).toBe(start + 142);
         expect(calendarMonth({ birthMonth: end.birthMonth, ageInMonths: start + 142 })).toBe(3);
-        const stillThere = end.people.filter((p) => p.periods.at(-1)!.to === undefined || p.periods.at(-1)!.to! > start + 142);
+        // Friends from school only: university friends (D82 phase 2a) are met after the parting.
+        const fromSchool = end.people.filter((p) => p.periods[0]!.from <= start + 142);
+        const stillThere = fromSchool.filter((p) => p.periods.at(-1)!.to === undefined || p.periods.at(-1)!.to! > start + 142);
         if (parting[0]!.choiceId === 'meet_yearly') {
           expect(stillThere.map((p) => p.id)).toEqual([parting[0]!.person!.id]);
         } else {
@@ -1476,7 +1498,11 @@ describe('real events over many lives (Monte Carlo)', () => {
       // `ends` ran whole lives (first open choice, which makes and keeps friends): count friends met before 19, the loners' window.
       const friendlyAt19 = grown(ends).map((end) => ({ ...end, people: end.people.filter((p) => p.periods[0]!.from < 19 * 12) }));
       expect(mean(friendlyAt19)).toBeGreaterThan(mean(grown(loners)) * 1.3);
-      expect(kept(grown(loners))).toBeLessThan(0.1);
+      // Friends from school only: at university (D82 phase 2a) a first best friend comes with no way to say no,
+      // like the first one at school, so a loner who went on to study meets someone new there.
+      const parting = (end: GameState) => end.eventHistory.find((r) => GRADUATION.includes(r.id))?.ageInMonths ?? end.ageInMonths;
+      const schoolFriendsOnly = grown(loners).map((end) => ({ ...end, people: end.people.filter((p) => p.periods[0]!.from <= parting(end)) }));
+      expect(kept(schoolFriendsOnly)).toBeLessThan(0.1);
     });
   });
 
