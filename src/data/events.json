@@ -5138,11 +5138,11 @@
       },
       "flagsAny": [
         "club_arts",
-        "club_science",
         "club_scouts"
       ],
       "flagsNone": [
-        "club_sports"
+        "club_sports",
+        "club_science"
       ]
     },
     "frequency": "guaranteed",
@@ -5156,7 +5156,6 @@
           },
           "removeFlags": [
             "club_arts",
-            "club_science",
             "club_scouts"
           ]
         }
@@ -5165,6 +5164,54 @@
         "id": "stay_in_club",
         "effects": {
           "stats": {
+            "mentalHealth": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "school_m3_club_or_study_science",
+    "conditions": {
+      "ageMin": 14,
+      "ageMax": 15,
+      "monthsSince": {
+        "events": [
+          "school_start_international",
+          "school_start_private",
+          "school_start_public",
+          "school_start_scholarship",
+          "school_start_local"
+        ],
+        "min": 104
+      },
+      "flagsAll": [
+        "club_science"
+      ]
+    },
+    "frequency": "guaranteed",
+    "once": true,
+    "choices": [
+      {
+        "id": "project",
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "creative": 1
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 3
+            }
+          }
+        }
+      },
+      {
+        "id": "exam",
+        "effects": {
+          "stats": {
+            "academic": 1,
             "mentalHealth": 1
           }
         }

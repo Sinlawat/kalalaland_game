@@ -1307,7 +1307,7 @@ describe('real events over many lives (Monte Carlo)', () => {
       }
     });
 
-    it('the first club leaves a club flag, and in January of ม.3 the child chooses between that club and studying', () => {
+    it('the first club leaves a club flag, and in January of ม.3 the child chooses between that club and studying (science club: a project or the exam)', () => {
       const asked = new Set<string>();
       for (const end of all) {
         const club = recordsOf(end, 'school_first_club')[0];
@@ -1318,8 +1318,10 @@ describe('real events over many lives (Monte Carlo)', () => {
         expect(ask.ageInMonths).toBe(schoolStartAt(end) + 104);
         expect(monthOf(end, ask.ageInMonths)).toBe(1);
         expect(ask.id === 'school_m3_club_or_study_sports').toBe(club.choiceId === 'sports');
+        // D78: the science club is study already: its question is a project or the exam, and nobody leaves it.
+        expect(ask.id === 'school_m3_club_or_study_science').toBe(club.choiceId === 'science');
         const clubFlag = `club_${club.choiceId}`;
-        expect(end.flags.includes(clubFlag)).toBe(ask.choiceId === 'stay_in_club');
+        expect(end.flags.includes(clubFlag)).toBe(club.choiceId === 'science' || ask.choiceId === 'stay_in_club');
       }
       expect([...asked].sort()).toEqual([...CLUBS].sort());
     });

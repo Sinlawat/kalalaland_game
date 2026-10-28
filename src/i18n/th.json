@@ -1158,5 +1158,11 @@
   "event.social_graduation_best_friend_far.choice.meet_yearly": "ชวน {name} มาเจอกันฉลองเรียนจบ",
   "event.social_graduation_best_friend_far.result.meet_yearly": "คุณกับ {name} ได้เจอกันอีกครั้ง คุยกันเหมือนไม่เคยห่างกันไป แล้วนัดกันว่าจะเจอกันทุกปี ส่วนเพื่อนในห้องค่อยๆ หายไปตามทางของตัวเอง",
   "event.social_graduation_best_friend_far.choice.separate": "ต่างคนต่างไปตามทางของตัวเอง",
-  "event.social_graduation_best_friend_far.result.separate": "คุณกดถูกใจรูปของ {name} แล้ววางโทรศัพท์ ต่างคนต่างเริ่มชีวิตใหม่ ไม่ได้ติดต่อกันอีก"
+  "event.social_graduation_best_friend_far.result.separate": "คุณกดถูกใจรูปของ {name} แล้ววางโทรศัพท์ ต่างคนต่างเริ่มชีวิตใหม่ ไม่ได้ติดต่อกันอีก",
+  "event.school_m3_club_or_study_science.title": "ต้องเลือกระหว่างโครงงานกับการสอบ",
+  "event.school_m3_club_or_study_science.text": "ปีนี้คุณอยู่ ม.3 ต้องสอบเข้า ม.4 ครูที่ปรึกษาชมรมวิทย์-คณิตชวนคุณทำโครงงานส่งประกวดระดับจังหวัด ต้องเข้าแล็บทุกเย็น ช่วงเดียวกับที่ต้องอ่านสอบพอดี",
+  "event.school_m3_club_or_study_science.choice.project": "รับทำโครงงาน",
+  "event.school_m3_club_or_study_science.result.project": "คุณกับเพื่อนในชมรมทดลองจนมืดทุกวัน ผลงานได้รางวัลชมเชย และคุณได้เห็นว่าสิ่งที่เรียนเอาไปใช้ได้จริง",
+  "event.school_m3_club_or_study_science.choice.exam": "ขอปฏิเสธ ตั้งใจอ่านสอบเข้า ม.4",
+  "event.school_m3_club_or_study_science.result.exam": "คุณอ่านหนังสือตามแผนทุกเย็น ยังไปชมรมบ้างเมื่อมีเวลา"
 }
