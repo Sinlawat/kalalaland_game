@@ -50,7 +50,7 @@ function closeYear(state: GameState): void {
   });
   state.yearLog = {};
   state.yearHabits = [];
-  state.money.year = { earned: 0, given: 0 };
+  state.money.year = { earned: 0, given: 0, income: {}, spent: {} };
 }
 
 /**

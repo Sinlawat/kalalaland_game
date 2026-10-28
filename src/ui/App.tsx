@@ -11,6 +11,7 @@ import { FriendsCard } from './FriendsCard';
 import { LifestylePanel } from './LifestylePanel';
 import { PlaybackBar } from './PlaybackBar';
 import { residenceLabel } from './residence';
+import { FinanceDialog } from './FinanceDialog';
 import { ResidenceDialog } from './ResidenceDialog';
 import { SceneFrame } from './SceneFrame';
 import { StartScreen } from './StartScreen';
@@ -23,6 +24,7 @@ export function App() {
   const { game } = controller;
   // Hooks must run on every render, so this sits above the early returns.
   const [residenceOpen, setResidenceOpen] = useState(false);
+  const [financeOpen, setFinanceOpen] = useState(false);
 
   if (game === null) {
     return (
@@ -64,12 +66,17 @@ export function App() {
             <button type="button" className="button button--small" onClick={() => setResidenceOpen(true)}>
               {t('residence.open')}
             </button>
+            {/* D79: savings, jobs, money by source, and the family's money stress. */}
+            <button type="button" className="button button--small" onClick={() => setFinanceOpen(true)}>
+              {t('finance.open')}
+            </button>
           </div>
         </div>
         <span className="muted small">{t('status.seed', { seed: game.seed })}</span>
       </header>
 
       {residenceOpen && <ResidenceDialog game={game} onClose={() => setResidenceOpen(false)} />}
+      {financeOpen && <FinanceDialog game={game} onClose={() => setFinanceOpen(false)} />}
 
       {/* Time sits right under who and how old: the two things read together. */}
       <div className="playback-dock">

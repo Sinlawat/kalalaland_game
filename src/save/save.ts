@@ -14,7 +14,7 @@
 import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, JOB_IDS, PROGRAM_IDS, RELATIONS, SEXES, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 13;
+export const CURRENT_SAVE_VERSION = 14;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -53,7 +53,17 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   10: addPeople,
   11: addEducation,
   12: addWorkAndMoney,
+  13: addMoneyBySource,
 };
+
+/**
+ * 13 → 14 (D79): the year's money by source. The running year starts empty
+ * (its wages so far stay in the totals); closed years simply have none.
+ */
+function addMoneyBySource(state: unknown): unknown {
+  if (!isRecord(state) || !isRecord(state.money) || !isRecord(state.money.year)) return state;
+  return { ...state, money: { ...state.money, year: { ...state.money.year, income: {}, spent: {} } } };
+}
 
 /**
  * 12 → 13 (D77): work and money. Nobody had a paid job before, so the work
@@ -65,6 +75,7 @@ function addWorkAndMoney(state: unknown): unknown {
   return {
     ...state,
     work: { history: [] },
+    // The shape of version 13: the year's money by source came in version 14 (addMoneyBySource).
     money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } },
   };
 }
@@ -155,12 +166,20 @@ function isValidWork(value: unknown): boolean {
   );
 }
 
+/** D79: { "job.cafe": 2400, ... }. */
+function isAmountsBySource(value: unknown): boolean {
+  return isRecord(value) && Object.values(value).every((amount) => typeof amount === 'number' && Number.isFinite(amount));
+}
+
 /** D77: savings are whole baht and never negative. */
 function isValidMoney(value: unknown): boolean {
   if (!isRecord(value) || !hasNumbers(value, ['cash', 'familySharePercent', 'monthGiven'])) return false;
   return (
     (value.cash as number) >= 0 &&
     hasNumbers(value.year, ['earned', 'given']) &&
+    isAmountsBySource((value.year as Record<string, unknown>).income) &&
+    isAmountsBySource((value.year as Record<string, unknown>).spent) &&
+    (value.jobLossRecoveryUntil === undefined || typeof value.jobLossRecoveryUntil === 'number') &&
     (value.familyRelief === undefined || hasNumbers(value.familyRelief, ['amount', 'untilMonth']))
   );
 }

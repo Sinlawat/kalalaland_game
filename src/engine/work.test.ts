@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import { enroll } from './education';
-import { applyChoice, applyEvent, EVENTS, findEvent, isEligible, lockReasons, monthlyChance, parseEvents, yearlyChance, type EventDef } from './events';
+import { applyChoice, applyEvent, calendarMonth, EVENTS, findEvent, isEligible, lockReasons, monthlyChance, parseEvents, yearlyChance, type EventDef } from './events';
 import { advanceOneMonth, simulateWholeLife, type Chooser } from './game';
 import { createNewLife } from './newLife';
 import { computePassiveContributions, isWorking } from './passive';
@@ -13,6 +13,7 @@ import {
   changeMoney,
   currentJob,
   familyMoneyStress,
+  familyMoneyStressParts,
   meetsWorkConditions,
   monthlyWage,
   startJob,
@@ -118,7 +119,7 @@ describe('the monthly money step (D77)', () => {
     months(state, 1);
     expect(state.money.cash).toBe(2400 + 1680);
     expect(state.money.monthGiven).toBe(720);
-    expect(state.money.year).toEqual({ earned: 4800, given: 720 });
+    expect(state.money.year).toEqual({ earned: 4800, given: 720, income: { 'job.convenience_store': 4800 }, spent: {} });
     expect(Number.isInteger(state.money.cash)).toBe(true);
   });
 
@@ -359,5 +360,55 @@ describe('real lives (D77)', () => {
     expect(adults.length).toBeGreaterThan(250);
     for (const end of adults) expect(end.environment.financialStress).toBe(0);
     expect(EVENTS.some((e) => e.id === 'work_family_short_money')).toBe(true);
+  });
+});
+
+describe('D79: stress after a job loss fades; money by source; the yearly question', () => {
+  it('a parent back at work: the 30 of being out of work fades over 6 months instead of vanishing', () => {
+    const state = makeState({ ageInMonths: 12 * 12, environment: { familyWealth: 70 }, flags: ['parent_lost_job'] });
+    expect(familyMoneyStressParts(state)).toMatchObject({ wealth: 0, parentOutOfWork: 30, recovering: 0, total: 30 });
+    applyEvent(state, findEvent('family_parent_new_job')!);
+    expect(state.money.jobLossRecoveryUntil).toBe(12 * 12 + 6);
+    expect(familyMoneyStressParts(state)).toMatchObject({ parentOutOfWork: 0, recovering: 30, total: 30 });
+    const seen: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      state.ageInMonths += 1;
+      advanceWork(state);
+      seen.push(state.environment.financialStress);
+    }
+    expect(seen).toEqual([25, 20, 15, 10, 5, 0, 0]);
+    expect(state.money.jobLossRecoveryUntil).toBeUndefined();
+  });
+
+  it('the parts add up to the total, with help from the character as negative parts', () => {
+    const state = makeState({ ageInMonths: 16 * 12, environment: { familyWealth: 40 } });
+    state.money.monthGiven = 1000;
+    state.money.familyRelief = { amount: 5, untilMonth: 16 * 12 + 1 };
+    expect(familyMoneyStressParts(state)).toEqual({ wealth: 30, parentOutOfWork: 0, recovering: 0, giving: -10, gift: -5, total: 15 });
+  });
+
+  it('counts money by source: wages by job, events in and out', () => {
+    const state = student({ residence: { regionId: 'city', homeId: 'parents' } });
+    startJob(state, 'cafe', 'weekend');
+    months(state, 2);
+    applyEvent(state, findEvent('life_birthday_money')!);
+    applyChoice(state, findEvent('work_first_paycheck')!, 'treat', state.ageInMonths);
+    expect(state.money.year.income).toEqual({ 'job.cafe': 4800, 'event.life_birthday_money': 500 });
+    expect(state.money.year.spent).toEqual({ 'event.work_first_paycheck': 500 });
+  });
+
+  it('every May of school, a part-time worker is asked whether to go on; the level they already have is locked', () => {
+    const event = findEvent('work_parttime_new_term')!;
+    const state = student();
+    startJob(state, 'cafe', 'weekend');
+    const may = (s: GameState) => {
+      while (calendarMonth(s) !== 5 || s.ageInMonths - currentJob(s)!.from < 3) s.ageInMonths += 1;
+    };
+    may(state);
+    expect(isEligible(event, state)).toBe(true);
+    const locked = (id: string) => lockReasons(event.choices!.find((c) => c.id === id)!, state).length > 0;
+    expect([locked('keep'), locked('to_weekend'), locked('to_daily'), locked('quit')]).toEqual([false, true, false, false]);
+    applyChoice(state, event, 'to_daily', state.ageInMonths);
+    expect(currentJob(state)!.level).toBe('daily');
   });
 });

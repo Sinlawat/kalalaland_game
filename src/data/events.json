@@ -8147,6 +8147,71 @@
     ]
   },
   {
+    "id": "work_parttime_new_term",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 18,
+      "months": [
+        5
+      ],
+      "education": {
+        "enrolled": true
+      },
+      "work": {
+        "levels": [
+          "weekend",
+          "daily"
+        ],
+        "monthsIn": {
+          "min": 3
+        }
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 11,
+    "choices": [
+      {
+        "id": "keep",
+        "effects": {}
+      },
+      {
+        "id": "to_weekend",
+        "conditions": {
+          "habits": {
+            "overtime": "heavy"
+          }
+        },
+        "effects": {
+          "work": {
+            "level": "weekend"
+          }
+        }
+      },
+      {
+        "id": "to_daily",
+        "conditions": {
+          "habits": {
+            "overtime": "some"
+          }
+        },
+        "effects": {
+          "work": {
+            "level": "daily"
+          }
+        }
+      },
+      {
+        "id": "quit",
+        "effects": {
+          "work": {
+            "quit": true
+          }
+        }
+      }
+    ]
+  },
+  {
     "id": "work_school_break_job",
     "conditions": {
       "ageMin": 15,

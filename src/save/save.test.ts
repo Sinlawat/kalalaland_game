@@ -122,12 +122,21 @@ describe('save / load', () => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 12, savedAt: '2026-10-28T00:00:00.000Z', state: v12 }));
     expect(loadGame(storage)).toEqual({
       status: 'ok',
-      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } } },
+      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} } } },
     });
   });
 
+  it('upgrades a version 13 save: the year by source starts empty, the totals stay (D79)', () => {
+    const life = createNewLife(21);
+    const v13 = { ...life, money: { ...life.money, cash: 500, year: { earned: 2400, given: 0 } } };
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 13, savedAt: '2026-10-28T00:00:00.000Z', state: v13 }));
+    const loaded = loadGame(storage);
+    expect(loaded.status === 'ok' && loaded.state.money).toEqual({ ...life.money, cash: 500, year: { earned: 2400, given: 0, income: {}, spent: {} } });
+  });
+
   it.each([
-    ['negative savings', { money: { cash: -1, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0 } } }],
+    ['negative savings', { money: { cash: -1, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} } } }],
+    ['income by source that is not a number (D79)', { money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: { 'job.cafe': 'a lot' }, spent: {} } } }],
     ['no yearly totals', { money: { cash: 0, familySharePercent: 0, monthGiven: 0 } }],
     ['an unknown job', { work: { history: [{ job: 'bank', level: 'weekend', from: 180 }] } }],
     ['an unknown work level', { work: { history: [{ job: 'cafe', level: 'night_shift', from: 180 }] } }],

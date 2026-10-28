@@ -3,7 +3,7 @@ import { makeState } from '../engine/testUtils';
 import { startJob, stopWork } from '../engine/work';
 import { formatMoney, formatMoneyChange } from './format';
 import { buildTimeline } from './timeline';
-import { lifeMoney, overtimeLabels, showsFamilyMoneyStress, workChangeText, workLine, workRows } from './work';
+import { jobIncomes, lifeMoney, lifeTotals, overtimeLabels, showsFamilyMoneyStress, sourceLabel, stressLines, workChangeText, workLine, workRows, yearLines } from './work';
 
 describe('work and money on screen (D77)', () => {
   it('money: whole baht with thousands separators, changes with a real minus sign', () => {
@@ -36,7 +36,7 @@ describe('work and money on screen (D77)', () => {
       { age: 16, changes: {}, snapshot: {} as never, money: { earned: 10000, given: 3000, cash: 7000 } },
       { age: 17, changes: {}, snapshot: {} as never },
     ];
-    state.money.year = { earned: 2400, given: 0 };
+    state.money.year = { earned: 2400, given: 0, income: {}, spent: {} };
     state.money.cash = 9400;
     expect(lifeMoney(state)).toEqual({ earned: 12400, given: 3000, cash: 9400 });
   });
@@ -66,12 +66,51 @@ describe('work and money on screen (D77)', () => {
       { id: 'work_parttime_offer', ageInMonths: 16 * 12 + 1, choiceId: 'daily', workChange: { to: { job: 'restaurant', level: 'daily' } } },
       { id: 'work_first_paycheck', ageInMonths: 16 * 12 + 2, choiceId: 'treat', moneyChange: -500 },
     ];
-    state.money.year = { earned: 15000, given: 0 };
+    state.money.year = { earned: 15000, given: 0, income: {}, spent: {} };
     const [year] = buildTimeline(state);
     expect(year!.money).toEqual({ earned: 15000, given: 0 });
     expect(year!.entries.map((e) => [e.id, e.moneyChange, e.workChange?.to?.job])).toEqual([
       ['work_first_paycheck', -500, undefined],
       ['work_parttime_offer', undefined, 'restaurant'],
     ]);
+  });
+});
+
+describe('the finance dialog (D79)', () => {
+  it('lists the job now with its monthly and yearly wage and how it is split', () => {
+    const state = makeState({ ageInMonths: 16 * 12, residence: { regionId: 'city', homeId: 'parents' } });
+    expect(jobIncomes(state)).toEqual([]);
+    startJob(state, 'cafe', 'weekend');
+    state.money.familySharePercent = 30;
+    expect(jobIncomes(state)).toEqual([{ job: 'ร้านกาแฟ', level: 'part-time เสาร์-อาทิตย์', monthly: 2400, yearly: 28800, sharePercent: 30, given: 720, saved: 1680 }]);
+  });
+
+  it("names this year's money by source, largest first", () => {
+    const state = makeState({ ageInMonths: 16 * 12 });
+    state.money.year = { earned: 4800, given: 720, income: { 'event.life_birthday_money': 500, 'job.cafe': 4800 }, spent: { 'event.work_first_paycheck': 500 } };
+    expect(sourceLabel('job.cafe')).toBe('ค่าจ้าง · ร้านกาแฟ');
+    expect(yearLines(state)).toEqual({
+      income: [
+        { source: 'job.cafe', label: 'ค่าจ้าง · ร้านกาแฟ', amount: 4800 },
+        { source: 'event.life_birthday_money', label: 'เงินวันเกิด', amount: 500 },
+      ],
+      spent: [{ source: 'event.work_first_paycheck', label: 'เงินค่าจ้างก้อนแรก', amount: 500 }],
+      given: 720,
+    });
+  });
+
+  it('adds up the whole life: wages, other money, given, spent (years before D79 count their wages)', () => {
+    const state = makeState({ ageInMonths: 17 * 12 });
+    state.history = [
+      { age: 16, changes: {}, snapshot: {} as never, money: { earned: 10000, given: 1000, cash: 9000 } },
+      { age: 17, changes: {}, snapshot: {} as never, money: { earned: 2000, given: 0, cash: 11500, income: { 'job.cafe': 2000, 'event.life_birthday_money': 500 }, spent: {} } },
+    ];
+    state.money.year = { earned: 0, given: 0, income: {}, spent: { 'event.work_first_paycheck': 500 } };
+    expect(lifeTotals(state)).toEqual({ wages: 12000, other: 500, given: 1000, spent: 500 });
+  });
+
+  it('shows the family money stress part by part, without the zero parts', () => {
+    const state = makeState({ ageInMonths: 12 * 12, environment: { familyWealth: 50 }, flags: ['parent_lost_job'] });
+    expect(stressLines(state)).toEqual({ total: 45, parts: [{ key: 'wealth', amount: 15 }, { key: 'parentOutOfWork', amount: 30 }] });
   });
 });

@@ -47,6 +47,7 @@ import {
   isJobId,
   isWorkLevel,
   meetsWorkConditions,
+  startJobLossRecovery,
   type WorkConditions,
   type WorkEffect,
 } from './work';
@@ -1175,6 +1176,8 @@ function applyEffects(
     if (!state.flags.includes(flag)) state.flags.push(flag);
   }
   if (effects.removeFlags) {
+    // D79: a parent back at work: the family's money stress of those months fades instead of vanishing.
+    if (effects.removeFlags.includes('parent_lost_job') && state.flags.includes('parent_lost_job')) startJobLossRecovery(state);
     state.flags = state.flags.filter((flag) => !effects.removeFlags!.includes(flag));
   }
   // D72: the group first, then the person the event is about (a best friend
@@ -1193,7 +1196,7 @@ function applyEffects(
  */
 function applyMoneyAndWork(state: GameState, effects: EventEffects, record: EventRecord): void {
   if (effects.money !== undefined) {
-    const actual = changeMoney(state, effects.money);
+    const actual = changeMoney(state, effects.money, `event.${record.id}`);
     if (actual !== 0) record.moneyChange = actual;
   }
   if (effects.work) {

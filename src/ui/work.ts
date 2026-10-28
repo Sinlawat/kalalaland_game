@@ -4,7 +4,7 @@
  */
 
 import { BALANCE } from '../data/balance';
-import { currentJob, isPartTime } from '../engine/work';
+import { currentJob, familyMoneyStressParts, isPartTime, monthlyWage } from '../engine/work';
 import type { GameState, WorkChange, WorkLevel, WorkResult, YearMoney } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatMoney } from './format';
@@ -76,4 +76,90 @@ export function showsFamilyMoneyStress(state: Pick<GameState, 'ageInMonths'>): b
 /** "12,400 บาท". */
 export function moneyText(amount: number): string {
   return t('money.amount', { amount: formatMoney(amount) });
+}
+
+// ── D79: the finance dialog ─────────────────────────────────────────────────
+
+/** One line of money by source: "ค่าจ้าง · ร้านกาแฟ 4,800". */
+export interface SourceLine {
+  source: string;
+  label: string;
+  amount: number;
+}
+
+/** "job.cafe" → "ค่าจ้าง · ร้านกาแฟ"; "event.<id>" → the event's title. */
+export function sourceLabel(source: string): string {
+  const [kind, ...rest] = source.split('.');
+  const id = rest.join('.');
+  if (kind === 'job') return t('finance.source.job', { job: t(`job.${id}`) });
+  if (kind === 'event') return t(`event.${id}.title`);
+  return source;
+}
+
+/** Largest first, so the main source of money reads first. */
+function lines(totals: Record<string, number>): SourceLine[] {
+  return Object.entries(totals)
+    .filter(([, amount]) => amount !== 0)
+    .map(([source, amount]) => ({ source, label: sourceLabel(source), amount }))
+    .sort((a, b) => b.amount - a.amount);
+}
+
+/** A job now and what it pays: a list, ready for a main job and a side job together (career system). */
+export interface JobIncome {
+  job: string;
+  level: string;
+  monthly: number;
+  yearly: number;
+  sharePercent: number;
+  /** Given to the family each month. */
+  given: number;
+  /** Into the savings each month. */
+  saved: number;
+}
+
+export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence'>): JobIncome[] {
+  const job = currentJob(state);
+  if (job === undefined) return [];
+  const monthly = monthlyWage(job.job, job.level, state.residence.regionId);
+  const given = Math.round((monthly * state.money.familySharePercent) / 100);
+  return [
+    {
+      job: t(`job.${job.job}`),
+      level: t(`work.level.${job.level}`),
+      monthly,
+      yearly: monthly * 12,
+      sharePercent: state.money.familySharePercent,
+      given,
+      saved: monthly - given,
+    },
+  ];
+}
+
+/** This year's money (since the last birthday) by source. */
+export function yearLines(state: Pick<GameState, 'money'>): { income: SourceLine[]; spent: SourceLine[]; given: number } {
+  return { income: lines(state.money.year.income), spent: lines(state.money.year.spent), given: state.money.year.given };
+}
+
+/** The whole life so far: wages, money from anywhere else, given to the family, spent. */
+export function lifeTotals(state: Pick<GameState, 'history' | 'money'>): { wages: number; other: number; given: number; spent: number } {
+  const totals = { wages: 0, other: 0, given: 0, spent: 0 };
+  const add = (year: { earned: number; given: number; income?: Record<string, number>; spent?: Record<string, number> }) => {
+    totals.wages += year.earned;
+    totals.given += year.given;
+    for (const [source, amount] of Object.entries(year.income ?? {})) if (!source.startsWith('job.')) totals.other += amount;
+    for (const amount of Object.values(year.spent ?? {})) totals.spent += amount;
+  };
+  for (const year of state.history) if (year.money) add(year.money);
+  add(state.money.year);
+  return totals;
+}
+
+/** The family's money stress, part by part, without the parts that are 0. */
+export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths'>): { total: number; parts: { key: string; amount: number }[] } {
+  const parts = familyMoneyStressParts(state);
+  const keys = ['wealth', 'parentOutOfWork', 'recovering', 'giving', 'gift'] as const;
+  return {
+    total: parts.total,
+    parts: keys.map((key) => ({ key, amount: Math.round(parts[key]) })).filter((part) => part.amount !== 0),
+  };
 }

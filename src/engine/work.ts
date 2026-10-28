@@ -147,16 +147,58 @@ export function stopWork(state: GameState, result: WorkResult = 'quit'): HabitCh
 
 // ── Monthly step ────────────────────────────────────────────────────────────
 
-/** The family's money stress (0–100) from Family wealth, a parent out of work, and help from the character. */
-export function familyMoneyStress(state: Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths'>): number {
+/**
+ * D79: the family's money stress, part by part, so the screen can say where
+ * it comes from. Parts that lower it are negative. `total` is what is stored
+ * (0–100, whole); every part is 0 from the age the family's stress ends.
+ */
+export interface FamilyMoneyStressParts {
+  /** From Family wealth below the line. */
+  wealth: number;
+  /** A parent is out of work. */
+  parentOutOfWork: number;
+  /** A parent found work again; the debts of the months out of work are still being paid. */
+  recovering: number;
+  /** What the character gives every month (negative). */
+  giving: number;
+  /** A one-off gift that still helps (negative). */
+  gift: number;
+  total: number;
+}
+
+type StressSource = Pick<GameState, 'environment' | 'flags' | 'money' | 'ageInMonths'>;
+
+export function familyMoneyStressParts(state: StressSource): FamilyMoneyStressParts {
   const b = BALANCE.familyMoneyStress;
-  if (state.ageInMonths >= b.untilAge * 12) return 0;
-  let stress = Math.max(0, (b.wealthAtZero - state.environment.familyWealth) * b.perWealthPoint);
-  if (state.flags.includes('parent_lost_job')) stress += b.parentLostJob;
-  stress -= Math.min(b.maxReliefFromGiving, (state.money.monthGiven / 1000) * b.reliefPer1000Given);
+  const none = { wealth: 0, parentOutOfWork: 0, recovering: 0, giving: 0, gift: 0, total: 0 };
+  if (state.ageInMonths >= b.untilAge * 12) return none;
+  const outOfWork = state.flags.includes('parent_lost_job');
+  const until = state.money.jobLossRecoveryUntil;
   const relief = state.money.familyRelief;
-  if (relief !== undefined && state.ageInMonths <= relief.untilMonth) stress -= relief.amount;
-  return Math.round(Math.min(100, Math.max(0, stress)));
+  const parts = {
+    wealth: Math.max(0, (b.wealthAtZero - state.environment.familyWealth) * b.perWealthPoint),
+    parentOutOfWork: outOfWork ? b.parentLostJob : 0,
+    recovering: !outOfWork && until !== undefined && until > state.ageInMonths ? (b.parentLostJob * (until - state.ageInMonths)) / b.jobLossRecoveryMonths : 0,
+    giving: -Math.min(b.maxReliefFromGiving, (state.money.monthGiven / 1000) * b.reliefPer1000Given),
+    gift: relief !== undefined && state.ageInMonths <= relief.untilMonth ? -relief.amount : 0,
+  };
+  const sum = parts.wealth + parts.parentOutOfWork + parts.recovering + parts.giving + parts.gift;
+  return { ...parts, total: Math.round(Math.min(100, Math.max(0, sum))) };
+}
+
+/** The family's money stress (0–100) from Family wealth, a parent out of work (and the months after), and help from the character. */
+export function familyMoneyStress(state: StressSource): number {
+  return familyMoneyStressParts(state).total;
+}
+
+/** D79: called when an event takes away "a parent is out of work": that stress fades instead of vanishing. */
+export function startJobLossRecovery(state: GameState): void {
+  state.money.jobLossRecoveryUntil = state.ageInMonths + BALANCE.familyMoneyStress.jobLossRecoveryMonths;
+}
+
+/** D79: adds to a by-source total. */
+function addTo(totals: Record<string, number>, source: string, amount: number): void {
+  totals[source] = (totals[source] ?? 0) + amount;
 }
 
 /**
@@ -174,6 +216,7 @@ export function advanceWork(state: GameState): void {
     state.money.monthGiven = given;
     state.money.year.earned += wage;
     state.money.year.given += given;
+    addTo(state.money.year.income, `job.${job.job}`, wage);
   }
   if (job !== undefined) {
     const breakOver = job.untilMonth !== undefined && state.ageInMonths >= job.untilMonth;
@@ -181,6 +224,7 @@ export function advanceWork(state: GameState): void {
     if (breakOver || schoolOver) stopWork(state, 'ended');
   }
   if (state.money.familyRelief !== undefined && state.ageInMonths > state.money.familyRelief.untilMonth) delete state.money.familyRelief;
+  if (state.money.jobLossRecoveryUntil !== undefined && state.ageInMonths >= state.money.jobLossRecoveryUntil) delete state.money.jobLossRecoveryUntil;
   state.environment.financialStress = familyMoneyStress(state);
 }
 
@@ -232,11 +276,18 @@ export function meetsWorkConditions(state: Pick<GameState, 'work' | 'ageInMonths
   return true;
 }
 
-/** Adds to (or takes from) the savings, never below 0. Returns the real change. */
-export function changeMoney(state: GameState, amount: number): number {
+/**
+ * Adds to (or takes from) the savings, never below 0. Returns the real change.
+ * D79: `source` (e.g. 'event.life_birthday_money') is counted in the year's
+ * income or spending.
+ */
+export function changeMoney(state: GameState, amount: number, source?: string): number {
   const before = state.money.cash;
   state.money.cash = Math.max(0, before + Math.round(amount));
-  return state.money.cash - before;
+  const actual = state.money.cash - before;
+  if (source !== undefined && actual > 0) addTo(state.money.year.income, source, actual);
+  if (source !== undefined && actual < 0) addTo(state.money.year.spent, source, -actual);
+  return actual;
 }
 
 /** For validation. */

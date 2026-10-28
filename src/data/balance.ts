@@ -280,6 +280,8 @@ export const BALANCE = {
     perWealthPoint: 1.5,
     /** Added while a parent is out of work (flag parent_lost_job). */
     parentLostJob: 30,
+    /** D79: after the parent finds work again, that part fades to 0 over these months. */
+    jobLossRecoveryMonths: 6,
     /**
      * Only while growing up and starting out ("from birth to working age"):
      * from this age the character's own finances (finance phase 2) take

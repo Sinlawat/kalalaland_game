@@ -367,8 +367,26 @@ export interface Money {
   monthGiven: number;
   /** A one-off gift to the family that eases its money stress until `untilMonth`. */
   familyRelief?: { amount: number; untilMonth: number };
+  /**
+   * D79: a parent found work again; the stress of the months out of work
+   * fades until this month (debts take time to pay back).
+   */
+  jobLossRecoveryUntil?: number;
   /** Running totals for the current (unfinished) year. */
-  year: { earned: number; given: number };
+  year: YearMoneyTotals;
+}
+
+/**
+ * D79: money in and out over one year. `income` and `spent` are by source:
+ * `job.<job id>` for wages, `event.<event id>` for money an event gave or took.
+ */
+export interface YearMoneyTotals {
+  /** All wages. */
+  earned: number;
+  /** Given to the family from wages. */
+  given: number;
+  income: Record<string, number>;
+  spent: Record<string, number>;
 }
 
 /** What the character earned and gave in one year of life. */
@@ -377,6 +395,9 @@ export interface YearMoney {
   given: number;
   /** Savings on the birthday. */
   cash: number;
+  /** D79: by source (save version 14); missing for earlier years. */
+  income?: Record<string, number>;
+  spent?: Record<string, number>;
 }
 
 export interface GameState {

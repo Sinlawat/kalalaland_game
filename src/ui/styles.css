@@ -248,6 +248,12 @@ p { margin: 0 0 8px; }
 .residence-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 12px; }
 .residence-facts dd { margin: 0; }
 .residence-history__title { font-size: 1rem; margin: 0 0 6px; }
+/* D79: the finance dialog. */
+.finance-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; }
+.finance-list li { display: flex; justify-content: space-between; gap: 16px; }
+.finance-list li > span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.finance-jobs { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.finance-jobs li { display: grid; gap: 2px; }
 .residence-history { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
 .residence-history__item { display: grid; grid-template-columns: 9.5em 1fr; gap: 12px; align-items: baseline; }
 @media (max-width: 480px) { .residence-history__item { grid-template-columns: 1fr; gap: 0; } }
