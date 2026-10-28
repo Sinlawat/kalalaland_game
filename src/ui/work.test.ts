@@ -131,4 +131,13 @@ describe('the spending section (D80)', () => {
     });
     expect(sourceLabel('living.food')).toBe('อาหาร (กินนอกบ้าน ขนม)');
   });
+
+  it('D81: an addiction is a line of its own, and is in the total', () => {
+    const state = makeState({ ageInMonths: 16 * 12, residence: { regionId: 'suburb', homeId: 'parents' }, habits: { smoking: 'addicted' } });
+    startJob(state, 'cafe', 'weekend');
+    const { lines, total } = spendingLines(state);
+    expect(lines.at(-1)).toEqual({ source: 'living.smoking', label: 'บุหรี่', amount: 1800 });
+    expect(total).toBe(1200 + 1800);
+    expect(sourceLabel('living.drinking')).toBe('เหล้าและเบียร์');
+  });
 });

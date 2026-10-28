@@ -137,7 +137,7 @@ describe('the monthly money step (D77)', () => {
     const state = student({ residence: { regionId: 'suburb', homeId: 'parents' } });
     expect(totalSpending(monthlySpending(state))).toBe(0);
     startJob(state, 'restaurant', 'full_time');
-    expect(monthlySpending(state)).toEqual({ food: 3000, transport: 1200, phone: 400, leisure: 1000 });
+    expect(monthlySpending(state)).toEqual({ food: 3000, transport: 1200, phone: 400, leisure: 1000, smoking: 0, drinking: 0 });
     state.residence.regionId = 'rural';
     expect(totalSpending(monthlySpending(state))).toBe(Math.round(3000 * 0.58) + Math.round(1200 * 0.58) + Math.round(400 * 0.58) + Math.round(1000 * 0.58));
     state.residence.regionId = 'suburb';
@@ -482,5 +482,76 @@ describe('D80: the spending level (player action) and birthday money', () => {
       [false, true],
     ]);
     expect([poor.frequency, rich.frequency]).toEqual(['normal', 'normal']);
+  });
+});
+
+describe('D81: money in events that already existed', () => {
+  it('an addiction costs a fixed amount a month from the own income, whatever the area or spending level', () => {
+    const state = student({ residence: { regionId: 'rural', homeId: 'parents' }, habits: { exercise: 'regular', smoking: 'addicted', drinking: 'addicted' } });
+    expect(monthlySpending(state)).toMatchObject({ smoking: 0, drinking: 0 }); // no income: the parents pay
+    startJob(state, 'cafe', 'weekend');
+    state.money.spendingLevel = 'frugal';
+    expect(monthlySpending(state)).toMatchObject({ smoking: BALANCE.work.addictionSpending.smoking, drinking: BALANCE.work.addictionSpending.drinking });
+    state.habits.drinking = 'none';
+    expect(monthlySpending(state).drinking).toBe(0);
+  });
+
+  it('living costs are paid before the addiction when the money runs short; the rest is the shortfall', () => {
+    const state = student({ residence: { regionId: 'suburb', homeId: 'parents' }, habits: { exercise: 'regular', smoking: 'addicted' } });
+    startJob(state, 'cafe', 'weekend');
+    months(state, 1);
+    // Suburb: wage 2,232; living 1,200, then cigarettes 1,800 of which 1,032 can be paid.
+    const wage = monthlyWage('cafe', 'weekend', 'suburb');
+    expect(state.money.year.spent).toEqual({ 'living.food': 600, 'living.transport': 200, 'living.phone': 200, 'living.leisure': 200, 'living.smoking': wage - 1200 });
+    expect(state.money.shortfall).toBe(1200 + 1800 - wage);
+    expect(state.money.cash).toBe(0);
+  });
+
+  it('a family trip in the school break needs family wealth 40', () => {
+    const trip = findEvent('family_summer_trip')!;
+    const at = (wealth: number) => makeState({ ageInMonths: 10 * 12, birthMonth: 4, environment: { familyWealth: wealth, familyWarmth: 60 } });
+    expect([isEligible(trip, at(39.9)), isEligible(trip, at(40))]).toEqual([false, true]);
+  });
+
+  it('divorce and a new sibling lower the family wealth (and so raise the money stress)', () => {
+    expect(findEvent('family_parents_divorce')!.effects!.environment).toMatchObject({ familyWealth: -8 });
+    expect(findEvent('family_new_sibling')!.effects!.environment).toEqual({ familyWealth: -3 });
+  });
+
+  it('a seriously ill relative: a working teen may help with their savings; only one of the two versions ever happens', () => {
+    const plain = findEvent('family_relative_seriously_ill')!;
+    const working = findEvent('family_relative_seriously_ill_working')!;
+    const state = student({ ageInMonths: 16 * 12 });
+    expect([isEligible(plain, state), isEligible(working, state)]).toEqual([true, false]);
+    startJob(state, 'cafe', 'weekend');
+    expect([isEligible(plain, state), isEligible(working, state)]).toEqual([false, true]);
+    const help = working.choices!.find((c) => c.id === 'help')!;
+    expect(lockReasons(help, state)).toEqual([{ kind: 'money', min: 3000, current: 0 }]);
+    state.money.cash = 5000;
+    const wealth = state.environment.familyWealth;
+    applyChoice(state, working, 'help', state.ageInMonths);
+    expect(state.money.cash).toBe(2000);
+    expect(state.environment.familyWealth).toBe(wealth - 3);
+    expect(state.money.familyRelief).toMatchObject({ amount: 20 });
+    expect(isEligible(plain, state)).toBe(false);
+  });
+
+  it('tutoring the family cannot pay for can be paid from the own savings', () => {
+    const cases = [
+      ['edu_wrong_track_science', 'tutor', 'tutor_self', 4000],
+      ['edu_admission_prep', 'cram', 'cram_self', 8000],
+    ] as const;
+    for (const [eventId, parentsPay, selfPay, price] of cases) {
+      const event = findEvent(eventId)!;
+      const choice = (id: string) => event.choices!.find((c) => c.id === id)!;
+      const poor = makeState({ ageInMonths: 16 * 12, environment: { familyWealth: 20 } });
+      expect(lockReasons(choice(parentsPay), poor)).toHaveLength(1);
+      expect(lockReasons(choice(selfPay), poor)).toEqual([{ kind: 'money', min: price, current: 0 }]);
+      poor.money.cash = price;
+      expect(lockReasons(choice(selfPay), poor)).toEqual([]);
+      // Same effects as when the family pays, plus the price.
+      const { money, ...rest } = choice(selfPay).effects;
+      expect([money, rest]).toEqual([-price, choice(parentsPay).effects]);
+    }
   });
 });

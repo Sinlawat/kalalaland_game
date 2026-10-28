@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits, JobId, RegionId, SchoolId, SkillKey, Skills, SpendingCategory, SpendingLevel, TraitKey, WorkLevel } from '../engine/types';
+import type { AddictionHabit, Habits, JobId, LivingSpendingCategory, RegionId, SchoolId, SkillKey, Skills, SpendingLevel, TraitKey, WorkLevel } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -270,7 +270,15 @@ export const BALANCE = {
       daily: { food: 800, transport: 300, phone: 200, leisure: 200 },
       school_break: { food: 800, transport: 300, phone: 200, leisure: 200 },
       full_time: { food: 3000, transport: 1200, phone: 400, leisure: 1000 },
-    } satisfies Record<WorkLevel, Record<SpendingCategory, number>>,
+    } satisfies Record<WorkLevel, Record<LivingSpendingCategory, number>>,
+    /**
+     * D81: the monthly cost of an addiction, paid from the character's own
+     * income (without one the parents pay, like the rest of their spending).
+     * Smoking: a pack a day of the cheapest Thai brands, 60 baht a pack (2023
+     * price list) × 30. Drinking: beer or spirits most evenings, an estimate
+     * (no per-drinker figure found).
+     */
+    addictionSpending: { smoking: 1800, drinking: 2000 } satisfies Record<AddictionHabit, number>,
     /** D80: cost of living by area (real price data: suburb = 1). */
     regionCostFactor: { city: 1.25, suburb: 1, rural: 0.58 } satisfies Record<RegionId, number>,
     /** D80: each spending level: how much of the "normal" amounts, and its yearly effect on mental health. */

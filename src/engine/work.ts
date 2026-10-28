@@ -26,8 +26,10 @@ import { BALANCE } from '../data/balance';
 import { currentEnrollment } from './education';
 import { setHabitFromEvent } from './lifestyle';
 import {
+  ADDICTION_HABITS,
   EXERCISE_LEVELS,
   JOB_IDS,
+  LIVING_SPENDING_CATEGORIES,
   SPENDING_CATEGORIES,
   WORK_LEVELS,
   type GameState,
@@ -72,13 +74,17 @@ export function monthlyWage(job: JobId, level: WorkLevel, region: GameState['res
  * D80: what the character pays for themselves this month, by category: only
  * while they have a job (otherwise the parents pay), by job level, area and
  * spending level. Whole baht.
+ *
+ * D81: an addiction adds its fixed monthly cost (cigarettes and alcohol cost
+ * the same everywhere, and spending less does not make the craving smaller).
  */
-export function monthlySpending(state: Pick<GameState, 'work' | 'money' | 'residence'>): Record<SpendingCategory, number> {
+export function monthlySpending(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): Record<SpendingCategory, number> {
   const job = currentJob(state);
-  const result = { food: 0, transport: 0, phone: 0, leisure: 0 };
+  const result = { food: 0, transport: 0, phone: 0, leisure: 0, smoking: 0, drinking: 0 };
   if (job === undefined) return result;
   const factor = B.regionCostFactor[state.residence.regionId] * B.spendingLevels[state.money.spendingLevel].factor;
-  for (const category of SPENDING_CATEGORIES) result[category] = Math.round(B.personalSpending[job.level][category] * factor);
+  for (const category of LIVING_SPENDING_CATEGORIES) result[category] = Math.round(B.personalSpending[job.level][category] * factor);
+  for (const habit of ADDICTION_HABITS) if (state.habits[habit] === 'addicted') result[habit] = B.addictionSpending[habit];
   return result;
 }
 

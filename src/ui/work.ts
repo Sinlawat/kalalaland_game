@@ -120,7 +120,7 @@ export interface JobIncome {
   saved: number;
 }
 
-export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence'>): JobIncome[] {
+export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): JobIncome[] {
   const job = currentJob(state);
   if (job === undefined) return [];
   const monthly = monthlyWage(job.job, job.level, state.residence.regionId);
@@ -169,8 +169,8 @@ export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'mo
   };
 }
 
-/** D80: the character's own monthly spending by category, and in total (0 without an income). */
-export function spendingLines(state: Pick<GameState, 'work' | 'money' | 'residence'>): { lines: SourceLine[]; total: number } {
+/** D80: the character's own monthly spending by category, and in total (0 without an income). D81: an addiction is a line of its own. */
+export function spendingLines(state: Pick<GameState, 'work' | 'money' | 'residence' | 'habits'>): { lines: SourceLine[]; total: number } {
   const spending = monthlySpending(state);
   const lines = (Object.entries(spending) as [string, number][])
     .filter(([, amount]) => amount > 0)

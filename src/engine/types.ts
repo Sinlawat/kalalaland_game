@@ -62,6 +62,7 @@ export const HABIT_LEVELS: { readonly [K in HabitKey]: readonly Habits[K][] } = 
 
 /** D69: the habits that are an addiction (shown only while addicted). */
 export const ADDICTION_HABITS = ['smoking', 'drinking'] as const satisfies readonly HabitKey[];
+export type AddictionHabit = (typeof ADDICTION_HABITS)[number];
 
 /**
  * D56: a lifestyle change that lasts a limited time. When the game month
@@ -389,7 +390,15 @@ export const SPENDING_LEVELS = ['frugal', 'normal', 'comfortable'] as const;
 export type SpendingLevel = (typeof SPENDING_LEVELS)[number];
 
 /** D80: what the character pays for themselves while living with the parents. */
-export const SPENDING_CATEGORIES = ['food', 'transport', 'phone', 'leisure'] as const;
+export const LIVING_SPENDING_CATEGORIES = ['food', 'transport', 'phone', 'leisure'] as const;
+export type LivingSpendingCategory = (typeof LIVING_SPENDING_CATEGORIES)[number];
+
+/**
+ * D81: every category of own spending: living costs (scaled by job level,
+ * area and spending level), then an addiction (a fixed amount while addicted).
+ * Order = the order they are paid in when the money runs short.
+ */
+export const SPENDING_CATEGORIES = [...LIVING_SPENDING_CATEGORIES, ...ADDICTION_HABITS] as const;
 export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number];
 
 /**

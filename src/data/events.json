@@ -666,7 +666,10 @@
       },
       "setFlags": [
         "has_sibling"
-      ]
+      ],
+      "environment": {
+        "familyWealth": -3
+      }
     }
   },
   {
@@ -814,7 +817,13 @@
     "id": "family_relative_seriously_ill",
     "conditions": {
       "ageMin": 10,
-      "ageMax": 17
+      "ageMax": 17,
+      "work": {
+        "employed": false
+      },
+      "eventsNone": [
+        "family_relative_seriously_ill_working"
+      ]
     },
     "frequency": "rare",
     "once": true,
@@ -827,8 +836,73 @@
       },
       "stats": {
         "mentalHealth": -4
+      },
+      "environment": {
+        "familyWealth": -3
       }
     }
+  },
+  {
+    "id": "family_relative_seriously_ill_working",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "work": {
+        "employed": true
+      },
+      "eventsNone": [
+        "family_relative_seriously_ill"
+      ]
+    },
+    "frequency": "rare",
+    "once": true,
+    "choices": [
+      {
+        "id": "help",
+        "conditions": {
+          "money": {
+            "min": 3000
+          }
+        },
+        "effects": {
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 3
+            }
+          },
+          "stats": {
+            "mentalHealth": -4
+          },
+          "environment": {
+            "familyWealth": -3,
+            "familyWarmth": 3
+          },
+          "money": -3000,
+          "familyRelief": {
+            "amount": 20,
+            "months": 3
+          }
+        }
+      },
+      {
+        "id": "cant",
+        "effects": {
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 3
+            }
+          },
+          "stats": {
+            "mentalHealth": -6
+          },
+          "environment": {
+            "familyWealth": -3
+          }
+        }
+      }
+    ]
   },
   {
     "id": "family_parents_divorce",
@@ -867,7 +941,8 @@
         "mentalHealth": -10
       },
       "environment": {
-        "familyWarmth": -10
+        "familyWarmth": -10,
+        "familyWealth": -8
       },
       "setFlags": [
         "parents_divorced"
@@ -911,6 +986,11 @@
           "stat": "familyWarmth",
           "op": ">=",
           "value": 50
+        },
+        {
+          "stat": "familyWealth",
+          "op": ">=",
+          "value": 40
         }
       ],
       "months": [
@@ -7186,6 +7266,27 @@
         }
       },
       {
+        "id": "tutor_self",
+        "conditions": {
+          "money": {
+            "min": 4000
+          }
+        },
+        "effects": {
+          "stats": {
+            "academic": 1,
+            "mentalHealth": -2
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          },
+          "money": -4000
+        }
+      },
+      {
         "id": "push",
         "effects": {
           "stats": {
@@ -7393,6 +7494,30 @@
           "setFlags": [
             "admission_prep"
           ]
+        }
+      },
+      {
+        "id": "cram_self",
+        "conditions": {
+          "money": {
+            "min": 8000
+          }
+        },
+        "effects": {
+          "stats": {
+            "academic": 2,
+            "mentalHealth": -2
+          },
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
+          },
+          "setFlags": [
+            "admission_prep"
+          ],
+          "money": -8000
         }
       },
       {
