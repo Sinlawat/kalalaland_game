@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
+import { setSpendingLevel } from '../actions/spending';
 import { enroll } from './education';
 import { applyChoice, applyEvent, calendarMonth, EVENTS, findEvent, isEligible, lockReasons, monthlyChance, parseEvents, yearlyChance, type EventDef } from './events';
 import { advanceOneMonth, simulateWholeLife, type Chooser } from './game';
@@ -15,9 +16,11 @@ import {
   familyMoneyStress,
   familyMoneyStressParts,
   meetsWorkConditions,
+  monthlySpending,
   monthlyWage,
   startJob,
   stopWork,
+  totalSpending,
 } from './work';
 
 /** A student in Grade 10 (ม.4) at 15, with a known lifestyle. */
@@ -108,29 +111,75 @@ describe('jobs and the lifestyle they bring (D77)', () => {
 });
 
 describe('the monthly money step (D77)', () => {
-  it('pays from the month after the job started, into the savings, minus the family share', () => {
+  it('pays from the month after the job started, into the savings, minus the family share and their own spending (D80)', () => {
     const state = student({ residence: { regionId: 'city', homeId: 'parents' } });
     startJob(state, 'convenience_store', 'weekend');
     advanceWork(state); // same month: nothing yet
     expect(state.money.cash).toBe(0);
     months(state, 1);
-    expect(state.money.cash).toBe(2400);
+    // City: wage 2,400; own spending 1,200 × 1.25 = 1,500.
+    expect(state.money.cash).toBe(2400 - 1500);
     state.money.familySharePercent = 30;
     months(state, 1);
-    expect(state.money.cash).toBe(2400 + 1680);
+    expect(state.money.cash).toBe(900 + 1680 - 1500);
     expect(state.money.monthGiven).toBe(720);
-    expect(state.money.year).toEqual({ earned: 4800, given: 720, income: { 'job.convenience_store': 4800 }, spent: {} });
+    expect(state.money.year).toEqual({
+      earned: 4800,
+      given: 720,
+      income: { 'job.convenience_store': 4800 },
+      spent: { 'living.food': 1500, 'living.transport': 500, 'living.phone': 500, 'living.leisure': 500 },
+    });
+    expect(state.money.shortfall).toBe(0);
     expect(Number.isInteger(state.money.cash)).toBe(true);
+  });
+
+  it('D80: spending follows the job level, the area and the spending level; nothing without a job', () => {
+    const state = student({ residence: { regionId: 'suburb', homeId: 'parents' } });
+    expect(totalSpending(monthlySpending(state))).toBe(0);
+    startJob(state, 'restaurant', 'full_time');
+    expect(monthlySpending(state)).toEqual({ food: 3000, transport: 1200, phone: 400, leisure: 1000 });
+    state.residence.regionId = 'rural';
+    expect(totalSpending(monthlySpending(state))).toBe(Math.round(3000 * 0.58) + Math.round(1200 * 0.58) + Math.round(400 * 0.58) + Math.round(1000 * 0.58));
+    state.residence.regionId = 'suburb';
+    state.money.spendingLevel = 'frugal';
+    expect(totalSpending(monthlySpending(state))).toBe(3360);
+    state.money.spendingLevel = 'comfortable';
+    expect(totalSpending(monthlySpending(state))).toBe(8960);
+  });
+
+  it('D80: what the savings cannot cover is not spent, and is remembered as a shortfall', () => {
+    const state = makeState({ ageInMonths: 16 * 12, residence: { regionId: 'suburb', homeId: 'parents' } });
+    startJob(state, 'restaurant', 'full_time');
+    state.money.familySharePercent = 50;
+    months(state, 1);
+    // 9,672 wage − 4,836 to the family = 4,836 left for 5,600 of spending.
+    expect(state.money.cash).toBe(0);
+    expect(state.money.shortfall).toBe(5600 - 4836);
+    expect(isEligible(findEvent('money_short')!, state)).toBe(true);
+    applyChoice(state, findEvent('money_short')!, 'give_less', state.ageInMonths);
+    months(state, 1);
+    expect(state.money.shortfall).toBe(0);
+    expect(state.money.cash).toBe(9672 - 5600);
+  });
+
+  it('D80: the spending level changes mental health a little, only while paying for oneself', () => {
+    const state = student();
+    state.money.spendingLevel = 'comfortable';
+    const line = () => computePassiveContributions(state).find((c) => c.source.startsWith('money.spending.'));
+    expect(line()).toBeUndefined();
+    startJob(state, 'cafe', 'weekend');
+    expect(line()).toMatchObject({ target: 'mentalHealth', source: 'money.spending.comfortable', amount: 1 / 12 });
   });
 
   it('the school break job pays two months, then ends by itself', () => {
     const state = student({ residence: { regionId: 'city', homeId: 'parents' } });
     startJob(state, 'local_shop', 'school_break');
     months(state, 2);
-    expect(state.money.cash).toBe(12400);
+    // Two wages of 6,200, minus two months of own spending in the city (1,500 × 1.25).
+    expect(state.money.cash).toBe(12400 - 2 * 1875);
     expect(jobs(state)).toEqual(['local_shop:school_break:ended']);
     months(state, 1);
-    expect(state.money.cash).toBe(12400);
+    expect(state.money.cash).toBe(12400 - 2 * 1875);
   });
 
   it('part-time work ends when school ends; a full-time job does not', () => {
@@ -394,7 +443,7 @@ describe('D79: stress after a job loss fades; money by source; the yearly questi
     applyEvent(state, findEvent('life_birthday_money')!);
     applyChoice(state, findEvent('work_first_paycheck')!, 'treat', state.ageInMonths);
     expect(state.money.year.income).toEqual({ 'job.cafe': 4800, 'event.life_birthday_money': 500 });
-    expect(state.money.year.spent).toEqual({ 'event.work_first_paycheck': 500 });
+    expect(state.money.year.spent).toMatchObject({ 'event.work_first_paycheck': 500, 'living.food': 1500 });
   });
 
   it('every May of school, a part-time worker is asked whether to go on; the level they already have is locked', () => {
@@ -410,5 +459,28 @@ describe('D79: stress after a job loss fades; money by source; the yearly questi
     expect([locked('keep'), locked('to_weekend'), locked('to_daily'), locked('quit')]).toEqual([false, true, false, false]);
     applyChoice(state, event, 'to_daily', state.ageInMonths);
     expect(currentJob(state)!.level).toBe('daily');
+  });
+});
+
+describe('D80: the spending level (player action) and birthday money', () => {
+  it('the player sets the spending level; the state is a new object only when it changes', () => {
+    const state = makeState();
+    expect(setSpendingLevel(state, 'normal')).toBe(state);
+    const next = setSpendingLevel(state, 'frugal');
+    expect(next.money.spendingLevel).toBe('frugal');
+    expect(state.money.spendingLevel).toBe('normal');
+  });
+
+  it('no birthday money below family wealth 40; 500 from 40, 1,500 from 65, at a normal frequency', () => {
+    const poor = findEvent('life_birthday_money')!;
+    const rich = findEvent('life_birthday_money_rich')!;
+    const at = (wealth: number) => makeState({ ageInMonths: 10 * 12, environment: { familyWealth: wealth } });
+    expect([39.9, 40, 64.9, 65].map((w) => [isEligible(poor, at(w)), isEligible(rich, at(w))])).toEqual([
+      [false, false],
+      [true, false],
+      [true, false],
+      [false, true],
+    ]);
+    expect([poor.frequency, rich.frequency]).toEqual(['normal', 'normal']);
   });
 });

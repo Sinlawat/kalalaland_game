@@ -19,10 +19,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { setSpendingLevel } from '../actions/spending';
 import { acknowledgeTraitReveal, shouldRevealTraits } from '../actions/traits';
 import { advanceOneMonth, resolveChoice, settlePendingChoices } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
-import type { GameState } from '../engine/types';
+import type { GameState, SpendingLevel } from '../engine/types';
 import { deleteSave, loadGame, saveGame, type LoadResult } from '../save/save';
 import { getBrowserStorage } from './browserStorage';
 
@@ -50,6 +51,8 @@ export interface GameController {
   acknowledgeTraits(): void;
   /** The player's answer to the choice popup. */
   choose(choiceId: string): void;
+  /** D80: how freely the character spends their own money. */
+  setSpending(level: SpendingLevel): void;
   quitToStart(): void;
 }
 
@@ -148,6 +151,13 @@ export function useGame(): GameController {
       setGame(result.state);
       persist(result.state);
       if (result.stop === 'death') setRunning(false);
+    },
+    setSpending: (level) => {
+      if (game === null || game.death !== null) return;
+      const next = setSpendingLevel(game, level);
+      if (next === game) return;
+      setGame(next);
+      persist(next);
     },
     quitToStart: () => {
       deleteSave(storage);

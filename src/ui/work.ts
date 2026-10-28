@@ -4,7 +4,7 @@
  */
 
 import { BALANCE } from '../data/balance';
-import { currentJob, familyMoneyStressParts, isPartTime, monthlyWage } from '../engine/work';
+import { currentJob, familyMoneyStressParts, isPartTime, monthlySpending, monthlyWage, totalSpending } from '../engine/work';
 import type { GameState, WorkChange, WorkLevel, WorkResult, YearMoney } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatMoney } from './format';
@@ -92,6 +92,7 @@ export function sourceLabel(source: string): string {
   const [kind, ...rest] = source.split('.');
   const id = rest.join('.');
   if (kind === 'job') return t('finance.source.job', { job: t(`job.${id}`) });
+  if (kind === 'living') return t(`finance.spending.${id}`);
   if (kind === 'event') return t(`event.${id}.title`);
   return source;
 }
@@ -113,7 +114,9 @@ export interface JobIncome {
   sharePercent: number;
   /** Given to the family each month. */
   given: number;
-  /** Into the savings each month. */
+  /** D80: the character's own spending each month (paid from this income). */
+  spending: number;
+  /** Into the savings each month (can be below 0: then the savings pay the rest). */
   saved: number;
 }
 
@@ -122,6 +125,7 @@ export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence'
   if (job === undefined) return [];
   const monthly = monthlyWage(job.job, job.level, state.residence.regionId);
   const given = Math.round((monthly * state.money.familySharePercent) / 100);
+  const spending = totalSpending(monthlySpending(state));
   return [
     {
       job: t(`job.${job.job}`),
@@ -130,7 +134,8 @@ export function jobIncomes(state: Pick<GameState, 'work' | 'money' | 'residence'
       yearly: monthly * 12,
       sharePercent: state.money.familySharePercent,
       given,
-      saved: monthly - given,
+      spending,
+      saved: monthly - given - spending,
     },
   ];
 }
@@ -162,4 +167,13 @@ export function stressLines(state: Pick<GameState, 'environment' | 'flags' | 'mo
     total: parts.total,
     parts: keys.map((key) => ({ key, amount: Math.round(parts[key]) })).filter((part) => part.amount !== 0),
   };
+}
+
+/** D80: the character's own monthly spending by category, and in total (0 without an income). */
+export function spendingLines(state: Pick<GameState, 'work' | 'money' | 'residence'>): { lines: SourceLine[]; total: number } {
+  const spending = monthlySpending(state);
+  const lines = (Object.entries(spending) as [string, number][])
+    .filter(([, amount]) => amount > 0)
+    .map(([category, amount]) => ({ source: `living.${category}`, label: t(`finance.spending.${category}`), amount }));
+  return { lines, total: totalSpending(spending) };
 }

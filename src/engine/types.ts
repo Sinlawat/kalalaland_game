@@ -374,7 +374,23 @@ export interface Money {
   jobLossRecoveryUntil?: number;
   /** Running totals for the current (unfinished) year. */
   year: YearMoneyTotals;
+  /**
+   * D80: how freely the character spends their own money (save version 15).
+   * Only matters while they have an income: then they pay their own food out,
+   * travel, phone and outings.
+   */
+  spendingLevel: SpendingLevel;
+  /** D80: what the character could not pay for last month (0 = enough money). */
+  shortfall: number;
 }
+
+/** D80: frugal ×0.6 (a little unhappier), normal, comfortable ×1.6 (a little happier). */
+export const SPENDING_LEVELS = ['frugal', 'normal', 'comfortable'] as const;
+export type SpendingLevel = (typeof SPENDING_LEVELS)[number];
+
+/** D80: what the character pays for themselves while living with the parents. */
+export const SPENDING_CATEGORIES = ['food', 'transport', 'phone', 'leisure'] as const;
+export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number];
 
 /**
  * D79: money in and out over one year. `income` and `spent` are by source:

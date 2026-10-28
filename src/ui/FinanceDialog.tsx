@@ -1,12 +1,14 @@
 import { BALANCE } from '../data/balance';
-import type { GameState } from '../engine/types';
+import { SPENDING_LEVELS, type GameState, type SpendingLevel } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { formatMoney } from './format';
-import { jobIncomes, lifeTotals, moneyText, showsFamilyMoneyStress, stressLines, yearLines, type SourceLine } from './work';
+import { jobIncomes, lifeTotals, moneyText, showsFamilyMoneyStress, spendingLines, stressLines, yearLines, type SourceLine } from './work';
 import { useModal } from './useModal';
 
 interface Props {
   game: GameState;
+  /** D80: the player picks how freely the character spends. */
+  onSpendingChange(level: SpendingLevel): void;
   onClose(): void;
 }
 
@@ -31,12 +33,13 @@ function SourceList({ lines, sign }: { lines: SourceLine[]; sign: '+' | '−' })
  * they pay, this year's money by source, the whole life so far, and what
  * the family's money stress is made of.
  */
-export function FinanceDialog({ game, onClose }: Props) {
+export function FinanceDialog({ game, onSpendingChange, onClose }: Props) {
   const dialogRef = useModal();
   const jobs = jobIncomes(game);
   const year = yearLines(game);
   const life = lifeTotals(game);
   const stress = stressLines(game);
+  const spending = spendingLines(game);
 
   return (
     <dialog ref={dialogRef} className="dialog" aria-labelledby="finance-title" onClose={onClose}>
@@ -59,12 +62,40 @@ export function FinanceDialog({ game, onClose }: Props) {
               </strong>
               <span>{t('finance.wage', { monthly: formatMoney(job.monthly), yearly: formatMoney(job.yearly) })}</span>
               <span className="muted small">
-                {t('finance.split', { percent: job.sharePercent, given: formatMoney(job.given), saved: formatMoney(job.saved) })}
+                {t('finance.split', {
+                  percent: job.sharePercent,
+                  given: formatMoney(job.given),
+                  spending: formatMoney(job.spending),
+                  saved: job.saved < 0 ? `−${formatMoney(-job.saved)}` : formatMoney(job.saved),
+                })}
               </span>
             </li>
           ))}
         </ul>
       )}
+
+      {/* D80: what the character pays for themselves, and how freely. */}
+      <h3 className="residence-history__title">{t('finance.spending.title')}</h3>
+      <div className="finance-levels" role="group" aria-label={t('finance.spending.level')}>
+        {SPENDING_LEVELS.map((level) => (
+          <button
+            key={level}
+            type="button"
+            className={`button button--small${game.money.spendingLevel === level ? ' button--primary' : ''}`}
+            aria-pressed={game.money.spendingLevel === level}
+            onClick={() => onSpendingChange(level)}
+          >
+            {t(`finance.spending.level.${level}`)}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">{t(`finance.spending.levelHint.${game.money.spendingLevel}`)}</p>
+      {spending.total === 0 ? (
+        <p className="muted small">{t('finance.spending.parentsPay')}</p>
+      ) : (
+        <SourceList lines={[...spending.lines, { source: 'total', label: t('finance.spending.total'), amount: spending.total }]} sign="−" />
+      )}
+      {game.money.shortfall > 0 && <p className="notice notice--error small">{t('finance.spending.short', { amount: formatMoney(game.money.shortfall) })}</p>}
 
       <h3 className="residence-history__title">{t('finance.year', { age: Math.floor(game.ageInMonths / 12) })}</h3>
       {year.income.length === 0 && year.spent.length === 0 && year.given === 0 ? (

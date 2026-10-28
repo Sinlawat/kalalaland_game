@@ -3,7 +3,7 @@ import { makeState } from '../engine/testUtils';
 import { startJob, stopWork } from '../engine/work';
 import { formatMoney, formatMoneyChange } from './format';
 import { buildTimeline } from './timeline';
-import { jobIncomes, lifeMoney, lifeTotals, overtimeLabels, showsFamilyMoneyStress, sourceLabel, stressLines, workChangeText, workLine, workRows, yearLines } from './work';
+import { jobIncomes, spendingLines, lifeMoney, lifeTotals, overtimeLabels, showsFamilyMoneyStress, sourceLabel, stressLines, workChangeText, workLine, workRows, yearLines } from './work';
 
 describe('work and money on screen (D77)', () => {
   it('money: whole baht with thousands separators, changes with a real minus sign', () => {
@@ -82,7 +82,7 @@ describe('the finance dialog (D79)', () => {
     expect(jobIncomes(state)).toEqual([]);
     startJob(state, 'cafe', 'weekend');
     state.money.familySharePercent = 30;
-    expect(jobIncomes(state)).toEqual([{ job: 'ร้านกาแฟ', level: 'part-time เสาร์-อาทิตย์', monthly: 2400, yearly: 28800, sharePercent: 30, given: 720, saved: 1680 }]);
+    expect(jobIncomes(state)).toEqual([{ job: 'ร้านกาแฟ', level: 'part-time เสาร์-อาทิตย์', monthly: 2400, yearly: 28800, sharePercent: 30, given: 720, spending: 1500, saved: 180 }]);
   });
 
   it("names this year's money by source, largest first", () => {
@@ -112,5 +112,23 @@ describe('the finance dialog (D79)', () => {
   it('shows the family money stress part by part, without the zero parts', () => {
     const state = makeState({ ageInMonths: 12 * 12, environment: { familyWealth: 50 }, flags: ['parent_lost_job'] });
     expect(stressLines(state)).toEqual({ total: 45, parts: [{ key: 'wealth', amount: 15 }, { key: 'parentOutOfWork', amount: 30 }] });
+  });
+});
+
+describe('the spending section (D80)', () => {
+  it('lists own spending by category with its total, or nothing without an income', () => {
+    const state = makeState({ ageInMonths: 16 * 12, residence: { regionId: 'suburb', homeId: 'parents' } });
+    expect(spendingLines(state)).toEqual({ lines: [], total: 0 });
+    startJob(state, 'cafe', 'weekend');
+    expect(spendingLines(state)).toEqual({
+      lines: [
+        { source: 'living.food', label: 'อาหาร (กินนอกบ้าน ขนม)', amount: 600 },
+        { source: 'living.transport', label: 'ค่าเดินทาง', amount: 200 },
+        { source: 'living.phone', label: 'ค่าโทรศัพท์และเน็ต', amount: 200 },
+        { source: 'living.leisure', label: 'เที่ยวกับเพื่อน', amount: 200 },
+      ],
+      total: 1200,
+    });
+    expect(sourceLabel('living.food')).toBe('อาหาร (กินนอกบ้าน ขนม)');
   });
 });

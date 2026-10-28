@@ -172,6 +172,9 @@ function mentalHealthContributions(state: GameState, age: number): Contribution[
     add('env.workStress', (environment.workStress / 100) * b.workStressAt100PerYear);
   }
   add('env.financialStress', (environment.financialStress / 100) * b.financialStressAt100PerYear);
+  // D80: how freely they spend their own money (only while they have an income to spend).
+  const spending = BALANCE.work.spendingLevels[state.money.spendingLevel].mentalHealthPerYear;
+  if (spending !== 0 && currentJob(state) !== undefined) add(`money.spending.${state.money.spendingLevel}`, spending);
   const warmthWeight = age < 18 ? 1 : b.familyWarmthAdultWeight;
   add(
     'env.familyWarmth',

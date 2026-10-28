@@ -28,11 +28,13 @@ import { setHabitFromEvent } from './lifestyle';
 import {
   EXERCISE_LEVELS,
   JOB_IDS,
+  SPENDING_CATEGORIES,
   WORK_LEVELS,
   type GameState,
   type Habits,
   type Job,
   type JobId,
+  type SpendingCategory,
   type WorkChange,
   type WorkLevel,
   type WorkResult,
@@ -64,6 +66,24 @@ export function monthlyWage(job: JobId, level: WorkLevel, region: GameState['res
   const payFactor = (B.jobPayFactor as Partial<Record<JobId, number>>)[job] ?? 1;
   if (level === 'full_time') return Math.round(B.fullTimeDailyWage[region] * B.fullTimeDaysPerMonth * payFactor);
   return Math.round(B.partTimeHourly * B.hoursPerMonth[level] * B.regionWageFactor[region] * payFactor);
+}
+
+/**
+ * D80: what the character pays for themselves this month, by category: only
+ * while they have a job (otherwise the parents pay), by job level, area and
+ * spending level. Whole baht.
+ */
+export function monthlySpending(state: Pick<GameState, 'work' | 'money' | 'residence'>): Record<SpendingCategory, number> {
+  const job = currentJob(state);
+  const result = { food: 0, transport: 0, phone: 0, leisure: 0 };
+  if (job === undefined) return result;
+  const factor = B.regionCostFactor[state.residence.regionId] * B.spendingLevels[state.money.spendingLevel].factor;
+  for (const category of SPENDING_CATEGORIES) result[category] = Math.round(B.personalSpending[job.level][category] * factor);
+  return result;
+}
+
+export function totalSpending(spending: Record<SpendingCategory, number>): number {
+  return SPENDING_CATEGORIES.reduce((sum, category) => sum + spending[category], 0);
 }
 
 /** Hours a month at a level, as a share of a full-time month (what the job teaches scales with it). */
@@ -217,6 +237,20 @@ export function advanceWork(state: GameState): void {
     state.money.year.earned += wage;
     state.money.year.given += given;
     addTo(state.money.year.income, `job.${job.job}`, wage);
+    // D80: then their own spending; what the savings cannot cover is not spent (and asks the player what to do).
+    const spending = monthlySpending(state);
+    const need = totalSpending(spending);
+    const paid = Math.min(need, state.money.cash);
+    state.money.cash -= paid;
+    state.money.shortfall = need - paid;
+    let left = paid;
+    for (const category of SPENDING_CATEGORIES) {
+      const part = Math.min(left, spending[category]);
+      if (part > 0) addTo(state.money.year.spent, `living.${category}`, part);
+      left -= part;
+    }
+  } else {
+    state.money.shortfall = 0;
   }
   if (job !== undefined) {
     const breakOver = job.untilMonth !== undefined && state.ageInMonths >= job.untilMonth;

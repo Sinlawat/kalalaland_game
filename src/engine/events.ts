@@ -60,6 +60,7 @@ import {
   REGION_IDS,
   RELATIONS,
   SCHOOL_FLAGS,
+  SPENDING_LEVELS,
   type EnvironmentKey,
   type EventRecord,
   type GameState,
@@ -68,6 +69,7 @@ import {
   type HomeId,
   type Person,
   type RegionId,
+  type SpendingLevel,
   type StatTarget,
   type TraitKey,
 } from './types';
@@ -166,6 +168,8 @@ export interface EventConditions extends CharacterConditions {
   education?: EducationConditions;
   /** D77: the character's job now. */
   work?: WorkConditions;
+  /** D80: last month the character's own money did not cover their spending. */
+  moneyShort?: true;
   /**
    * D77: only in the month of the birthday. The yearly chance then falls in
    * that one month (like an event limited to one calendar month).
@@ -199,6 +203,8 @@ export interface EventEffects {
   familyShare?: number;
   /** D77: a one-off gift that lowers the family's money stress by `amount` for `months` months. */
   familyRelief?: { amount: number; months: number };
+  /** D80: how freely the character spends from now on. */
+  spendingLevel?: SpendingLevel;
 }
 
 export interface EventChoice {
@@ -331,7 +337,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -391,6 +397,9 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   if (e.work !== undefined) checkWorkEffect(e.work, at, problems);
   if (e.familyShare !== undefined && !(Number.isInteger(e.familyShare) && (e.familyShare as number) >= 0 && (e.familyShare as number) <= 100)) {
     problems.push(`${at}: effects.familyShare must be a whole percent 0–100`);
+  }
+  if (e.spendingLevel !== undefined && !(SPENDING_LEVELS as readonly unknown[]).includes(e.spendingLevel)) {
+    problems.push(`${at}: effects.spendingLevel must be one of ${SPENDING_LEVELS.join(', ')}`);
   }
   if (e.familyRelief !== undefined) {
     const relief = e.familyRelief;
@@ -754,7 +763,7 @@ export function parseEvents(raw: unknown): EventDef[] {
     } else {
       for (const key of unknownKeys(c, [
         'ageMin', 'ageMax', 'stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'months', 'monthsSince', 'notWithin', 'eventsNone',
-        'residence', 'people', 'education', 'money', 'work', 'birthday',
+        'residence', 'people', 'education', 'money', 'work', 'birthday', 'moneyShort',
       ])) {
         problems.push(`${at}: unknown condition "${key}"`);
       }
@@ -793,6 +802,7 @@ export function parseEvents(raw: unknown): EventDef[] {
       if (c.people !== undefined) checkPeopleCondition(c.people, item.about, at, check);
       if (c.education !== undefined) checkEducationCondition(c.education, at, problems);
       if (c.work !== undefined) checkWorkCondition(c.work, at, problems);
+      if (c.moneyShort !== undefined && c.moneyShort !== true) problems.push(`${at}: conditions.moneyShort must be true`);
       if (c.birthday !== undefined) {
         if (c.birthday !== true) problems.push(`${at}: conditions.birthday must be true`);
         if (c.months !== undefined) problems.push(`${at}: conditions.birthday cannot go with months (the birthday is its own month)`);
@@ -958,6 +968,7 @@ export function isEligible(event: EventDef, state: GameState, happened: Happened
   if (c.education && !meetsEducationConditions(state, c.education)) return false;
   if (c.work && !meetsWorkConditions(state, c.work)) return false;
   if (c.birthday && state.ageInMonths % 12 !== 0) return false;
+  if (c.moneyShort && state.money.shortfall <= 0) return false;
   return meetsCharacterConditions(state, c);
 }
 
@@ -1205,6 +1216,7 @@ function applyMoneyAndWork(state: GameState, effects: EventEffects, record: Even
     if (change) record.workChange = change;
   }
   if (effects.familyShare !== undefined) state.money.familySharePercent = effects.familyShare;
+  if (effects.spendingLevel !== undefined) state.money.spendingLevel = effects.spendingLevel;
   if (effects.familyRelief) {
     state.money.familyRelief = { amount: effects.familyRelief.amount, untilMonth: state.ageInMonths + effects.familyRelief.months };
   }

@@ -8212,6 +8212,49 @@
     ]
   },
   {
+    "id": "money_short",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 99,
+      "moneyShort": true
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 3,
+    "choices": [
+      {
+        "id": "frugal",
+        "effects": {
+          "spendingLevel": "frugal"
+        }
+      },
+      {
+        "id": "give_less",
+        "effects": {
+          "familyShare": 0
+        }
+      },
+      {
+        "id": "ask_parents",
+        "conditions": {
+          "stats": [
+            {
+              "stat": "familyWealth",
+              "op": ">=",
+              "value": 50
+            }
+          ]
+        },
+        "effects": {
+          "money": 2000,
+          "environment": {
+            "familyWarmth": -2
+          }
+        }
+      }
+    ]
+  },
+  {
     "id": "work_school_break_job",
     "conditions": {
       "ageMin": 15,
@@ -8260,12 +8303,17 @@
       "stats": [
         {
           "stat": "familyWealth",
+          "op": ">=",
+          "value": 40
+        },
+        {
+          "stat": "familyWealth",
           "op": "<",
           "value": 65
         }
       ]
     },
-    "frequency": "common",
+    "frequency": "normal",
     "once": false,
     "cooldownMonths": 12,
     "effects": {
@@ -8286,7 +8334,7 @@
         }
       ]
     },
-    "frequency": "common",
+    "frequency": "normal",
     "once": false,
     "cooldownMonths": 12,
     "effects": {

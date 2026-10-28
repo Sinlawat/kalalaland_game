@@ -10,7 +10,7 @@
  * during testing). Change numbers here, then run `npm test` to see the effect.
  */
 
-import type { Habits, JobId, RegionId, SchoolId, SkillKey, Skills, TraitKey, WorkLevel } from '../engine/types';
+import type { Habits, JobId, RegionId, SchoolId, SkillKey, Skills, SpendingCategory, SpendingLevel, TraitKey, WorkLevel } from '../engine/types';
 
 export const BALANCE = {
   birth: {
@@ -259,6 +259,26 @@ export const BALANCE = {
     exerciseCap: { weekend: 'light', daily: 'none' } satisfies Partial<Record<WorkLevel, Habits['exercise']>>,
     /** Daily part-time work leaves less time to study: the school's academic learning × this. */
     dailyAcademicLearning: 0.7,
+    /**
+     * D80: what the character pays for themselves each month while they have
+     * an income and live with the parents (suburb, "normal" level). Housing,
+     * utilities and health stay with the parents. From the design doc's real
+     * price data, scaled down for someone living at home.
+     */
+    personalSpending: {
+      weekend: { food: 600, transport: 200, phone: 200, leisure: 200 },
+      daily: { food: 800, transport: 300, phone: 200, leisure: 200 },
+      school_break: { food: 800, transport: 300, phone: 200, leisure: 200 },
+      full_time: { food: 3000, transport: 1200, phone: 400, leisure: 1000 },
+    } satisfies Record<WorkLevel, Record<SpendingCategory, number>>,
+    /** D80: cost of living by area (real price data: suburb = 1). */
+    regionCostFactor: { city: 1.25, suburb: 1, rural: 0.58 } satisfies Record<RegionId, number>,
+    /** D80: each spending level: how much of the "normal" amounts, and its yearly effect on mental health. */
+    spendingLevels: {
+      frugal: { factor: 0.6, mentalHealthPerYear: -1 },
+      normal: { factor: 1, mentalHealthPerYear: 0 },
+      comfortable: { factor: 1.6, mentalHealthPerYear: 1 },
+    } satisfies Record<SpendingLevel, { factor: number; mentalHealthPerYear: number }>,
     /** What a job teaches per year at full-time hours (scaled by the hours worked). */
     skillsPerYear: {
       convenience_store: { communication: 1.5 },

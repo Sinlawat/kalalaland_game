@@ -11,10 +11,10 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
-import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, JOB_IDS, PROGRAM_IDS, RELATIONS, SEXES, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
+import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, JOB_IDS, PROGRAM_IDS, RELATIONS, SEXES, SPENDING_LEVELS, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 14;
+export const CURRENT_SAVE_VERSION = 15;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -54,7 +54,14 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   11: addEducation,
   12: addWorkAndMoney,
   13: addMoneyBySource,
+  14: addSpending,
 };
+
+/** 14 → 15 (D80): the character's own spending starts at the normal level, with nothing unpaid. */
+function addSpending(state: unknown): unknown {
+  if (!isRecord(state) || !isRecord(state.money)) return state;
+  return { ...state, money: { ...state.money, spendingLevel: 'normal', shortfall: 0 } };
+}
 
 /**
  * 13 → 14 (D79): the year's money by source. The running year starts empty
@@ -180,6 +187,8 @@ function isValidMoney(value: unknown): boolean {
     isAmountsBySource((value.year as Record<string, unknown>).income) &&
     isAmountsBySource((value.year as Record<string, unknown>).spent) &&
     (value.jobLossRecoveryUntil === undefined || typeof value.jobLossRecoveryUntil === 'number') &&
+    oneOf(SPENDING_LEVELS, value.spendingLevel) &&
+    typeof value.shortfall === 'number' &&
     (value.familyRelief === undefined || hasNumbers(value.familyRelief, ['amount', 'untilMonth']))
   );
 }

@@ -76,7 +76,7 @@ export function App() {
       </header>
 
       {residenceOpen && <ResidenceDialog game={game} onClose={() => setResidenceOpen(false)} />}
-      {financeOpen && <FinanceDialog game={game} onClose={() => setFinanceOpen(false)} />}
+      {financeOpen && <FinanceDialog game={game} onSpendingChange={controller.setSpending} onClose={() => setFinanceOpen(false)} />}
 
       {/* Time sits right under who and how old: the two things read together. */}
       <div className="playback-dock">

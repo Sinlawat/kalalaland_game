@@ -122,8 +122,15 @@ describe('save / load', () => {
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 12, savedAt: '2026-10-28T00:00:00.000Z', state: v12 }));
     expect(loadGame(storage)).toEqual({
       status: 'ok',
-      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} } } },
+      state: { ...life, work: { history: [] }, money: { cash: 0, familySharePercent: 0, monthGiven: 0, year: { earned: 0, given: 0, income: {}, spent: {} }, spendingLevel: 'normal', shortfall: 0 } },
     });
+  });
+
+  it('upgrades a version 14 save: spending starts at the normal level, nothing unpaid (D80)', () => {
+    const life = createNewLife(21);
+    const { spendingLevel: _level, shortfall: _short, ...money14 } = life.money;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 14, savedAt: '2026-10-28T00:00:00.000Z', state: { ...life, money: money14 } }));
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: life });
   });
 
   it('upgrades a version 13 save: the year by source starts empty, the totals stay (D79)', () => {
