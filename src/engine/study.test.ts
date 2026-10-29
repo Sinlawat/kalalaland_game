@@ -3,7 +3,7 @@ import { BALANCE } from '../data/balance';
 import { advanceEducation, enroll } from './education';
 import { applyChoice, applyEvent, findEvent, isEligible, lockReasons } from './events';
 import { computePassiveContributions } from './passive';
-import { allowanceShare, currentStudy, dormFor, monthlyAllowance, parentsStudySupport, programFor, tuitionPerTerm } from './study';
+import { allowanceShare, currentStudy, dormFor, loanRepaymentEstimate, monthlyAllowance, parentsStudySupport, programFor, tuitionPerTerm } from './study';
 import { makeState } from './testUtils';
 import type { GameState } from './types';
 import { advanceWork, familyMoneyStressParts, monthlySpending, startJob } from './work';
@@ -207,3 +207,19 @@ describe('D82: from Grade 12 to a university place', () => {
     expect(lines.map((c) => c.source)).toEqual(['study.bachelor_business', 'studyPlace.top_public.learning', 'study.bachelor_business']);
   });
 });
+
+describe('D85: the student loan repayment estimate', () => {
+  it('pays the debt back in 15 equal years at 1% (paying it year by year leaves nothing, give or take the rounding)', () => {
+    const debt = 288_000;
+    const { yearly, years } = loanRepaymentEstimate(debt)!;
+    let left = debt;
+    for (let year = 0; year < years; year++) left = left * 1.01 - yearly;
+    expect(left).toBeLessThanOrEqual(0);
+    expect(left).toBeGreaterThan(-years * 2);
+  });
+
+  it('no debt, no estimate', () => {
+    expect(loanRepaymentEstimate(0)).toBeUndefined();
+  });
+});
+

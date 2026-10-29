@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GameState } from '../engine/types';
 import { t } from '../i18n/i18n';
-import { ACTIVITIES, clock, DAYS_IN_MONTH, daySchedule, weekdayOf, weekSummary, type Activity } from './schedule';
+import { ACTIVITIES, clock, DAYS_IN_MONTH, daySchedule, wakingDay, weekdayOf, weekSummary, type Activity } from './schedule';
 import { useModal } from './useModal';
 
 interface Props {
@@ -16,9 +16,15 @@ const SUMMARY_KEYS: Record<Activity, keyof ReturnType<typeof weekSummary>['hours
   commute: 'commute',
   study: 'study',
   work: 'work',
+  lessons: 'lessons',
+  care: 'care',
   exercise: 'exercise',
+  friends: 'friends',
   free: 'free',
 };
+
+/** D85: activities only some lives have are listed while they take hours. */
+const SOMETIMES: readonly Activity[] = ['lessons', 'care', 'friends'];
 
 /** One day as a bar from midnight (top) to midnight (bottom). */
 function DayBar({ game, weekday }: { game: GameState; weekday: number }) {
@@ -42,7 +48,8 @@ export function ScheduleDialog({ game, onClose }: Props) {
   const [selected, setSelected] = useState(1);
   const summary = weekSummary(game);
   const weekday = weekdayOf(selected);
-  const blocks = daySchedule(game, weekday);
+  // D85: the day as the character lives it, from waking up to the next morning.
+  const blocks = wakingDay(game, weekday);
 
   return (
     <dialog ref={dialogRef} className="dialog" aria-labelledby="schedule-title" onClose={onClose}>
@@ -51,7 +58,7 @@ export function ScheduleDialog({ game, onClose }: Props) {
 
       <h3 className="residence-history__title">{t('schedule.week')}</h3>
       <ul className="finance-list">
-        {ACTIVITIES.map((activity) => (
+        {ACTIVITIES.filter((activity) => !SOMETIMES.includes(activity) || summary.hours[SUMMARY_KEYS[activity]] > 0).map((activity) => (
           <li key={activity}>
             <span>
               <span className={`schedule-dot schedule--${activity}`} aria-hidden="true" /> {t(`schedule.activity.${activity}`)}
@@ -96,6 +103,7 @@ export function ScheduleDialog({ game, onClose }: Props) {
       </div>
 
       <h3 className="residence-history__title">{t('schedule.day', { day: selected, weekday: t(`schedule.weekday.${weekday}`) })}</h3>
+      <p className="muted small">{t('schedule.dayHint')}</p>
       <ul className="finance-list">
         {blocks.map((block, i) => (
           <li key={i}>
@@ -104,6 +112,7 @@ export function ScheduleDialog({ game, onClose }: Props) {
             </span>
             <span>
               {clock(block.start)}–{clock(block.end)}
+              {block.end > 24 && <span className="muted small"> {t('schedule.nextDay')}</span>}
             </span>
           </li>
         ))}

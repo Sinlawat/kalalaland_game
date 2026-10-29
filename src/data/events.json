@@ -839,7 +839,21 @@
       },
       "environment": {
         "familyWealth": -3
-      }
+      },
+      "activities": [
+        {
+          "kind": "care",
+          "days": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "hours": 2,
+          "months": 3
+        }
+      ]
     }
   },
   {
@@ -882,7 +896,21 @@
           "familyRelief": {
             "amount": 20,
             "months": 3
-          }
+          },
+          "activities": [
+            {
+              "kind": "care",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 3
+            }
+          ]
         }
       },
       {
@@ -899,7 +927,21 @@
           },
           "environment": {
             "familyWealth": -3
-          }
+          },
+          "activities": [
+            {
+              "kind": "care",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 3
+            }
+          ]
         }
       }
     ]
@@ -3206,7 +3248,23 @@
               "level": "short",
               "months": 6
             }
-          }
+          },
+          "activities": [
+            {
+              "kind": "friends",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "hours": 2,
+              "months": 6
+            }
+          ]
         }
       },
       {
@@ -3220,7 +3278,19 @@
             }
           ]
         },
-        "effects": {}
+        "effects": {
+          "activities": [
+            {
+              "kind": "friends",
+              "days": [
+                4,
+                5
+              ],
+              "hours": 3,
+              "months": 6
+            }
+          ]
+        }
       }
     ]
   },
@@ -4916,6 +4986,20 @@
           },
           "setFlags": [
             "tutoring"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 3
+            }
           ]
         }
       },
@@ -4967,6 +5051,29 @@
           },
           "setFlags": [
             "olympiad_team"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 3
+            },
+            {
+              "kind": "lessons",
+              "days": [
+                5,
+                6
+              ],
+              "hours": 3,
+              "months": 3
+            }
           ]
         }
       },
@@ -5035,6 +5142,20 @@
           },
           "setFlags": [
             "tutoring"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            }
           ]
         }
       },
@@ -5046,6 +5167,17 @@
           },
           "setFlags": [
             "tutoring"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                5,
+                6
+              ],
+              "hours": 3,
+              "months": 6
+            }
           ]
         }
       },
@@ -5284,7 +5416,21 @@
               "level": "short",
               "months": 3
             }
-          }
+          },
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 3
+            }
+          ]
         }
       },
       {
@@ -7262,7 +7408,21 @@
               "level": "short",
               "months": 6
             }
-          }
+          },
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            }
+          ]
         }
       },
       {
@@ -7283,7 +7443,21 @@
               "months": 6
             }
           },
-          "money": -4000
+          "money": -4000,
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            }
+          ]
         }
       },
       {
@@ -7512,6 +7686,29 @@
           },
           "setFlags": [
             "admission_prep"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            },
+            {
+              "kind": "lessons",
+              "days": [
+                5,
+                6
+              ],
+              "hours": 3,
+              "months": 6
+            }
           ]
         }
       },
@@ -7536,7 +7733,30 @@
           "setFlags": [
             "admission_prep"
           ],
-          "money": -8000
+          "money": -8000,
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            },
+            {
+              "kind": "lessons",
+              "days": [
+                5,
+                6
+              ],
+              "hours": 3,
+              "months": 6
+            }
+          ]
         }
       },
       {
@@ -9835,6 +10055,28 @@
           "person": {
             "befriend": "friend",
             "tag": "uni"
+          },
+          "activities": [
+            {
+              "kind": "friends",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "hours": 3,
+              "months": 6
+            }
+          ],
+          "habits": {
+            "sleep": {
+              "level": "short",
+              "months": 6
+            }
           }
         }
       },
@@ -9848,7 +10090,17 @@
           "person": {
             "befriend": "friend",
             "tag": "uni"
-          }
+          },
+          "activities": [
+            {
+              "kind": "friends",
+              "days": [
+                4
+              ],
+              "hours": 4,
+              "months": 6
+            }
+          ]
         }
       },
       {
@@ -10385,6 +10637,20 @@
           },
           "setFlags": [
             "professor_noticed"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 6
+            }
           ]
         }
       },
@@ -10432,6 +10698,20 @@
           },
           "setFlags": [
             "in_competition"
+          ],
+          "activities": [
+            {
+              "kind": "lessons",
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "hours": 2,
+              "months": 2
+            }
           ]
         }
       },
@@ -11053,5 +11333,38 @@
         "familyWarmth": 2
       }
     }
+  },
+  {
+    "id": "work_school_break_over",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 17,
+      "work": {
+        "endedThisMonth": [
+          "school_break"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {}
+  },
+  {
+    "id": "work_parttime_ended_school",
+    "conditions": {
+      "ageMin": 15,
+      "ageMax": 40,
+      "work": {
+        "endedThisMonth": [
+          "weekend",
+          "daily"
+        ]
+      }
+    },
+    "frequency": "guaranteed",
+    "once": false,
+    "cooldownMonths": 1,
+    "effects": {}
   }
 ]

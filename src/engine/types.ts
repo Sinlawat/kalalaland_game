@@ -343,6 +343,29 @@ export interface Education {
   homeBeforeStudy?: Residence;
 }
 
+// ── Activities with set hours (D85) ─────────────────────────────────────────
+/**
+ * What a commitment is: lessons (tutoring, a cram course, practice, a lab),
+ * time with friends (nights out, games), or caring for someone at home.
+ * Homework and reading on one's own are not activities (D83: not counted).
+ */
+export const ACTIVITY_KINDS = ['lessons', 'friends', 'care'] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+/**
+ * D85: a commitment that takes `hours` on each of its `days` of the week
+ * (0 = Monday … 6 = Sunday) until the character's age `untilMonth`. It takes
+ * time from the week like school or work (time.ts); the event that started
+ * it is kept for the calendar and for replacing it when the event happens again.
+ */
+export interface Activity {
+  kind: ActivityKind;
+  days: number[];
+  hours: number;
+  untilMonth: number;
+  eventId: string;
+}
+
 // ── Work and money (D77, finance phase 1) ───────────────────────────────────
 /**
  * Where the character works. Jobs for students and school leavers only for
@@ -496,6 +519,8 @@ export interface GameState {
    * character would have with time to spare (save version 17). Absent = all fits.
    */
   timeCut?: Partial<Pick<Habits, 'exercise' | 'sleep'>>;
+  /** D85: commitments with set hours that are still running (save version 18). */
+  activities: Activity[];
   condition: Condition;
   /** D65: four skills instead of one knowledge value (save version 8). */
   skills: Skills;

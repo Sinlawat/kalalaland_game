@@ -14,10 +14,14 @@
  * This replaces D77's job exercise limit: a job now takes the time it takes,
  * and the budget decides what is left.
  *
+ * D85: activities with set hours (lessons, friends, caring for someone) take
+ * their hours too; they never lock a choice, the week gives way instead.
+ *
  * Functions that change the state MUTATE it; the read helpers never do.
  */
 
 import { BALANCE } from '../data/balance';
+import { activityHours } from './activities';
 import { currentEnrollment, programDef } from './education';
 import { OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
 import { studyPlace } from './study';
@@ -37,6 +41,10 @@ export interface WeekHours {
   /** Travel to school or work. */
   commute: number;
   work: number;
+  /** D85: activities with set hours. */
+  lessons: number;
+  friends: number;
+  care: number;
   essentials: number;
   sleep: number;
   exercise: number;
@@ -44,7 +52,7 @@ export interface WeekHours {
   free: number;
 }
 
-type HoursSource = Pick<GameState, 'education' | 'flags' | 'work' | 'ageInMonths'>;
+type HoursSource = Pick<GameState, 'education' | 'flags' | 'work' | 'ageInMonths' | 'activities'>;
 
 /** Hours a week the current studies take (0 during a school-break job: the school is closed). */
 function studyHours(state: HoursSource): number {
@@ -73,8 +81,9 @@ export function weekHours(state: HoursSource, habits: Pick<Habits, TimeHabit>): 
   const adult = state.ageInMonths >= T.sleepAdultFromAge * 12;
   const sleep = habits.sleep === 'enough' ? (adult ? T.sleep.enoughAdult : T.sleep.enoughChild) : T.sleep.short;
   const exercise = T.exercise[habits.exercise];
-  const used = study + commute + work + T.essentials + sleep + exercise;
-  return { study, commute, work, essentials: T.essentials, sleep, exercise, free: T.hoursPerWeek - used };
+  const { lessons, friends, care } = activityHours(state);
+  const used = study + commute + work + lessons + friends + care + T.essentials + sleep + exercise;
+  return { study, commute, work, lessons, friends, care, essentials: T.essentials, sleep, exercise, free: T.hoursPerWeek - used };
 }
 
 export function fits(week: WeekHours): boolean {

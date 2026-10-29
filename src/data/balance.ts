@@ -362,6 +362,13 @@ export const BALANCE = {
     loanBelowWealth: 50,
     /** กยศ. living allowance, per month, for a student living in a dorm. */
     loanLivingPerMonth: 3000,
+    /**
+     * D85: กยศ. repayment, for the estimate on the finance screen only (the
+     * real repayment comes with the career system): 2 years free after the
+     * studies, then up to 15 years at 1% a year. The estimate pays the same
+     * every year; the real schedule starts lower and rises.
+     */
+    loanRepayment: { graceYears: 2, years: 15, interestPerYear: 0.01 },
     /** Where each place is: in the city, or in the home area (a rural home still means a dorm). */
     inCity: ['top_public', 'private'] as readonly StudyPlace[],
     /** Places studied from home (no dorm). */

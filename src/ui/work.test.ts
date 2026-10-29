@@ -164,3 +164,20 @@ describe('the study section (D82)', () => {
     ]);
   });
 });
+
+describe('the study section: waiting to start and the student loan (D85)', () => {
+  it('between winning a place and the first term, says what is coming and who pays', () => {
+    const state = makeState({ ageInMonths: 18 * 12, environment: { familyWealth: 30 }, flags: ['study_top_public'] });
+    state.education = { history: [{ program: 'upper_secondary_science', from: 15 * 12, to: 18 * 12, result: 'graduated' }], next: 'bachelor_business' };
+    expect(studyMoney(state)).toBeUndefined();
+    state.money.study = { tuition: 'loan', livingLoan: true };
+    expect(studyMoney(state)).toMatchObject({ waiting: 'ปริญญาตรี บริหารธุรกิจและบัญชี · มหาวิทยาลัยรัฐชื่อดัง', paidBy: 'loan', debt: 0 });
+    expect(studyMoney(state)!.repayment).toBeUndefined();
+  });
+
+  it('a debt comes with an estimate of the repayment; the debt is not described as being repaid yet', () => {
+    const state = makeState({ ageInMonths: 22 * 12 });
+    state.money.studentLoan = 288_000;
+    expect(studyMoney(state)).toMatchObject({ debt: 288_000, repayment: { graceYears: 2, years: 15, yearly: 20_772, monthly: 1_731 } });
+  });
+});

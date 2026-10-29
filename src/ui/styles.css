@@ -666,6 +666,10 @@ p { margin: 0 0 8px; }
   --sched-work: #c08a1e;
   --sched-exercise: #b0453a;
   --sched-free: #eee7dc;
+  /* D85: lessons, caring for someone, time with friends. */
+  --sched-lessons: #8bb174;
+  --sched-care: #a77b9b;
+  --sched-friends: #2f9c95;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -676,6 +680,9 @@ p { margin: 0 0 8px; }
     --sched-work: #e0b45a;
     --sched-exercise: #e88c80;
     --sched-free: #34302b;
+    --sched-lessons: #6f9a55;
+    --sched-care: #8c6382;
+    --sched-friends: #5cc2ba;
   }
 }
 .schedule--sleep { background: var(--sched-sleep); }
@@ -685,6 +692,9 @@ p { margin: 0 0 8px; }
 .schedule--work { background: var(--sched-work); }
 .schedule--exercise { background: var(--sched-exercise); }
 .schedule--free { background: var(--sched-free); }
+.schedule--lessons { background: var(--sched-lessons); }
+.schedule--care { background: var(--sched-care); }
+.schedule--friends { background: var(--sched-friends); }
 .schedule-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
 .schedule-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 12px; }
 .schedule-grid__head { text-align: center; }

@@ -11,6 +11,7 @@
  * still safe, because nobody outside can see the copy until we return it.
  */
 
+import { expireActivities } from './activities';
 import { advanceEducation } from './education';
 import { applyChoice, applyEvent, EVENTS, findEvent, hasChoices, isEligible, lockReasons, personFor, rollEvents, type EventDef } from './events';
 import { applyStartingLifestyle, expireHabitTimers, OWN_LIFESTYLE_FROM_MONTH } from './lifestyle';
@@ -70,6 +71,8 @@ function simulateMonthInPlace(state: GameState, events: readonly EventDef[] = EV
   //    Done BEFORE recording, so the month strip shows what really applied.
   if (state.ageInMonths + 1 === OWN_LIFESTYLE_FROM_MONTH) applyStartingLifestyle(state);
   expireHabitTimers(state);
+  //    D85: lessons, nights out and caring that ran their months end.
+  expireActivities(state);
   //    D83: what the week has time for (a job, school or habit may have changed last month).
   fitTimeBudget(state);
   //    Remember which habits were in effect this month (events can change

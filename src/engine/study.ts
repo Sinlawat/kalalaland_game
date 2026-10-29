@@ -171,3 +171,25 @@ export function syncStudyHome(state: GameState): void {
     delete state.money.study;
   }
 }
+
+/** D85: an estimate of the กยศ. repayment, for the finance screen (nothing is repaid yet: the career system will). */
+export interface LoanRepaymentEstimate {
+  graceYears: number;
+  years: number;
+  /** Paid each year, the same every year (an annuity at the loan's interest). */
+  yearly: number;
+  monthly: number;
+}
+
+/**
+ * The same payment every year that pays `debt` back over the repayment
+ * years at the loan's interest, after the free years (no interest then).
+ * Whole baht, rounded up so the last year is not short.
+ */
+export function loanRepaymentEstimate(debt: number): LoanRepaymentEstimate | undefined {
+  if (debt <= 0) return undefined;
+  const { graceYears, years } = S.loanRepayment;
+  const r: number = S.loanRepayment.interestPerYear;
+  const yearly = r === 0 ? debt / years : (debt * r) / (1 - (1 + r) ** -years);
+  return { graceYears, years, yearly: Math.ceil(yearly), monthly: Math.ceil(yearly / 12) };
+}

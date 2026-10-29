@@ -27,6 +27,7 @@
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
 import { applyEducationEffect, meetsEducationConditions, type EducationConditions, type EducationEffect } from './education';
+import { isValidActivityDays, isValidActivityHours, MAX_ACTIVITY_HOURS_PER_DAY, startActivities, type ActivityEffect } from './activities';
 import { applyStudyFunding } from './study';
 import { fitTimeBudget, hasTimeFor } from './time';
 import { setHabitFromEvent } from './lifestyle';
@@ -55,6 +56,7 @@ import {
 } from './work';
 import { applyContributions, clampStat, type Contribution } from './stats';
 import {
+  ACTIVITY_KINDS,
   END_REASONS,
   HABIT_LEVELS,
   HOME_IDS,
@@ -213,6 +215,8 @@ export interface EventEffects {
   spendingLevel?: SpendingLevel;
   /** D82: a place to study after Grade 12 is won: who pays the tuition (the program then waits to start). */
   study?: { funding: StudyFunding };
+  /** D85: lessons, nights out, caring for someone: set hours on set days, for some months. */
+  activities?: ActivityEffect[];
 }
 
 export interface EventChoice {
@@ -345,7 +349,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel', 'study'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel', 'study', 'activities'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -412,6 +416,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
       problems.push(`${at}: effects.study must be { "funding": one of ${STUDY_FUNDING.join(', ')} }`);
     }
   }
+  if (e.activities !== undefined) checkActivities(e.activities, at, problems);
   if (e.spendingLevel !== undefined && !(SPENDING_LEVELS as readonly unknown[]).includes(e.spendingLevel)) {
     problems.push(`${at}: effects.spendingLevel must be one of ${SPENDING_LEVELS.join(', ')}`);
   }
@@ -428,6 +433,26 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   for (const school of (isStringArray(e.setFlags) ? e.setFlags : []).filter((flag) => SCHOOL_FLAGS.includes(flag))) {
     const kept = SCHOOL_FLAGS.filter((other) => other !== school && !removed.includes(other));
     if (kept.length > 0) problems.push(`${at}: sets "${school}" but does not remove ${kept.join(', ')} (a child is in one school at a time)`);
+  }
+}
+
+/** D85: [{ kind, days, hours, months }]: each entry is a commitment on some days of the week. */
+function checkActivities(list: unknown, at: string, problems: string[]): void {
+  if (!Array.isArray(list) || list.length === 0) {
+    problems.push(`${at}: effects.activities must be a non-empty list of { "kind", "days", "hours", "months" }`);
+    return;
+  }
+  for (const entry of list) {
+    const where = `${at}: activities ${JSON.stringify(entry)}`;
+    if (!isRecord(entry)) {
+      problems.push(`${where}: must be an object`);
+      continue;
+    }
+    for (const key of unknownKeys(entry, ['kind', 'days', 'hours', 'months'])) problems.push(`${where}: unknown field "${key}"`);
+    if (!(ACTIVITY_KINDS as readonly unknown[]).includes(entry.kind)) problems.push(`${where}: kind must be one of ${ACTIVITY_KINDS.join(', ')}`);
+    if (!isValidActivityDays(entry.days)) problems.push(`${where}: days must be a list of different weekdays 0–6 (0 = Monday)`);
+    if (!isValidActivityHours(entry.hours)) problems.push(`${where}: hours must be above 0 and at most ${MAX_ACTIVITY_HOURS_PER_DAY}, in half hours`);
+    if (!isPositiveInteger(entry.months)) problems.push(`${where}: months must be a whole number above 0`);
   }
 }
 
@@ -515,13 +540,16 @@ function checkWorkEffect(effect: unknown, at: string, problems: string[]): void 
   if (effect.quit !== undefined && effect.quit !== true) problems.push(`${at}: effects.work.quit must be true`);
 }
 
-/** D77: { employed?, levels?, monthsIn? }. */
+/** D77: { employed?, levels?, monthsIn? }; D85: endedThisMonth. */
 function checkWorkCondition(c: unknown, at: string, problems: string[]): void {
   if (!isRecord(c) || Object.keys(c).length === 0) {
-    problems.push(`${at}: conditions.work must have at least one of employed, levels, monthsIn`);
+    problems.push(`${at}: conditions.work must have at least one of employed, levels, monthsIn, endedThisMonth`);
     return;
   }
-  for (const key of unknownKeys(c, ['employed', 'levels', 'monthsIn'])) problems.push(`${at}: conditions.work: unknown field "${key}"`);
+  for (const key of unknownKeys(c, ['employed', 'levels', 'monthsIn', 'endedThisMonth'])) problems.push(`${at}: conditions.work: unknown field "${key}"`);
+  if (c.endedThisMonth !== undefined && !(Array.isArray(c.endedThisMonth) && c.endedThisMonth.length > 0 && c.endedThisMonth.every(isWorkLevel))) {
+    problems.push(`${at}: conditions.work.endedThisMonth must be a non-empty list of work levels`);
+  }
   if (c.employed !== undefined && typeof c.employed !== 'boolean') problems.push(`${at}: conditions.work.employed must be true or false`);
   if (c.levels !== undefined && !(Array.isArray(c.levels) && c.levels.length > 0 && c.levels.every(isWorkLevel))) {
     problems.push(`${at}: conditions.work.levels must be a non-empty list of work levels`);
@@ -1222,7 +1250,9 @@ function applyEffects(
   if (person !== undefined) record.person = applyPersonEffect(state, person, effects.person ?? {}, ageInMonths);
   if (effects.education) applyEducationEffect(state, effects.education, ageInMonths);
   applyMoneyAndWork(state, effects, record);
-  // D83: a job, a school or a habit may have changed what the week has time for.
+  // D85: lessons, nights out, caring: hours on set days.
+  if (effects.activities) startActivities(state, eventId, effects.activities);
+  // D83: a job, a school, a habit or an activity may have changed what the week has time for.
   fitTimeBudget(state);
   state.eventHistory.push(record);
 }

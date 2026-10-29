@@ -11,10 +11,11 @@
  *   becomes a `LoadResult` the UI can show to the player.
  */
 
+import { isValidActivity } from '../engine/activities';
 import { ENROLLMENT_RESULTS, EXERCISE_LEVELS, HOME_IDS, SLEEP_LEVELS, JOB_IDS, PROGRAM_IDS, REGION_IDS, RELATIONS, SEXES, SPENDING_LEVELS, STUDY_FUNDING, WORK_LEVELS, WORK_RESULTS, type Enrollment, type GameState } from '../engine/types';
 
 export const SAVE_KEY = 'kalalaland.save';
-export const CURRENT_SAVE_VERSION = 17;
+export const CURRENT_SAVE_VERSION = 18;
 /**
  * Saves older than this cannot be upgraded; the player starts a new life.
  * D71 (version 10): the first and last name became a sex and a nickname.
@@ -57,7 +58,18 @@ const MIGRATIONS: Record<number, (state: unknown) => unknown> = {
   14: addSpending,
   15: addStudentLoan,
   16: addTimeCut,
+  17: addActivities,
 };
+
+/**
+ * 17 → 18 (D85): activities with set hours (lessons, nights out, caring).
+ * None is running in an older save: lessons signed up for before keep their
+ * shorter sleep until it ends, but not their hours in the calendar.
+ */
+function addActivities(state: unknown): unknown {
+  if (!isRecord(state)) return state;
+  return { ...state, activities: [] };
+}
 
 /**
  * 16 → 17 (D83): a job's exercise limit became the time budget. The exercise
@@ -256,6 +268,8 @@ export function isValidGameState(value: unknown): value is GameState {
     isRecord(value.habits) &&
     ['exercise', 'sleep', 'overtime', 'smoking', 'drinking'].every((habit) => typeof (value.habits as Record<string, unknown>)[habit] === 'string') &&
     isRecord(value.habitTimers) &&
+    Array.isArray(value.activities) &&
+    value.activities.every(isValidActivity) &&
     (value.timeCut === undefined ||
       (isRecord(value.timeCut) &&
         (value.timeCut.exercise === undefined || oneOf(EXERCISE_LEVELS, value.timeCut.exercise)) &&

@@ -138,6 +138,23 @@ describe('save / load', () => {
     expect(loadGame(storage)).toEqual({ status: 'ok', state: noJob });
   });
 
+  it('upgrades a version 17 save: no activity with set hours is running (D85)', () => {
+    const life = makeState({ ageInMonths: 16 * 12 });
+    const { activities: _activities, ...v17 } = life;
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 17, savedAt: '2026-10-29T00:00:00.000Z', state: v17 }));
+    expect(loadGame(storage)).toEqual({ status: 'ok', state: { ...life, activities: [] } });
+  });
+
+  it.each([
+    ['an unknown kind', { kind: 'party', days: [0], hours: 2, untilMonth: 200, eventId: 'x' }],
+    ['a day 7', { kind: 'lessons', days: [7], hours: 2, untilMonth: 200, eventId: 'x' }],
+    ['no hours', { kind: 'lessons', days: [0], hours: 0, untilMonth: 200, eventId: 'x' }],
+  ])('rejects a save with an activity with %s (D85)', (_label, activity) => {
+    const life = { ...makeState({ ageInMonths: 16 * 12 }), activities: [activity] };
+    storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: CURRENT_SAVE_VERSION, state: life }));
+    expect(loadGame(storage)).toEqual({ status: 'error', reason: 'corrupt' });
+  });
+
   it('upgrades a version 15 save: no student loan yet (D82)', () => {
     const life = createNewLife(21);
     const { studentLoan: _loan, ...money15 } = life.money;

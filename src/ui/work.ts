@@ -4,7 +4,7 @@
  */
 
 import { BALANCE } from '../data/balance';
-import { currentStudy, loanLiving, monthlyAllowance, tuitionPerTerm } from '../engine/study';
+import { currentStudy, isHigherEducation, loanLiving, loanRepaymentEstimate, monthlyAllowance, studyPlace, tuitionPerTerm, type LoanRepaymentEstimate } from '../engine/study';
 import { currentJob, familyMoneyStressParts, isPartTime, monthlySpending, monthlyWage, totalSpending } from '../engine/work';
 import type { GameState, StudyFunding, WorkChange, WorkLevel, WorkResult, YearMoney } from '../engine/types';
 import { t } from '../i18n/i18n';
@@ -196,13 +196,30 @@ export interface StudyMoney {
   allowance: number;
   loanLiving: number;
   debt: number;
+  /** D85: a place won and paid for, the studies not started yet: "ปริญญาตรี … · มหาวิทยาลัยรัฐชื่อดัง". */
+  waiting?: string;
+  /** D85: what the student loan would cost to repay (an estimate; nothing is repaid yet). */
+  repayment?: LoanRepaymentEstimate;
 }
 
-/** Undefined when there is nothing to say (not studying after Grade 12 and no student loan). */
+/**
+ * Undefined when there is nothing to say (not studying after Grade 12, not
+ * waiting to start, and no student loan).
+ */
 export function studyMoney(state: Pick<GameState, 'education' | 'flags' | 'residence' | 'environment' | 'money'>): StudyMoney | undefined {
   const study = currentStudy(state);
-  if (study === undefined && state.money.studentLoan === 0) return undefined;
+  // D85: between winning a place (and choosing who pays) and the first term, say so.
+  const next = state.education.next;
+  const place = studyPlace(state);
+  const waiting =
+    study === undefined && next !== undefined && isHigherEducation(next) && state.money.study !== undefined && place !== undefined
+      ? `${t(`program.${next}`)} · ${t(`studyPlace.${place}`)}`
+      : undefined;
+  if (study === undefined && waiting === undefined && state.money.studentLoan === 0) return undefined;
+  const repayment = loanRepaymentEstimate(state.money.studentLoan);
   return {
+    ...(waiting !== undefined ? { waiting, paidBy: state.money.study!.tuition } : {}),
+    ...(repayment !== undefined ? { repayment } : {}),
     ...(study !== undefined
       ? {
           studying: `${t(`program.${study.program}`)} · ${t(`studyPlace.${study.place}`)}`,

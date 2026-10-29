@@ -331,6 +331,12 @@ export interface WorkConditions {
   levels?: WorkLevel[];
   /** Months at the current job and level. */
   monthsIn?: { min?: number; max?: number };
+  /**
+   * D85: a job at one of these levels ran its course this month (the school
+   * break is over, or part-time work ended with the studies). The game ends
+   * those jobs by itself; an event tells the player.
+   */
+  endedThisMonth?: WorkLevel[];
 }
 
 export function meetsWorkConditions(state: Pick<GameState, 'work' | 'ageInMonths'>, c: WorkConditions): boolean {
@@ -342,6 +348,10 @@ export function meetsWorkConditions(state: Pick<GameState, 'work' | 'ageInMonths
     if (months === undefined) return false;
     if (c.monthsIn.min !== undefined && months < c.monthsIn.min) return false;
     if (c.monthsIn.max !== undefined && months > c.monthsIn.max) return false;
+  }
+  if (c.endedThisMonth !== undefined) {
+    const ended = state.work.history.find((job) => job.to === state.ageInMonths && job.result === 'ended');
+    if (ended === undefined || !c.endedThisMonth.includes(ended.level)) return false;
   }
   return true;
 }

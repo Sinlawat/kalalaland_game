@@ -91,7 +91,29 @@ export function FinanceDialog({ game, onSpendingChange, onClose }: Props) {
                 {study.loanLiving > 0 && <span className="muted small">{t('finance.study.loanLiving', { amount: formatMoney(study.loanLiving) })}</span>}
               </li>
             )}
-            {study.debt > 0 && <li className="muted small">{t('finance.study.debt', { amount: formatMoney(study.debt) })}</li>}
+            {study.waiting !== undefined && study.paidBy !== undefined && (
+              <li>
+                <strong>{t('finance.study.waiting', { studying: study.waiting })}</strong>
+                <span>{t(`finance.study.by.${study.paidBy}`)}</span>
+              </li>
+            )}
+            {/* D85: the student loan and what repaying it would cost (an estimate: nothing is repaid yet). */}
+            {study.debt > 0 && (
+              <li>
+                <strong>{t('finance.study.debt', { amount: formatMoney(study.debt) })}</strong>
+                {study.repayment !== undefined && (
+                  <span>
+                    {t('finance.study.repayment', {
+                      grace: study.repayment.graceYears,
+                      years: study.repayment.years,
+                      yearly: formatMoney(study.repayment.yearly),
+                      monthly: formatMoney(study.repayment.monthly),
+                    })}
+                  </span>
+                )}
+                <span className="muted small">{t('finance.study.repaymentNote')}</span>
+              </li>
+            )}
           </ul>
         </>
       )}

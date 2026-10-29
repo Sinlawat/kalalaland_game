@@ -81,6 +81,7 @@ export function createNewLife(seed: number): GameState {
     eventHistory: [],
     pendingChoices: [],
     habitTimers: {},
+    activities: [],
     yearLog: {},
     yearHabits: [],
     history: [],
