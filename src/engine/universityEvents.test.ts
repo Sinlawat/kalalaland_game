@@ -71,7 +71,8 @@ describe('D82 phase 2a: money short (no overlap, no gap)', () => {
 
   it('a student with no job and no money in a dorm runs short, and the event offers work', () => {
     const state = student('top_public', 0, { residence: { regionId: 'rural', homeId: 'parents' }, environment: { familyWealth: 20 } });
-    state.money.study = { tuition: 'parents', livingLoan: false };
+    // D86: parents who pay the tuition pay the living too; a family this poor takes the student loan.
+    state.money.study = { tuition: 'loan', livingLoan: true };
     state.money.cash = 0;
     for (let i = 0; i < 2; i++) {
       state.ageInMonths += 1;

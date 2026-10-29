@@ -725,6 +725,21 @@
       },
       "setFlags": [
         "helps_family_business"
+      ],
+      "activities": [
+        {
+          "kind": "chores",
+          "days": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "hours": 2,
+          "untilAge": 18,
+          "morning": true
+        }
       ]
     }
   },
@@ -1196,6 +1211,9 @@
           "who": "best_friend",
           "tag": "other_school"
         }
+      ],
+      "endActivities": [
+        "family_market_helper"
       ]
     }
   },
@@ -1275,6 +1293,9 @@
           "who": "best_friend",
           "tag": "other_school"
         }
+      ],
+      "endActivities": [
+        "family_market_helper"
       ]
     }
   },
@@ -9756,18 +9777,55 @@
     },
     "frequency": "guaranteed",
     "once": false,
-    "cooldownMonths": 3,
+    "cooldownMonths": 6,
     "choices": [
       {
         "id": "frugal",
         "effects": {
           "spendingLevel": "frugal"
+        },
+        "conditions": {
+          "spendingLevels": [
+            "normal",
+            "comfortable"
+          ]
         }
       },
       {
         "id": "give_less",
         "effects": {
           "familyShare": 0
+        },
+        "conditions": {
+          "familyShare": {
+            "min": 1
+          }
+        }
+      },
+      {
+        "id": "more_shifts",
+        "conditions": {
+          "work": {
+            "levels": [
+              "weekend"
+            ]
+          }
+        },
+        "effects": {
+          "work": {
+            "level": "daily"
+          }
+        }
+      },
+      {
+        "id": "living_loan",
+        "conditions": {
+          "livingLoanAvailable": true
+        },
+        "effects": {
+          "study": {
+            "livingLoan": true
+          }
         }
       },
       {
@@ -9785,6 +9843,14 @@
           "money": 2000,
           "environment": {
             "familyWarmth": -2
+          }
+        }
+      },
+      {
+        "id": "endure",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
           }
         }
       }
@@ -10321,12 +10387,18 @@
     },
     "frequency": "guaranteed",
     "once": false,
-    "cooldownMonths": 3,
+    "cooldownMonths": 6,
     "choices": [
       {
         "id": "frugal",
         "effects": {
           "spendingLevel": "frugal"
+        },
+        "conditions": {
+          "spendingLevels": [
+            "normal",
+            "comfortable"
+          ]
         }
       },
       {
@@ -10352,6 +10424,17 @@
         }
       },
       {
+        "id": "living_loan",
+        "conditions": {
+          "livingLoanAvailable": true
+        },
+        "effects": {
+          "study": {
+            "livingLoan": true
+          }
+        }
+      },
+      {
         "id": "ask_parents",
         "conditions": {
           "stats": [
@@ -10366,6 +10449,14 @@
           "money": 2000,
           "environment": {
             "familyWarmth": -2
+          }
+        }
+      },
+      {
+        "id": "endure",
+        "effects": {
+          "stats": {
+            "mentalHealth": -2
           }
         }
       }

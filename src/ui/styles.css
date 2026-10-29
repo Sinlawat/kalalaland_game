@@ -670,6 +670,8 @@ p { margin: 0 0 8px; }
   --sched-lessons: #8bb174;
   --sched-care: #a77b9b;
   --sched-friends: #2f9c95;
+  /* D86: helping with the family's work. */
+  --sched-chores: #b98b5e;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -683,6 +685,7 @@ p { margin: 0 0 8px; }
     --sched-lessons: #6f9a55;
     --sched-care: #8c6382;
     --sched-friends: #5cc2ba;
+    --sched-chores: #c99a6c;
   }
 }
 .schedule--sleep { background: var(--sched-sleep); }
@@ -695,6 +698,7 @@ p { margin: 0 0 8px; }
 .schedule--lessons { background: var(--sched-lessons); }
 .schedule--care { background: var(--sched-care); }
 .schedule--friends { background: var(--sched-friends); }
+.schedule--chores { background: var(--sched-chores); }
 .schedule-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
 .schedule-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 12px; }
 .schedule-grid__head { text-align: center; }

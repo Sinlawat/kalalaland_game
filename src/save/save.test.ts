@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { lockReasons } from '../engine/events';
 import { advanceOneMonth, advanceUntilStop } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
 import { makeState } from '../engine/testUtils';
@@ -93,7 +94,8 @@ describe('save / load', () => {
 
   it('upgrades a version 11 save: education rebuilt from the school start (D74)', () => {
     let life = createNewLife(21);
-    while (life.ageInMonths < 16 * 12) life = advanceUntilStop(life, { chooser: (_s, e) => e.choices![0]!.id }).state;
+    // The first choice that is open (D85: a full week can lock one that gives more sleep).
+    while (life.ageInMonths < 16 * 12) life = advanceUntilStop(life, { chooser: (s, e) => e.choices!.find((c) => lockReasons(c, s).length === 0)!.id }).state;
     const { education: _education, ...v11 } = life;
     const start = life.eventHistory.find((r) => r.id.startsWith('school_start_'))!.ageInMonths;
     storage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: 11, savedAt: '2026-10-27T00:00:00.000Z', state: v11 }));

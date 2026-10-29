@@ -2,7 +2,7 @@ import type { HabitKey } from '../engine/types';
 import { t } from '../i18n/i18n';
 import { changeClass, formatChange, formatMoney, formatMoneyChange } from './format';
 import { residenceLabel } from './residence';
-import type { TimelineEntry, TimelineYear } from './timeline';
+import { activityText, type TimelineEntry, type TimelineYear } from './timeline';
 import { isPartTime } from '../engine/work';
 import { overtimeLabels, workChangeText } from './work';
 
@@ -63,6 +63,11 @@ export function TimelineYears({ years }: { years: TimelineYear[] }) {
                       </p>
                     );
                   })}
+                {entry.activities?.map((activity) => (
+                  <p key={`activity-${activity.kind}-${activity.months}`} className="muted small">
+                    {activityText(activity, entry.ageInMonths)}
+                  </p>
+                ))}
                 {entry.residenceChange && (
                   <p className="muted small">
                     {t('timeline.residenceChange', {

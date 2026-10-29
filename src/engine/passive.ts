@@ -154,6 +154,8 @@ function physicalHealthContributions(state: GameState, age: number): Contributio
     ...physicalLifestyleEffects(state).map(
       (effect): Contribution => ({ target: 'physicalHealth', source: effect.source, amount: perMonth(effect.yearly) }),
     ),
+    // D86: last month the money did not cover the spending: eating less.
+    ...(state.money.shortfall > 0 ? [{ target: 'physicalHealth' as const, source: 'money.short', amount: perMonth(BALANCE.work.shortMonthPerYear.physicalHealth) }] : []),
   ];
 }
 
@@ -176,6 +178,8 @@ function mentalHealthContributions(state: GameState, age: number): Contribution[
   // D80: how freely they spend their own money (only while they have an income to spend).
   const spending = BALANCE.work.spendingLevels[state.money.spendingLevel].mentalHealthPerYear;
   if (spending !== 0 && currentJob(state) !== undefined) add(`money.spending.${state.money.spendingLevel}`, spending);
+  // D86: last month the money did not cover the spending.
+  if (state.money.shortfall > 0) add('money.short', BALANCE.work.shortMonthPerYear.mentalHealth);
   const warmthWeight = age < 18 ? 1 : b.familyWarmthAdultWeight;
   add(
     'env.familyWarmth',

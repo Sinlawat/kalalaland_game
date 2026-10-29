@@ -158,3 +158,19 @@ describe('D85: activities in the calendar', () => {
     expect(days.sleep).toBeCloseTo(engine.sleep);
   });
 });
+
+describe('D86: what comes before the day', () => {
+  it('the morning market: up at 04:30, the stall 04:30–06:30, then ready for school', () => {
+    const state = student({ habits: { exercise: 'none', sleep: 'short' } });
+    startActivities(state, 'family_market_helper', [{ kind: 'chores', days: [0, 1, 2, 3, 4], hours: 2, untilAge: 18, morning: true }]);
+    expect(wakingDay(state, 0).slice(0, 3).map((b) => `${b.activity} ${clock(b.start)}–${clock(b.end)}`)).toEqual([
+      'chores 04:30–06:30',
+      'essentials 06:30–07:30',
+      'commute 07:30–08:00',
+    ]);
+    // Sunday night ends earlier: Monday starts at 04:30.
+    expect(wakingDay(state, 6).at(-1)).toEqual({ start: 22.5, end: 28.5, activity: 'sleep' });
+    expect(wakingDay(state, 5).find((b) => b.activity === 'chores')).toBeUndefined();
+  });
+});
+

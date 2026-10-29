@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { simulateWholeLife } from '../engine/game';
 import { createNewLife } from '../engine/newLife';
 import type { GameState, YearSummary } from '../engine/types';
-import { buildTimeline, countEntries, splitRecent, withoutTraitChips, type TimelineYear } from './timeline';
+import { activityText, buildTimeline, countEntries, splitRecent, withoutTraitChips, type TimelineYear } from './timeline';
 
 const ZERO_SNAPSHOT: YearSummary['snapshot'] = {
   physicalHealth: 0,
@@ -239,3 +239,10 @@ describe('withoutTraitChips (D35: traits secret before Grade 1)', () => {
   });
 });
 
+
+describe('D86: the activities an event started', () => {
+  it('reads as hours a week and months, or until an age for a long one', () => {
+    expect(activityText({ kind: 'lessons', hoursPerWeek: 10, months: 3 }, 14 * 12)).toBe('กิจกรรม: เรียนพิเศษ ติว ซ้อม 10 ชม./สัปดาห์ (3 เดือน)');
+    expect(activityText({ kind: 'chores', hoursPerWeek: 10, months: 96 }, 10 * 12)).toBe('กิจกรรม: ช่วยงานที่บ้าน 10 ชม./สัปดาห์ (ถึงอายุ 18 ปี)');
+  });
+});

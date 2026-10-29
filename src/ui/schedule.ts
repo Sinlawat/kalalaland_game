@@ -13,10 +13,10 @@ import { currentEnrollment, programDef } from '../engine/education';
 import { OWN_LIFESTYLE_FROM_MONTH } from '../engine/lifestyle';
 import { studyPlace } from '../engine/study';
 import { fits, TIME_HABITS, weekHours, type TimeHabit, type WeekHours } from '../engine/time';
-import type { GameState } from '../engine/types';
+import { ACTIVITY_KINDS, type GameState } from '../engine/types';
 import { currentJob } from '../engine/work';
 
-export const ACTIVITIES = ['sleep', 'essentials', 'commute', 'study', 'work', 'lessons', 'care', 'exercise', 'friends', 'free'] as const;
+export const ACTIVITIES = ['sleep', 'chores', 'essentials', 'commute', 'study', 'work', 'lessons', 'care', 'exercise', 'friends', 'free'] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 
 /** A stretch of one day, in hours from midnight (0–24; halves allowed; a waking day runs past 24 into the next morning). */
@@ -137,10 +137,13 @@ function dayUntilEvening(state: ScheduleSource, weekday: number, wake: number): 
     blocks.push({ start, end, activity });
     cursor = end;
   };
+  // D86: what comes before the day (the morning market), right after getting up.
+  const early = activityHoursOn(state, weekday, true);
+  for (const activity of ACTIVITY_KINDS) if (early[activity] > 0) add(cursor, cursor + early[activity], activity);
   add(cursor, cursor + 1, 'essentials');
   for (const block of fixed) add(Math.max(block.start, cursor), Math.max(block.start, cursor) + (block.end - block.start), block.activity);
   const extra = activityHoursOn(state, weekday);
-  for (const activity of ['lessons', 'care'] as const) if (extra[activity] > 0) add(cursor, cursor + extra[activity], activity);
+  for (const activity of ['lessons', 'care', 'chores'] as const) if (extra[activity] > 0) add(cursor, cursor + extra[activity], activity);
   // A free day, or one that ends early (university classes end at 14): the evening starts at the usual time.
   if (cursor < 16) add(17, 17, 'free');
   if (exercisesOn(state, weekday)) add(cursor, cursor + 1, 'exercise');
@@ -157,7 +160,9 @@ function dayUntilEvening(state: ScheduleSource, weekday: number, wake: number): 
  */
 function wakeOn(state: ScheduleSource, weekday: number): number {
   const fixed = fixedBlocks(state, weekday);
-  const usual = usualWake(fixed, weekday);
+  // D86: up earlier for what comes before the day (the morning market before school).
+  const early = Object.values(activityHoursOn(state, weekday, true)).reduce((sum, hours) => sum + hours, 0);
+  const usual = usualWake(fixed, weekday) - early;
   if (fixed.length > 0) return usual;
   const yesterday = (weekday + 6) % 7;
   const lastEvening = dayUntilEvening(state, yesterday, usualWake(fixedBlocks(state, yesterday), yesterday)).end;

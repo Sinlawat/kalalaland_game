@@ -281,6 +281,12 @@ export const BALANCE = {
      * (no per-drinker figure found).
      */
     addictionSpending: { smoking: 1800, drinking: 2000 } satisfies Record<AddictionHabit, number>,
+    /**
+     * D86: a month the character's money did not cover their spending (they
+     * ate less, went without): per year of such months. Estimates, tuned by
+     * simulation; the money-short question comes back every 6 months.
+     */
+    shortMonthPerYear: { mentalHealth: -3, physicalHealth: -1.5 },
     /** D80: cost of living by area (real price data: suburb = 1). */
     regionCostFactor: { city: 1.25, suburb: 1, rural: 0.58 } satisfies Record<RegionId, number>,
     /** D80: each spending level: how much of the "normal" amounts, and its yearly effect on mental health. */

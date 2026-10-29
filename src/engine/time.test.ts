@@ -24,6 +24,7 @@ describe('D83: the hours of a week', () => {
       lessons: 0,
       friends: 0,
       care: 0,
+      chores: 0,
       essentials: 21,
       sleep: 63,
       exercise: 5,

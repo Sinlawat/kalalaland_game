@@ -60,7 +60,10 @@ describe('parseEvents (data validation)', () => {
         `event.${e.id}.choice.${c.id}`,
         `event.${e.id}.result.${c.id}`,
         // A flag condition cannot explain itself: the writer must say why the choice is locked.
-        ...(c.conditions?.flagsAll || c.conditions?.flagsAny || c.conditions?.flagsNone ? [`event.${e.id}.choice.${c.id}.locked`] : []),
+        // Flags and (D86) the money situation cannot explain themselves: the writer must.
+        ...(c.conditions?.flagsAll || c.conditions?.flagsAny || c.conditions?.flagsNone || c.conditions?.spendingLevels || c.conditions?.familyShare || c.conditions?.work || c.conditions?.livingLoanAvailable
+          ? [`event.${e.id}.choice.${c.id}.locked`]
+          : []),
       ]),
     ]);
     expect(keys.filter((k) => !hasMessage(k))).toEqual([]);
@@ -170,7 +173,7 @@ describe('parseEvents (data validation)', () => {
         ]),
         'at least one choice must have no conditions',
       ],
-      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats, flags, lifestyle and money'],
+      ['an age condition on a choice', choiceEvent([open('a'), { id: 'b', conditions: { ageMin: 3 }, effects: {} }]), 'may only test stats, flags, lifestyle, money and the money situation'],
       ['an unsupported trait', choiceEvent([open('a'), open('b', { traits: { charm: 5 } as never })]), 'unsupported trait "charm"'],
       ['a habit level that does not exist', choiceEvent([open('a'), open('b', { habits: { exercise: 'daily' } as never })]), 'has no level "daily"'],
     ])('rejects %s', (_label, raw, expected) => {

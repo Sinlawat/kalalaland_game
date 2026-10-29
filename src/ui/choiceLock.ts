@@ -4,8 +4,8 @@
  *
  * Whose words are used, first match wins:
  * 1. `event.<id>.choice.<choice>.locked`: the writer explains the whole lock
- *    in one sentence (required for flag conditions, which cannot explain
- *    themselves; optional otherwise, e.g. house rules).
+ *    in one sentence (required for flag conditions and D86's money
+ *    situation, which cannot explain themselves; optional otherwise).
  * 2. `event.<id>.choice.<choice>.locked.<stat>`: the writer explains one stat
  *    condition (D73, e.g. mental health too low to apologise first). Used when
  *    a choice has several conditions and each needs its own reason: a single
@@ -27,6 +27,7 @@ type Params = Record<string, string>;
 function automaticReason(game: GameState, reason: LockReason): string {
   switch (reason.kind) {
     case 'flag':
+    case 'situation':
       return t('choice.locked.generic');
     case 'habit':
       return t('choice.locked.habit', { habit: t(`habit.${reason.habit}`), level: t(`habit.${reason.habit}.${reason.level}`) });

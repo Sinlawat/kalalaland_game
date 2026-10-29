@@ -45,6 +45,8 @@ export interface WeekHours {
   lessons: number;
   friends: number;
   care: number;
+  /** D86: helping with the family's work. */
+  chores: number;
   essentials: number;
   sleep: number;
   exercise: number;
@@ -81,9 +83,9 @@ export function weekHours(state: HoursSource, habits: Pick<Habits, TimeHabit>): 
   const adult = state.ageInMonths >= T.sleepAdultFromAge * 12;
   const sleep = habits.sleep === 'enough' ? (adult ? T.sleep.enoughAdult : T.sleep.enoughChild) : T.sleep.short;
   const exercise = T.exercise[habits.exercise];
-  const { lessons, friends, care } = activityHours(state);
-  const used = study + commute + work + lessons + friends + care + T.essentials + sleep + exercise;
-  return { study, commute, work, lessons, friends, care, essentials: T.essentials, sleep, exercise, free: T.hoursPerWeek - used };
+  const { lessons, friends, care, chores } = activityHours(state);
+  const used = study + commute + work + lessons + friends + care + chores + T.essentials + sleep + exercise;
+  return { study, commute, work, lessons, friends, care, chores, essentials: T.essentials, sleep, exercise, free: T.hoursPerWeek - used };
 }
 
 export function fits(week: WeekHours): boolean {

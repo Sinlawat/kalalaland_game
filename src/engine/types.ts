@@ -189,6 +189,8 @@ export interface EventRecord {
   moneyChange?: number;
   /** D77: the job the event started, changed or ended. */
   workChange?: WorkChange;
+  /** D86: the activities with set hours the event started: hours a week, and for how many months. */
+  activities?: { kind: ActivityKind; hoursPerWeek: number; months: number }[];
 }
 
 /** D77: a job change on an event record: before and after (absent = no job). */
@@ -346,10 +348,11 @@ export interface Education {
 // ── Activities with set hours (D85) ─────────────────────────────────────────
 /**
  * What a commitment is: lessons (tutoring, a cram course, practice, a lab),
- * time with friends (nights out, games), or caring for someone at home.
+ * time with friends (nights out, games), caring for someone at home, or
+ * (D86) helping with the family's work (the stall at the morning market).
  * Homework and reading on one's own are not activities (D83: not counted).
  */
-export const ACTIVITY_KINDS = ['lessons', 'friends', 'care'] as const;
+export const ACTIVITY_KINDS = ['lessons', 'friends', 'care', 'chores'] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 /**
@@ -364,6 +367,8 @@ export interface Activity {
   hours: number;
   untilMonth: number;
   eventId: string;
+  /** D86: before the day starts (the morning market before school); otherwise after the day's fixed parts. */
+  morning?: true;
 }
 
 // ── Work and money (D77, finance phase 1) ───────────────────────────────────

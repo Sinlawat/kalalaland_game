@@ -11,14 +11,26 @@
 
 import { ACTIVITY_KINDS, type Activity, type ActivityKind, type GameState } from './types';
 
-/** events.json `effects.activities`: one entry per kind of day (e.g. evenings, and longer on weekends). */
+/**
+ * events.json `effects.activities`: one entry per kind of day (e.g. evenings,
+ * and longer on weekends). Exactly one of `months` (for some months) or
+ * `untilAge` (D86: until a birthday, e.g. helping at the market until 18).
+ */
 export interface ActivityEffect {
   kind: ActivityKind;
   /** Days of the week, 0 = Monday … 6 = Sunday. */
   days: number[];
   /** Hours on each of those days (halves allowed). */
   hours: number;
-  months: number;
+  months?: number;
+  untilAge?: number;
+  /** D86: before the day starts (the character gets up earlier for it). */
+  morning?: true;
+}
+
+/** When an activity started now ends (character's age in months). */
+export function activityEnd(state: Pick<GameState, 'ageInMonths'>, effect: ActivityEffect): number {
+  return effect.untilAge !== undefined ? effect.untilAge * 12 : state.ageInMonths + (effect.months ?? 0);
 }
 
 /** Longest day an activity may take: more would not leave room for sleep and school. */
@@ -32,8 +44,35 @@ export const MAX_ACTIVITY_HOURS_PER_DAY = 8;
 export function startActivities(state: GameState, eventId: string, effects: readonly ActivityEffect[]): void {
   state.activities = state.activities.filter((activity) => activity.eventId !== eventId);
   for (const effect of effects) {
-    state.activities.push({ kind: effect.kind, days: [...effect.days], hours: effect.hours, untilMonth: state.ageInMonths + effect.months, eventId });
+    const untilMonth = activityEnd(state, effect);
+    if (untilMonth <= state.ageInMonths) continue;
+    state.activities.push({
+      kind: effect.kind,
+      days: [...effect.days],
+      hours: effect.hours,
+      untilMonth,
+      eventId,
+      ...(effect.morning ? { morning: true as const } : {}),
+    });
   }
+}
+
+/** D86: ends the activities some events started (e.g. the market help, when the child moves to the grandparents). */
+export function endActivities(state: GameState, eventIds: readonly string[]): void {
+  state.activities = state.activities.filter((activity) => !eventIds.includes(activity.eventId));
+}
+
+/** D86: the activities an event started, for its record: kind, hours a week, months. */
+export function activitiesRecord(state: Pick<GameState, 'activities' | 'ageInMonths'>, eventId: string): { kind: ActivityKind; hoursPerWeek: number; months: number }[] {
+  return state.activities
+    .filter((activity) => activity.eventId === eventId)
+    .reduce<{ kind: ActivityKind; hoursPerWeek: number; months: number }[]>((list, activity) => {
+      const months = activity.untilMonth - state.ageInMonths;
+      const same = list.find((entry) => entry.kind === activity.kind && entry.months === months);
+      if (same) same.hoursPerWeek += activity.hours * activity.days.length;
+      else list.push({ kind: activity.kind, hoursPerWeek: activity.hours * activity.days.length, months });
+      return list;
+    }, []);
 }
 
 /** Activities whose months are over end (start of the month, like the lifestyle timers). */
@@ -48,10 +87,12 @@ export function activityHours(state: Pick<GameState, 'activities'>): Record<Acti
   return result;
 }
 
-/** Hours of each kind of activity on one day of the week (for the calendar). */
-export function activityHoursOn(state: Pick<GameState, 'activities'>, weekday: number): Record<ActivityKind, number> {
+/** Hours of each kind of activity on one day of the week (for the calendar); `morning` picks those before the day starts. */
+export function activityHoursOn(state: Pick<GameState, 'activities'>, weekday: number, morning = false): Record<ActivityKind, number> {
   const result = Object.fromEntries(ACTIVITY_KINDS.map((kind) => [kind, 0])) as Record<ActivityKind, number>;
-  for (const activity of state.activities) if (activity.days.includes(weekday)) result[activity.kind] += activity.hours;
+  for (const activity of state.activities) {
+    if (activity.days.includes(weekday) && (activity.morning === true) === morning) result[activity.kind] += activity.hours;
+  }
   return result;
 }
 
@@ -72,6 +113,7 @@ export function isValidActivity(value: unknown): value is Activity {
     isValidActivityDays(a.days) &&
     isValidActivityHours(a.hours) &&
     Number.isInteger(a.untilMonth) &&
-    typeof a.eventId === 'string'
+    typeof a.eventId === 'string' &&
+    (a.morning === undefined || a.morning === true)
   );
 }

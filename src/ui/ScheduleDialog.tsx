@@ -18,13 +18,14 @@ const SUMMARY_KEYS: Record<Activity, keyof ReturnType<typeof weekSummary>['hours
   work: 'work',
   lessons: 'lessons',
   care: 'care',
+  chores: 'chores',
   exercise: 'exercise',
   friends: 'friends',
   free: 'free',
 };
 
 /** D85: activities only some lives have are listed while they take hours. */
-const SOMETIMES: readonly Activity[] = ['lessons', 'care', 'friends'];
+const SOMETIMES: readonly Activity[] = ['chores', 'lessons', 'care', 'friends'];
 
 /** One day as a bar from midnight (top) to midnight (bottom). */
 function DayBar({ game, weekday }: { game: GameState; weekday: number }) {

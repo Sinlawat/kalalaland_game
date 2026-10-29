@@ -27,8 +27,8 @@
 import { BALANCE } from '../data/balance';
 import eventsJson from '../data/events.json';
 import { applyEducationEffect, meetsEducationConditions, type EducationConditions, type EducationEffect } from './education';
-import { isValidActivityDays, isValidActivityHours, MAX_ACTIVITY_HOURS_PER_DAY, startActivities, type ActivityEffect } from './activities';
-import { applyStudyFunding } from './study';
+import { activitiesRecord, endActivities, isValidActivityDays, isValidActivityHours, MAX_ACTIVITY_HOURS_PER_DAY, startActivities, type ActivityEffect } from './activities';
+import { applyStudyFunding, canTakeLivingLoan, takeLivingLoan } from './study';
 import { fitTimeBudget, hasTimeFor } from './time';
 import { setHabitFromEvent } from './lifestyle';
 import {
@@ -213,16 +213,38 @@ export interface EventEffects {
   familyRelief?: { amount: number; months: number };
   /** D80: how freely the character spends from now on. */
   spendingLevel?: SpendingLevel;
-  /** D82: a place to study after Grade 12 is won: who pays the tuition (the program then waits to start). */
-  study?: { funding: StudyFunding };
+  /**
+   * D82: a place to study after Grade 12 is won: who pays the tuition (the
+   * program then waits to start). D86: `livingLoan` takes the student loan's
+   * living allowance on its own (a student short of money).
+   */
+  study?: { funding?: StudyFunding; livingLoan?: true };
+  /** D86: ends the activities these events started (e.g. moving away ends the market help). */
+  endActivities?: string[];
   /** D85: lessons, nights out, caring for someone: set hours on set days, for some months. */
   activities?: ActivityEffect[];
+}
+
+/**
+ * D86: what only a choice may test, beyond the character: the money
+ * situation. A choice that would change nothing (spend less when already
+ * frugal) is locked with the writer's reason (`.locked`, like flags).
+ */
+export interface ChoiceConditions extends CharacterConditions {
+  /** The spending level now is one of these. */
+  spendingLevels?: SpendingLevel[];
+  /** At least this percent of the wage goes to the family now. */
+  familyShare?: { min: number };
+  /** The job now (e.g. weekends only, to ask for more shifts). */
+  work?: WorkConditions;
+  /** A student in a dorm who could still take the student loan's living allowance. */
+  livingLoanAvailable?: true;
 }
 
 export interface EventChoice {
   id: string;
   /** Absent = always available. */
-  conditions?: CharacterConditions;
+  conditions?: ChoiceConditions;
   effects: EventEffects;
 }
 
@@ -349,7 +371,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
     problems.push(`${at}: effects must be an object (use {} for no effect)`);
     return;
   }
-  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel', 'study', 'activities'])) {
+  for (const key of unknownKeys(e, ['stats', 'traits', 'environment', 'habits', 'residence', 'setFlags', 'removeFlags', 'person', 'friends', 'education', 'money', 'work', 'familyShare', 'familyRelief', 'spendingLevel', 'study', 'activities', 'endActivities'])) {
     problems.push(`${at}: unknown effect "${key}"`);
   }
   for (const [field, allowed] of [
@@ -412,9 +434,14 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
   }
   if (e.study !== undefined) {
     const study = e.study;
-    if (!isRecord(study) || !(STUDY_FUNDING as readonly unknown[]).includes(study.funding) || unknownKeys(study, ['funding']).length > 0) {
-      problems.push(`${at}: effects.study must be { "funding": one of ${STUDY_FUNDING.join(', ')} }`);
+    const fundingOk = isRecord(study) && (study.funding === undefined || (STUDY_FUNDING as readonly unknown[]).includes(study.funding));
+    const livingOk = isRecord(study) && (study.livingLoan === undefined || study.livingLoan === true);
+    if (!isRecord(study) || !fundingOk || !livingOk || (study.funding === undefined && study.livingLoan === undefined) || unknownKeys(study, ['funding', 'livingLoan']).length > 0) {
+      problems.push(`${at}: effects.study must be { "funding"?: one of ${STUDY_FUNDING.join(', ')}, "livingLoan"?: true } with at least one`);
     }
+  }
+  if (e.endActivities !== undefined && (!isStringArray(e.endActivities) || e.endActivities.length === 0)) {
+    problems.push(`${at}: effects.endActivities must be a non-empty list of event ids`);
   }
   if (e.activities !== undefined) checkActivities(e.activities, at, problems);
   if (e.spendingLevel !== undefined && !(SPENDING_LEVELS as readonly unknown[]).includes(e.spendingLevel)) {
@@ -439,7 +466,7 @@ function checkEffects(e: unknown, at: string, check: Checker): void {
 /** D85: [{ kind, days, hours, months }]: each entry is a commitment on some days of the week. */
 function checkActivities(list: unknown, at: string, problems: string[]): void {
   if (!Array.isArray(list) || list.length === 0) {
-    problems.push(`${at}: effects.activities must be a non-empty list of { "kind", "days", "hours", "months" }`);
+    problems.push(`${at}: effects.activities must be a non-empty list of { "kind", "days", "hours", "months" | "untilAge", "morning"? }`);
     return;
   }
   for (const entry of list) {
@@ -448,11 +475,14 @@ function checkActivities(list: unknown, at: string, problems: string[]): void {
       problems.push(`${where}: must be an object`);
       continue;
     }
-    for (const key of unknownKeys(entry, ['kind', 'days', 'hours', 'months'])) problems.push(`${where}: unknown field "${key}"`);
+    for (const key of unknownKeys(entry, ['kind', 'days', 'hours', 'months', 'untilAge', 'morning'])) problems.push(`${where}: unknown field "${key}"`);
+    if (entry.morning !== undefined && entry.morning !== true) problems.push(`${where}: morning must be true`);
+    if ((entry.months === undefined) === (entry.untilAge === undefined)) problems.push(`${where}: needs exactly one of months or untilAge`);
+    if (entry.untilAge !== undefined && !isPositiveInteger(entry.untilAge)) problems.push(`${where}: untilAge must be a whole number of years`);
     if (!(ACTIVITY_KINDS as readonly unknown[]).includes(entry.kind)) problems.push(`${where}: kind must be one of ${ACTIVITY_KINDS.join(', ')}`);
     if (!isValidActivityDays(entry.days)) problems.push(`${where}: days must be a list of different weekdays 0–6 (0 = Monday)`);
     if (!isValidActivityHours(entry.hours)) problems.push(`${where}: hours must be above 0 and at most ${MAX_ACTIVITY_HOURS_PER_DAY}, in half hours`);
-    if (!isPositiveInteger(entry.months)) problems.push(`${where}: months must be a whole number above 0`);
+    if (entry.months !== undefined && !isPositiveInteger(entry.months)) problems.push(`${where}: months must be a whole number above 0`);
   }
 }
 
@@ -712,6 +742,18 @@ function checkChanceBy(item: Record<string, unknown>, at: string, problems: stri
   }
 }
 
+/** D86: the money situation a choice may test. */
+function checkChoiceSituation(c: Record<string, unknown>, at: string, problems: string[]): void {
+  if (c.spendingLevels !== undefined && !(Array.isArray(c.spendingLevels) && c.spendingLevels.length > 0 && c.spendingLevels.every((l) => (SPENDING_LEVELS as readonly unknown[]).includes(l)))) {
+    problems.push(`${at}: conditions.spendingLevels must be a non-empty list of ${SPENDING_LEVELS.join(', ')}`);
+  }
+  if (c.familyShare !== undefined && !(isRecord(c.familyShare) && isPositiveInteger(c.familyShare.min) && unknownKeys(c.familyShare, ['min']).length === 0)) {
+    problems.push(`${at}: conditions.familyShare must be { "min": whole percent above 0 }`);
+  }
+  if (c.work !== undefined) checkWorkCondition(c.work, at, problems);
+  if (c.livingLoanAvailable !== undefined && c.livingLoanAvailable !== true) problems.push(`${at}: conditions.livingLoanAvailable must be true`);
+}
+
 function checkChoices(choices: unknown, at: string, check: Checker): void {
   const { problems } = check;
   if (!Array.isArray(choices) || choices.length < 2) {
@@ -735,10 +777,11 @@ function checkChoices(choices: unknown, at: string, check: Checker): void {
     if (choice.conditions === undefined) alwaysAvailable += 1;
     else if (!isRecord(choice.conditions)) problems.push(`${where}: conditions must be an object`);
     else {
-      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'money'])) {
-        problems.push(`${where}: unknown condition "${key}" (a choice may only test stats, flags, lifestyle and money)`);
+      for (const key of unknownKeys(choice.conditions, ['stats', 'flagsAll', 'flagsAny', 'flagsNone', 'habits', 'money', 'spendingLevels', 'familyShare', 'work', 'livingLoanAvailable'])) {
+        problems.push(`${where}: unknown condition "${key}" (a choice may only test stats, flags, lifestyle, money and the money situation)`);
       }
       checkCharacterConditions(choice.conditions, where, check);
+      checkChoiceSituation(choice.conditions, where, problems);
     }
     checkEffects(choice.effects, where, check);
   });
@@ -868,6 +911,15 @@ export function parseEvents(raw: unknown): EventDef[] {
     checkAbout(item, at, problems);
   });
 
+  // D86: effects.endActivities names the events whose activities end.
+  raw.forEach((item: unknown) => {
+    if (!isRecord(item)) return;
+    const at = `event "${String(item.id)}"`;
+    const all = [item.effects, ...(Array.isArray(item.choices) ? item.choices.map((c: unknown) => (isRecord(c) ? c.effects : undefined)) : [])];
+    for (const effects of all) {
+      if (isRecord(effects) && isStringArray(effects.endActivities)) effects.endActivities.forEach((eventId) => eventsReferenced.push({ at, eventId, field: 'endActivities' }));
+    }
+  });
   // Naming an event that does not exist: almost certainly a typo (monthsSince would block forever, notWithin never).
   for (const { at, eventId, field } of eventsReferenced) {
     if (!ids.has(eventId)) problems.push(`${at}: ${field} names event "${eventId}", which does not exist`);
@@ -1031,7 +1083,9 @@ export type LockReason =
   /** D77: not enough savings. */
   | { kind: 'money'; min: number; current: number }
   /** D83: the week has no time for the sleep or exercise this choice would give. */
-  | { kind: 'time' };
+  | { kind: 'time' }
+  /** D86: the money situation does not fit (already frugal, nothing given to the family, no weekend job, no loan to take); the writer explains. */
+  | { kind: 'situation' };
 
 /** Empty list = the choice is available. */
 export function lockReasons(choice: EventChoice, state: GameState): LockReason[] {
@@ -1050,6 +1104,12 @@ export function lockReasons(choice: EventChoice, state: GameState): LockReason[]
     !(c.flagsNone ?? []).some((flag) => state.flags.includes(flag));
   if (!flagsOk) reasons.push({ kind: 'flag' });
   if (c.money !== undefined && state.money.cash < c.money.min) reasons.push({ kind: 'money', min: c.money.min, current: state.money.cash });
+  const situationOk =
+    (c.spendingLevels === undefined || c.spendingLevels.includes(state.money.spendingLevel)) &&
+    (c.familyShare === undefined || state.money.familySharePercent >= c.familyShare.min) &&
+    (c.work === undefined || meetsWorkConditions(state, c.work)) &&
+    (c.livingLoanAvailable === undefined || canTakeLivingLoan(state));
+  if (!situationOk) reasons.push({ kind: 'situation' });
   return [...reasons, ...time];
 }
 
@@ -1250,8 +1310,13 @@ function applyEffects(
   if (person !== undefined) record.person = applyPersonEffect(state, person, effects.person ?? {}, ageInMonths);
   if (effects.education) applyEducationEffect(state, effects.education, ageInMonths);
   applyMoneyAndWork(state, effects, record);
-  // D85: lessons, nights out, caring: hours on set days.
-  if (effects.activities) startActivities(state, eventId, effects.activities);
+  // D85: lessons, nights out, caring: hours on set days. D86: and the record says so.
+  if (effects.endActivities) endActivities(state, effects.endActivities);
+  if (effects.activities) {
+    startActivities(state, eventId, effects.activities);
+    const started = activitiesRecord(state, eventId);
+    if (started.length > 0) record.activities = started;
+  }
   // D83: a job, a school, a habit or an activity may have changed what the week has time for.
   fitTimeBudget(state);
   state.eventHistory.push(record);
@@ -1274,7 +1339,8 @@ function applyMoneyAndWork(state: GameState, effects: EventEffects, record: Even
   }
   if (effects.familyShare !== undefined) state.money.familySharePercent = effects.familyShare;
   if (effects.spendingLevel !== undefined) state.money.spendingLevel = effects.spendingLevel;
-  if (effects.study) applyStudyFunding(state, effects.study.funding);
+  if (effects.study?.funding) applyStudyFunding(state, effects.study.funding);
+  if (effects.study?.livingLoan) takeLivingLoan(state);
   if (effects.familyRelief) {
     state.money.familyRelief = { amount: effects.familyRelief.amount, untilMonth: state.ageInMonths + effects.familyRelief.months };
   }

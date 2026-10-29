@@ -106,9 +106,25 @@ export function allowanceShare(familyWealth: number): number {
 }
 
 /** What the parents send each month to a student in a dorm (a share of living at the normal level). */
-export function monthlyAllowance(state: Pick<GameState, 'education' | 'flags' | 'residence' | 'environment'>): number {
+export function monthlyAllowance(state: Pick<GameState, 'education' | 'flags' | 'residence' | 'environment' | 'money'>): number {
   if (!livesInDorm(state)) return 0;
-  return Math.round(total(dormLiving(state, 'normal')) * allowanceShare(state.environment.familyWealth));
+  // D86: parents who chose to pay the tuition pay the living too (no student loan means the family can).
+  const share = state.money.study?.tuition === 'parents' ? 1 : allowanceShare(state.environment.familyWealth);
+  return Math.round(total(dormLiving(state, 'normal')) * share);
+}
+
+/**
+ * D86: a student in a dorm who could have the student loan (Family wealth
+ * below the line) but has no living allowance from it yet: their parents
+ * pay the tuition, or they pay it themselves.
+ */
+export function canTakeLivingLoan(state: Pick<GameState, 'education' | 'flags' | 'residence' | 'environment' | 'money'>): boolean {
+  return livesInDorm(state) && state.environment.familyWealth < S.loanBelowWealth && state.money.study !== undefined && !state.money.study.livingLoan;
+}
+
+/** D86: takes the student loan's living allowance (from next month, while living in the dorm). */
+export function takeLivingLoan(state: GameState): void {
+  if (state.money.study !== undefined) state.money.study = { ...state.money.study, livingLoan: true };
 }
 
 /** The student loan's living allowance this month (a student in a dorm who took the loan). */

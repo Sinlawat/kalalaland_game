@@ -29,7 +29,7 @@ describe('D85: an activity takes its hours for its months', () => {
       { kind: 'lessons', days: [5, 6], hours: 3, months: 6 },
       { kind: 'friends', days: [4], hours: 4, months: 6 },
     ]);
-    expect(activityHours(state)).toEqual({ lessons: 16, friends: 4, care: 0 });
+    expect(activityHours(state)).toEqual({ lessons: 16, friends: 4, care: 0, chores: 0 });
     expect(weekHours(state, state.habits)).toMatchObject({ lessons: 16, friends: 4, free: 34 - 20 });
   });
 
@@ -60,11 +60,11 @@ describe('D85: an activity takes its hours for its months', () => {
 
 describe('D85: the real events', () => {
   it.each([
-    ['school_math_struggle', 'tutoring', { lessons: 10, friends: 0, care: 0 }, 3],
-    ['school_tutoring_offer', 'weekends', { lessons: 6, friends: 0, care: 0 }, 6],
-    ['edu_admission_prep', 'cram', { lessons: 16, friends: 0, care: 0 }, 6],
-    ['social_late_night_gaming', 'every_night', { lessons: 0, friends: 14, care: 0 }, 6],
-    ['family_relative_seriously_ill_working', 'help', { lessons: 0, friends: 0, care: 10 }, 3],
+    ['school_math_struggle', 'tutoring', { lessons: 10, friends: 0, care: 0, chores: 0 }, 3],
+    ['school_tutoring_offer', 'weekends', { lessons: 6, friends: 0, care: 0, chores: 0 }, 6],
+    ['edu_admission_prep', 'cram', { lessons: 16, friends: 0, care: 0, chores: 0 }, 6],
+    ['social_late_night_gaming', 'every_night', { lessons: 0, friends: 14, care: 0, chores: 0 }, 6],
+    ['family_relative_seriously_ill_working', 'help', { lessons: 0, friends: 0, care: 10, chores: 0 }, 3],
   ])('%s · %s takes %j a week for %i months', (eventId, choiceId, hours, months) => {
     const state = student();
     state.money.cash = 10_000;
@@ -191,5 +191,50 @@ describe('D85: a job the game ends is told to the player', () => {
     state.ageInMonths += 1;
     stopWork(state, 'quit');
     expect(isEligible(findEvent('work_parttime_ended_school')!, state)).toBe(false);
+  });
+});
+
+describe('D86: helping at the morning market', () => {
+  /** A Grade 4 pupil (born in May) of a poor family. */
+  function pupil(): GameState {
+    const state = makeState({ birthMonth: 5, ageInMonths: 10 * 12, environment: { familyWealth: 30 }, flags: ['school_public'], habits: { exercise: 'light', sleep: 'enough' } });
+    enroll(state, 'primary', 6 * 12);
+    return state;
+  }
+
+  it('takes 2 hours before school every school day, until 18', () => {
+    const state = pupil();
+    applyEvent(state, findEvent('family_market_helper')!);
+    expect(state.activities).toEqual([{ kind: 'chores', days: [0, 1, 2, 3, 4], hours: 2, untilMonth: 18 * 12, eventId: 'family_market_helper', morning: true }]);
+    expect(activityHours(state).chores).toBe(10);
+    expect(state.eventHistory.at(-1)!.activities).toEqual([{ kind: 'chores', hoursPerWeek: 10, months: 8 * 12 }]);
+  });
+
+  it('ends when the child moves to the grandparents in the countryside', () => {
+    const state = pupil();
+    applyEvent(state, findEvent('family_market_helper')!);
+    applyEvent(state, findEvent('family_live_with_grandparents')!);
+    expect(state.activities).toEqual([]);
+  });
+
+  it('an activity until an age that has passed does not start', () => {
+    const state = makeState({ ageInMonths: 18 * 12 });
+    startActivities(state, 'x', [{ kind: 'chores', days: [0], hours: 2, untilAge: 18 }]);
+    expect(state.activities).toEqual([]);
+  });
+});
+
+describe('D86: events.json validation of activity lengths and endings', () => {
+  const event = (effects: unknown) => [{ id: 'e', conditions: { ageMin: 0, ageMax: 9 }, frequency: 'normal', once: true, effects }];
+
+  it.each([
+    [{ activities: [{ kind: 'chores', days: [0], hours: 2 }] }, 'exactly one of months or untilAge'],
+    [{ activities: [{ kind: 'chores', days: [0], hours: 2, months: 2, untilAge: 18 }] }, 'exactly one of months or untilAge'],
+    [{ activities: [{ kind: 'chores', days: [0], hours: 2, untilAge: 17.5 }] }, 'untilAge must be'],
+    [{ activities: [{ kind: 'chores', days: [0], hours: 2, months: 2, morning: false }] }, 'morning must be true'],
+    [{ endActivities: [] }, 'endActivities must be a non-empty list'],
+    [{ endActivities: ['nope'] }, 'endActivities names event "nope", which does not exist'],
+  ])('rejects %j', (effects, expected) => {
+    expect(() => parseEvents(event(effects))).toThrow(expected);
   });
 });

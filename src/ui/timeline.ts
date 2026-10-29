@@ -9,6 +9,7 @@
 
 import { calendarMonth } from '../engine/events';
 import { TRAIT_KEYS, type EnvironmentKey, type EventRecord, type GameState, type HabitKey, type Habits, type StatTarget, type TraitKey, type WorkChange } from '../engine/types';
+import { t } from '../i18n/i18n';
 
 /** Design decision: the timeline card shows the last 5 years; older ones are in the history popup. */
 export const RECENT_YEARS = 5;
@@ -51,6 +52,8 @@ export interface TimelineEntry {
   moneyChange?: number;
   /** D77: the job the event started, changed or ended (the latest occurrence wins). */
   workChange?: WorkChange;
+  /** D86: the activities with set hours the event started (the latest occurrence wins). */
+  activities?: EventRecord['activities'];
   /** Month of life of the LATEST occurrence in this year of age (entries are sorted by it, newest first). */
   ageInMonths: number;
   /** Calendar month (1–12) of that occurrence, shown beside the title so the order is visible. */
@@ -164,6 +167,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
       if (record.residenceChange) existing.residenceChange = record.residenceChange;
       if (record.moneyChange !== undefined) existing.moneyChange = (existing.moneyChange ?? 0) + record.moneyChange;
       if (record.workChange) existing.workChange = record.workChange;
+      if (record.activities) existing.activities = record.activities;
       existing.ageInMonths = record.ageInMonths;
       existing.calendarMonth = calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths });
       latestIndex.set(existing, index);
@@ -179,6 +183,7 @@ export function buildTimeline(state: TimelineSource): TimelineYear[] {
         ...(record.person ? { personName: record.person.nickname } : {}),
         ...(record.moneyChange !== undefined ? { moneyChange: record.moneyChange } : {}),
         ...(record.workChange ? { workChange: record.workChange } : {}),
+        ...(record.activities ? { activities: record.activities } : {}),
         ageInMonths: record.ageInMonths,
         calendarMonth: calendarMonth({ birthMonth: state.birthMonth, ageInMonths: record.ageInMonths }),
         count: 1,
@@ -233,4 +238,15 @@ export function splitRecent(timeline: TimelineYear[], currentAgeInMonths: number
 
 export function countEntries(years: TimelineYear[]): number {
   return years.reduce((sum, year) => sum + year.entries.reduce((s, e) => s + e.count, 0), 0);
+}
+
+/**
+ * D86: "กิจกรรม: เรียนพิเศษ ติว ซ้อม 10 ชม./สัปดาห์ (3 เดือน)", or "(ถึงอายุ 18 ปี)"
+ * for one that lasts until a birthday (more than two years).
+ */
+export function activityText(activity: NonNullable<EventRecord['activities']>[number], startedAt: number): string {
+  const params = { kind: t(`schedule.activity.${activity.kind}`), hours: activity.hoursPerWeek };
+  return activity.months > 24
+    ? t('timeline.activityUntil', { ...params, age: Math.floor((startedAt + activity.months) / 12) })
+    : t('timeline.activity', { ...params, months: activity.months });
 }
